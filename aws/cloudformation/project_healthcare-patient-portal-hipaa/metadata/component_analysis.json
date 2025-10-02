@@ -1,0 +1,165 @@
+{
+  "original_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_ec2_instance",
+      "purpose": "Hosts the patient portal web application with SSL termination and session management",
+      "dependencies": [
+        "application_load_balancer",
+        "patient_database"
+      ],
+      "security_considerations": [
+        "SSL/TLS encryption",
+        "session security",
+        "input validation",
+        "OWASP compliance"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "application_load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Distributes traffic across web servers and provides SSL termination with health checks",
+      "dependencies": [],
+      "security_considerations": [
+        "SSL certificate management",
+        "security headers",
+        "DDoS protection"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "patient_database",
+      "service_type": "aws_rds_mysql",
+      "purpose": "Stores patient records, appointments, and user authentication data with encryption",
+      "dependencies": [
+        "database_subnet_group"
+      ],
+      "security_considerations": [
+        "encryption at rest",
+        "backup encryption",
+        "access logging",
+        "parameter group hardening"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Secure storage for medical documents, lab results, and imaging files with versioning",
+      "dependencies": [],
+      "security_considerations": [
+        "server-side encryption",
+        "bucket policies",
+        "access logging",
+        "versioning for audit"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "audit_logging_system",
+      "service_type": "aws_cloudwatch_logs",
+      "purpose": "Centralized logging for HIPAA audit requirements and security monitoring",
+      "dependencies": [
+        "web_application_tier",
+        "patient_database"
+      ],
+      "security_considerations": [
+        "log encryption",
+        "retention policies",
+        "access controls",
+        "tamper protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Encrypted backup storage for database and document backups with lifecycle policies",
+      "dependencies": [
+        "patient_database",
+        "document_storage"
+      ],
+      "security_considerations": [
+        "cross-region replication",
+        "encryption",
+        "access controls",
+        "immutable backups"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_ec2_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "patient_database",
+      "service_type": "aws_rds_mysql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "audit_logging_system",
+      "service_type": "aws_cloudwatch_logs",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 482,
+      "resource_count": 122,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 117,
+      "resource_count": 19,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 108,
+      "resource_count": 37,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 54,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,220 @@
+{
+  "original_components": [
+    {
+      "name": "patient_web_app",
+      "service_type": "azure_app_service",
+      "purpose": "Frontend web application for patient portal interface with SSL termination and custom domain",
+      "dependencies": [
+        "patient_api",
+        "azure_ad_b2c"
+      ],
+      "security_considerations": [
+        "HTTPS enforcement",
+        "CORS configuration",
+        "authentication integration"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "patient_api",
+      "service_type": "azure_app_service",
+      "purpose": "Backend REST API handling patient data operations, appointment scheduling, and secure messaging",
+      "dependencies": [
+        "patient_database",
+        "document_storage",
+        "key_vault"
+      ],
+      "security_considerations": [
+        "API authentication",
+        "data validation",
+        "rate limiting",
+        "audit logging"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "patient_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Encrypted database storing patient records, appointments, and audit logs with automated backups",
+      "dependencies": [
+        "key_vault"
+      ],
+      "security_considerations": [
+        "transparent data encryption",
+        "firewall rules",
+        "threat detection",
+        "backup encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "document_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Encrypted blob storage for medical documents, lab results, and imaging files with lifecycle management",
+      "dependencies": [
+        "key_vault"
+      ],
+      "security_considerations": [
+        "encryption at rest",
+        "access policies",
+        "private endpoints",
+        "audit logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "azure_ad_b2c",
+      "service_type": "azure_ad_b2c",
+      "purpose": "Patient identity and access management with MFA support and custom user flows",
+      "dependencies": [],
+      "security_considerations": [
+        "MFA enforcement",
+        "password policies",
+        "account lockout",
+        "identity protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "key_vault",
+      "service_type": "azure_key_vault",
+      "purpose": "Centralized management of encryption keys, connection strings, and certificates for HIPAA compliance",
+      "dependencies": [],
+      "security_considerations": [
+        "access policies",
+        "key rotation",
+        "HSM protection",
+        "audit logging"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "patient_web_app",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 0.7999999999999999
+    },
+    {
+      "name": "patient_api",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 0.5
+    },
+    {
+      "name": "patient_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 0.5
+    },
+    {
+      "name": "document_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 0.6
+    },
+    {
+      "name": "azure_ad_b2c",
+      "service_type": "azure_ad_b2c",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "key_vault",
+      "service_type": "azure_key_vault",
+      "implementation_confidence": 0.7
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 806,
+      "resource_count": 21,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/publicIPAddresses"
+        },
+        {
+          "type": "Microsoft.OperationalInsights/workspaces"
+        },
+        {
+          "type": "Microsoft.Insights/components"
+        },
+        {
+          "type": "Microsoft.KeyVault/vaults"
+        },
+        {
+          "type": "Microsoft.KeyVault/vaults/keys"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Sql/servers/firewallRules"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites/networkConfig"
+        },
+        {
+          "type": "Microsoft.Web/sites/networkConfig"
+        },
+        {
+          "type": "Microsoft.Network/applicationGateways"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 24,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 16,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

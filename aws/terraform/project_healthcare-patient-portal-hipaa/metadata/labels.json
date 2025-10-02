@@ -1,0 +1,438 @@
+{
+  "project_labels": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 2,
+        "medium": 6
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "network": 2,
+        "logging": 1
+      },
+      "by_trivy_service": {
+        "rds": 2,
+        "s3": 2,
+        "ec2": 3,
+        "cloudtrail": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-S3-SPECIFY_PUBLIC_ACCESS_BLOCK",
+        "AWS-S3-IGNORE_PUBLIC_ACLS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+        "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+        "AWS-EC2-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-CLOUDTRAIL-REQUIRE_BUCKET_ACCESS_LOGGING"
+      ],
+      "services_covered": [
+        "rds",
+        "s3",
+        "ec2",
+        "cloudtrail"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+      "trivy_rule_info": {
+        "original_file": "encrypt_instance_storage_data.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/rds"
+      },
+      "vulnerability_class": "encryption_at_rest",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "physical",
+      "prerequisites": [
+        "physical_access_to_storage",
+        "storage_compromise"
+      ],
+      "mitigation_strategies": [
+        "enable_storage_encryption",
+        "use_customer_managed_keys",
+        "implement_key_rotation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_db_instance without storage_encrypted = true",
+        "secure_pattern": "aws_db_instance { storage_encrypted = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "disable_public_access.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/rds"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity",
+        "database_credentials"
+      ],
+      "mitigation_strategies": [
+        "disable_public_accessibility",
+        "use_vpc_endpoints",
+        "implement_network_acls"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_db_instance { publicly_accessible = true }",
+        "secure_pattern": "aws_db_instance { publicly_accessible = false }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-S3-SPECIFY_PUBLIC_ACCESS_BLOCK",
+      "trivy_rule_info": {
+        "original_file": "specify_public_access_block.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/s3"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "HIPAA",
+        "GDPR",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "misconfiguration_opportunity",
+        "public_access_grants"
+      ],
+      "mitigation_strategies": [
+        "implement_public_access_block",
+        "review_bucket_policies",
+        "enable_access_logging"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_s3_bucket without corresponding aws_s3_bucket_public_access_block",
+        "secure_pattern": "aws_s3_bucket with aws_s3_bucket_public_access_block resource"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-S3-IGNORE_PUBLIC_ACLS",
+      "trivy_rule_info": {
+        "original_file": "ignore_public_acls.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/s3"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "HIPAA",
+        "GDPR",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "acl_modification_capability",
+        "public_acl_application"
+      ],
+      "mitigation_strategies": [
+        "set_ignore_public_acls_true",
+        "implement_least_privilege",
+        "regular_access_reviews"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_s3_bucket_public_access_block { ignore_public_acls = false }",
+        "secure_pattern": "aws_s3_bucket_public_access_block { ignore_public_acls = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+      "trivy_rule_info": {
+        "original_file": "add_description_to_security_group_rule.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "governance",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 4,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "adjacent",
+      "prerequisites": [
+        "security_group_misconfiguration",
+        "lack_of_documentation"
+      ],
+      "mitigation_strategies": [
+        "add_rule_descriptions",
+        "implement_documentation_standards",
+        "regular_security_reviews"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "security_group ingress/egress rules without description field",
+        "secure_pattern": "security_group rules with descriptive description field"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "governance",
+        "severity_numeric": 4.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+      "trivy_rule_info": {
+        "original_file": "no_public_ip_subnet.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity",
+        "service_exploitation"
+      ],
+      "mitigation_strategies": [
+        "disable_auto_assign_public_ip",
+        "use_nat_gateways",
+        "implement_proper_subnetting"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_subnet { map_public_ip_on_launch = true } for private subnets",
+        "secure_pattern": "aws_subnet { map_public_ip_on_launch = false } for private subnets"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-ENCRYPTION_CUSTOMER_KEY",
+      "trivy_rule_info": {
+        "original_file": "encryption_customer_key.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "encryption_key_management",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "key_compromise",
+        "insufficient_key_controls"
+      ],
+      "mitigation_strategies": [
+        "use_customer_managed_keys",
+        "implement_key_rotation",
+        "apply_least_privilege_key_access"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_ebs_volume without kms_key_id parameter",
+        "secure_pattern": "aws_ebs_volume { kms_key_id = aws_kms_key.example.arn }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-REQUIRE_BUCKET_ACCESS_LOGGING",
+      "trivy_rule_info": {
+        "original_file": "require_bucket_access_logging.yaml",
+        "service_category": "cloudtrail",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudtrail"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "audit_log_access",
+        "log_tampering_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_s3_access_logging",
+        "implement_log_integrity_monitoring",
+        "centralize_log_management"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "CloudTrail S3 bucket without logging configuration",
+        "secure_pattern": "CloudTrail S3 bucket with logging { target_bucket = ... }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,CRITICAL .",
+      "expected_trivy_output": "8 findings across RDS, S3, EC2, and CloudTrail services with HIGH and MEDIUM severities"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand HIPAA compliance requirements for healthcare infrastructure",
+      "Learn how Trivy detects common AWS security misconfigurations",
+      "Master encryption at rest and in transit for sensitive data",
+      "Implement proper network segmentation and access controls",
+      "Configure comprehensive audit logging for compliance",
+      "Apply security governance through documentation and monitoring"
+    ],
+    "prerequisite_knowledge": [
+      "Basic AWS services (RDS, S3, EC2, CloudTrail)",
+      "Infrastructure as Code concepts",
+      "Healthcare data protection requirements",
+      "Network security fundamentals",
+      "Encryption key management principles"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Healthcare applications require multiple layers of security controls",
+      "Trivy can automatically detect critical compliance violations",
+      "Encryption and access controls are fundamental for PHI protection",
+      "Proper network segmentation prevents unauthorized data access",
+      "Comprehensive logging is essential for audit trails and incident response",
+      "Security governance through documentation improves maintainability"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "s3",
+      "rds",
+      "ec2",
+      "cloudtrail"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "generation_timestamp": "2025-08-06T22:41:04.694898",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

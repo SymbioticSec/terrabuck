@@ -1,0 +1,344 @@
+{
+  "project_info": {
+    "project_id": "enterprise-backup-dr-platform",
+    "project_name": "Enterprise Backup and Disaster Recovery Platform",
+    "description": "A comprehensive backup and disaster recovery solution for enterprise clients that provides automated backup scheduling, cross-region replication, and rapid recovery capabilities. The platform supports multiple backup types (database, file system, application state) with configurable retention policies, encryption at rest and in transit, and compliance reporting. Features include backup verification, point-in-time recovery, and automated failover orchestration for critical business systems.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "data_pipeline",
+    "business_context": "Large enterprises require robust backup and disaster recovery solutions to meet RTO/RPO requirements, comply with data retention regulations, and ensure business continuity. This platform serves as a managed service offering for MSPs or internal IT departments managing hundreds of servers and databases across multiple environments.",
+    "components": [
+      {
+        "name": "backup_orchestration_service",
+        "service_type": "aws_lambda",
+        "purpose": "Coordinates backup jobs, manages scheduling, and handles backup lifecycle management including retention policy enforcement",
+        "dependencies": [
+          "backup_storage",
+          "backup_metadata_db",
+          "monitoring_dashboard"
+        ],
+        "security_considerations": [
+          "IAM role permissions for cross-service access",
+          "encryption key management",
+          "backup job authentication"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "backup_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Primary storage for backup data with multiple storage classes for cost optimization and cross-region replication for disaster recovery",
+        "dependencies": [],
+        "security_considerations": [
+          "bucket encryption with KMS",
+          "access logging",
+          "versioning and MFA delete",
+          "cross-region replication security"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "backup_metadata_db",
+        "service_type": "aws_rds",
+        "purpose": "Stores backup job metadata, schedules, retention policies, and recovery point information for fast backup catalog queries",
+        "dependencies": [
+          "backup_storage"
+        ],
+        "security_considerations": [
+          "database encryption",
+          "VPC security groups",
+          "backup authentication",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "backup_agents_cluster",
+        "service_type": "aws_ec2",
+        "purpose": "Auto-scaling cluster of backup agents that perform actual backup operations on target systems and stream data to storage",
+        "dependencies": [
+          "backup_orchestration_service",
+          "backup_storage",
+          "backup_metadata_db"
+        ],
+        "security_considerations": [
+          "agent authentication certificates",
+          "network security groups",
+          "encrypted communication channels",
+          "privileged access management"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "recovery_service",
+        "service_type": "aws_lambda",
+        "purpose": "Handles recovery requests, validates recovery points, and orchestrates data restoration with progress tracking",
+        "dependencies": [
+          "backup_storage",
+          "backup_metadata_db",
+          "monitoring_dashboard"
+        ],
+        "security_considerations": [
+          "recovery authorization controls",
+          "data integrity verification",
+          "audit trail for recovery operations"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "monitoring_dashboard",
+        "service_type": "aws_cloudwatch",
+        "purpose": "Provides real-time monitoring of backup jobs, storage utilization, and system health with alerting for failed operations",
+        "dependencies": [
+          "backup_orchestration_service",
+          "backup_agents_cluster",
+          "recovery_service"
+        ],
+        "security_considerations": [
+          "dashboard access controls",
+          "sensitive data masking in logs",
+          "alert notification security"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancers and private subnets for backup agents and database. NAT gateways provide outbound internet access for backup agents.",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Backup agents in private subnets connect to target systems via VPC peering or VPN",
+        "Lambda functions access RDS and S3 via VPC endpoints",
+        "Cross-region replication uses AWS backbone network"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 3,
+      "databases": 1,
+      "networking_components": 6,
+      "lambda_functions": 8,
+      "iam_roles": 5,
+      "cloudwatch_resources": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:14:42.683269"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-ENABLE_LOGGING",
+        "title": "Enable Logging",
+        "description": "S3 bucket access logging is not enabled, preventing audit trails of backup data access and potential unauthorized access attempts",
+        "severity": "medium",
+        "affected_component": "backup_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without access logging, security incidents involving backup data cannot be properly investigated, potentially violating compliance requirements for audit trails",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            LoggingConfiguration:\n              DestinationBucketName: !Ref TestLoggingBucket\n              LogFilePrefix: accesslogs/\n\n        TestLoggingBucket:\n          Type: AWS::S3::Bucket\n          Properties:\n            AccessControl: LogDeliveryWrite\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket\n          Properties: null",
+        "file_name": "enable_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without LoggingConfiguration property",
+          "explanation": "Missing logging configuration prevents tracking of backup data access patterns and potential security incidents"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+        "title": "Specify Backup Retention",
+        "description": "RDS backup retention period is not properly configured, potentially causing backup metadata to be lost prematurely",
+        "severity": "medium",
+        "affected_component": "backup_metadata_db",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Inadequate backup retention for metadata database could result in loss of backup catalog information, making disaster recovery impossible",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            BackupRetentionPeriod: 30\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBInstance\n          Properties: null",
+        "file_name": "specify_backup_retention.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create RDS instance without BackupRetentionPeriod property or with value less than 5 days",
+          "explanation": "Default backup retention (1 day) is insufficient for a backup platform that needs to maintain metadata integrity"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "title": "No Public Ingress Sgr",
+        "description": "Security group allows unrestricted public access to backup agents cluster, exposing backup infrastructure to internet threats",
+        "severity": "medium",
+        "affected_component": "backup_agents_cluster",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Public access to backup agents could allow attackers to compromise backup operations, steal sensitive data, or disrupt disaster recovery capabilities",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupIngress:\n              - CidrIp: 127.0.0.1/32\n                IpProtocol: \"6\"\n                FromPort: 22\n                ToPort: 22\n  bad:\n    - |-\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupIngress:\n              - CidrIp: 0.0.0.0/0\n                IpProtocol: \"6\"\n                FromPort: 22\n                ToPort: 22",
+        "file_name": "no_public_ingress_sgr.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure security group with CidrIp: 0.0.0.0/0 for SSH or backup agent ports",
+          "explanation": "Unrestricted ingress rules expose backup infrastructure to potential attacks from any internet source"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "Lambda functions for backup orchestration and recovery services lack X-Ray tracing, limiting observability into backup operations",
+        "severity": "medium",
+        "affected_component": "backup_orchestration_service",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without tracing, troubleshooting failed backup operations becomes difficult, potentially extending RTO during critical recovery scenarios",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x\n            TracingConfig:\n              Mode: Active\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Lambda function without TracingConfig property or with Mode set to PassThrough",
+          "explanation": "Missing tracing configuration reduces visibility into backup orchestration workflows and error diagnosis capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+        "title": "As Enforce Http Token Imds",
+        "description": "EC2 instances in backup agents cluster do not enforce IMDSv2, allowing potential SSRF attacks against instance metadata",
+        "severity": "medium",
+        "affected_component": "backup_agents_cluster",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "SSRF vulnerabilities could expose IAM credentials used by backup agents, potentially compromising the entire backup infrastructure",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::AutoScaling::LaunchConfiguration\n          Properties:\n            MetadataOptions:\n              HttpEndpoint: enabled\n              HttpTokens: required\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::AutoScaling::LaunchConfiguration\n          Properties:\n            MetadataOptions:\n              HttpEndpoint: enabled\n              HttpTokens: optional",
+        "file_name": "as_enforce_http_token_imds.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure launch configuration without MetadataOptions or with HttpTokens set to optional",
+          "explanation": "IMDSv1 allows unauthenticated access to instance metadata, creating SSRF attack vectors against backup agent credentials"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "title": "Require Symbols In Passwords",
+        "description": "IAM password policy does not require symbols, weakening authentication security for backup platform administrators",
+        "severity": "medium",
+        "affected_component": "backup_orchestration_service",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak password policies increase risk of credential compromise, potentially allowing unauthorized access to backup management functions",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        # ...\n        require_symbols = true\n        # ...\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # require_symbols not set\n        # ...\n      }",
+        "file_name": "require_symbols_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM password policy without require_symbols property or set to false",
+          "explanation": "Weak password requirements make administrative accounts more susceptible to brute force and dictionary attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_OBJECT_WRITE_LOGGING",
+        "title": "Enable Object Write Logging",
+        "description": "CloudTrail is not configured to log S3 object-level write operations for backup storage, missing critical audit trail for backup data modifications",
+        "severity": "medium",
+        "affected_component": "backup_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without object-level logging, unauthorized modifications or deletions of backup data cannot be detected or investigated, violating compliance requirements",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        bucket = \"my-bucket\"\n      }\n\n      resource \"aws_cloudtrail\" \"example\" {\n        event_selector {\n          read_write_type = \"WriteOnly\"\n          data_resource {\n            type   = \"AWS::S3::Object\"\n            values = [\"arn:aws:s3\"]\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"my-bucket\"\n      }",
+        "file_name": "enable_object_write_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without corresponding CloudTrail configuration for object-level write logging",
+          "explanation": "Missing object-level logging prevents detection of unauthorized backup data modifications or deletions"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EFS-ENABLE_AT_REST_ENCRYPTION",
+        "title": "Enable At Rest Encryption",
+        "description": "EFS file system used for backup staging lacks encryption at rest, exposing sensitive backup data",
+        "severity": "medium",
+        "affected_component": "backup_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted backup staging area could expose sensitive enterprise data if storage media is compromised, violating data protection regulations",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EFS::FileSystem\n          Properties:\n            Encrypted: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EFS::FileSystem\n          Properties:\n            Encrypted: false",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "efs",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create EFS file system without Encrypted property or with Encrypted set to false",
+          "explanation": "Unencrypted file systems expose backup data at rest, creating compliance and security risks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-S3-ENABLE_LOGGING",
+        "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "AWS-S3-ENABLE_OBJECT_WRITE_LOGGING",
+        "AWS-EFS-ENABLE_AT_REST_ENCRYPTION"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "iam",
+        "s3",
+        "efs",
+        "ec2",
+        "rds",
+        "lambda"
+      ],
+      "services_covered": [
+        "iam",
+        "s3",
+        "efs",
+        "ec2",
+        "rds",
+        "lambda"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 160,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

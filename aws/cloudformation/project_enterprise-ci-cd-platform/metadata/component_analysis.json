@@ -1,0 +1,179 @@
+{
+  "original_components": [
+    {
+      "name": "build_orchestration",
+      "service_type": "aws_codebuild",
+      "purpose": "Manages automated build processes, runs unit tests, and performs code quality analysis using configurable build specifications",
+      "dependencies": [
+        "artifact_storage",
+        "source_control_integration"
+      ],
+      "security_considerations": [
+        "build_environment_isolation",
+        "secrets_management",
+        "iam_role_permissions"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "artifact_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Stores build artifacts, Docker images, deployment packages, and maintains versioned releases with lifecycle policies",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_logging",
+        "versioning_controls",
+        "cross_account_access"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "deployment_automation",
+      "service_type": "aws_codedeploy",
+      "purpose": "Automates application deployments across multiple environments with blue-green and rolling deployment strategies",
+      "dependencies": [
+        "artifact_storage",
+        "target_infrastructure"
+      ],
+      "security_considerations": [
+        "deployment_permissions",
+        "rollback_capabilities",
+        "environment_isolation"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "pipeline_orchestration",
+      "service_type": "aws_codepipeline",
+      "purpose": "Coordinates the entire CI/CD workflow from source code changes through production deployment with approval gates",
+      "dependencies": [
+        "build_orchestration",
+        "deployment_automation",
+        "notification_system"
+      ],
+      "security_considerations": [
+        "pipeline_permissions",
+        "approval_workflows",
+        "audit_logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "target_infrastructure",
+      "service_type": "aws_ec2_autoscaling",
+      "purpose": "Provides scalable compute infrastructure for hosting applications across development, staging, and production environments",
+      "dependencies": [
+        "network_infrastructure"
+      ],
+      "security_considerations": [
+        "instance_hardening",
+        "security_groups",
+        "patch_management",
+        "ssh_key_management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "notification_system",
+      "service_type": "aws_sns",
+      "purpose": "Sends build status notifications, deployment alerts, and failure notifications to development teams via email and Slack",
+      "dependencies": [],
+      "security_considerations": [
+        "message_encryption",
+        "topic_access_controls"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "source_control_integration",
+      "service_type": "aws_codecommit",
+      "purpose": "Provides Git-based source code repositories with branch protection, merge request workflows, and integration hooks",
+      "dependencies": [],
+      "security_considerations": [
+        "repository_access_controls",
+        "branch_protection",
+        "commit_signing"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "build_orchestration",
+      "service_type": "aws_codebuild",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "artifact_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "deployment_automation",
+      "service_type": "aws_codedeploy",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "pipeline_orchestration",
+      "service_type": "aws_codepipeline",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "target_infrastructure",
+      "service_type": "aws_ec2_autoscaling",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "notification_system",
+      "service_type": "aws_sns",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "source_control_integration",
+      "service_type": "aws_codecommit",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 487,
+      "resource_count": 142,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 51,
+      "resource_count": 6,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 96,
+      "resource_count": 33,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 265,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

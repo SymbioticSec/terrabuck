@@ -1,0 +1,395 @@
+{
+  "project_labels": {
+    "project_id": "gcp-fintech-trading-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 9,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 9
+      },
+      "by_type": {
+        "access_control": 2,
+        "encryption": 2,
+        "network": 3,
+        "logging": 2
+      },
+      "by_trivy_service": {
+        "sql": 1,
+        "compute": 4,
+        "iam": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "GOOGLE-SQL-PG_LOG_CONNECTIONS",
+        "GOOGLE-COMPUTE-ENABLE_VPC_FLOW_LOGS",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+        "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "GOOGLE-COMPUTE-VM_DISK_ENCRYPTION_CUSTOMER_KEY",
+        "GOOGLE-COMPUTE-DISABLE_ALLOW_ALL_PORTS_FIREWALL_RULE",
+        "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_PRIVATE_GOOGLE_ACCESS"
+      ],
+      "services_covered": [
+        "sql",
+        "compute",
+        "iam"
+      ],
+      "detection_accuracy": "100%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "GOOGLE-SQL-PG_LOG_CONNECTIONS",
+      "trivy_rule_info": {
+        "original_file": "pg_log_connections.yaml",
+        "service_category": "sql",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/sql"
+      },
+      "vulnerability_class": "audit_logging",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOX",
+        "PCI-DSS",
+        "GDPR",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "database_access",
+        "insider_threat"
+      ],
+      "mitigation_strategies": [
+        "Enable log_connections database flag",
+        "Configure comprehensive audit logging",
+        "Set up log monitoring and alerting"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "database_flags { name = \"log_connections\"; value = \"off\" }",
+        "secure_pattern": "database_flags { name = \"log_connections\"; value = \"on\" }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "audit_logging",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-ENABLE_VPC_FLOW_LOGS",
+      "trivy_rule_info": {
+        "original_file": "enable_vpc_flow_logs.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "network_monitoring",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "NIST",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "lateral_movement_capability"
+      ],
+      "mitigation_strategies": [
+        "Enable VPC flow logs on all subnets",
+        "Configure appropriate sampling rates",
+        "Set up log analysis and monitoring"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "google_compute_subnetwork without log_config block",
+        "secure_pattern": "log_config { aggregation_interval = \"INTERVAL_10_MIN\"; flow_sampling = 0.5 }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_monitoring",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+      "trivy_rule_info": {
+        "original_file": "enable_shielded_vm_vtpm.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "system_integrity",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "NIST",
+        "FedRAMP"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "vm_access",
+        "boot_level_compromise"
+      ],
+      "mitigation_strategies": [
+        "Enable vTPM in shielded_instance_config",
+        "Enable secure boot and integrity monitoring",
+        "Regular attestation verification"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "shielded_instance_config { enable_vtpm = false }",
+        "secure_pattern": "shielded_instance_config { enable_vtpm = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "system_integrity",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+      "trivy_rule_info": {
+        "original_file": "no_user_granted_permissions.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/iam"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "user_account_compromise",
+        "privilege_escalation"
+      ],
+      "mitigation_strategies": [
+        "Use service accounts instead of user accounts",
+        "Implement group-based permissions",
+        "Regular access reviews and audits"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "members = [\"user:example@domain.com\"]",
+        "secure_pattern": "members = [\"serviceAccount:service@project.iam.gserviceaccount.com\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-VM_DISK_ENCRYPTION_CUSTOMER_KEY",
+      "trivy_rule_info": {
+        "original_file": "vm_disk_encryption_customer_key.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "encryption_key_management",
+      "detection_difficulty": "easy",
+      "remediation_effort": "high",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "GDPR",
+        "HIPAA",
+        "SOX"
+      ],
+      "attack_vector": "physical",
+      "prerequisites": [
+        "disk_access",
+        "cloud_provider_compromise"
+      ],
+      "mitigation_strategies": [
+        "Implement customer-managed encryption keys (CMEK)",
+        "Use Google Cloud KMS for key management",
+        "Regular key rotation policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "boot_disk { initialize_params { ... } } # missing kms_key_self_link",
+        "secure_pattern": "boot_disk { kms_key_self_link = google_kms_crypto_key.key.id }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption_key_management",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-DISABLE_ALLOW_ALL_PORTS_FIREWALL_RULE",
+      "trivy_rule_info": {
+        "original_file": "disable_allow_all_ports_firewall_rule.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "NIST",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "port_scanning_capability"
+      ],
+      "mitigation_strategies": [
+        "Implement principle of least privilege for firewall rules",
+        "Specify exact ports and protocols needed",
+        "Use network tags for targeted access"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "allow { protocol = \"tcp\"; ports = [\"0-65535\"] }",
+        "secure_pattern": "allow { protocol = \"tcp\"; ports = [\"443\", \"80\"] }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_PRIVATE_GOOGLE_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "enable_subnetwork_private_google_access.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "NIST",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_monitoring",
+        "traffic_interception"
+      ],
+      "mitigation_strategies": [
+        "Enable private_ip_google_access on subnets",
+        "Use private service connect endpoints",
+        "Implement VPC peering where appropriate"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "private_ip_google_access = false",
+        "secure_pattern": "private_ip_google_access = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment",
+      "automated_remediation_prioritization"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "9 medium severity findings across SQL, Compute, and IAM services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand how Trivy detects GCP security misconfigurations",
+      "Learn common security patterns in financial trading platforms",
+      "Practice identifying and remediating infrastructure vulnerabilities",
+      "Understand the relationship between security controls and compliance requirements",
+      "Learn to prioritize security fixes based on business impact"
+    ],
+    "prerequisite_knowledge": [
+      "Basic Terraform syntax and GCP resources",
+      "Understanding of cloud security principles",
+      "Familiarity with financial services compliance requirements",
+      "Basic knowledge of network security concepts"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Trivy can automatically detect common GCP security misconfigurations",
+      "Financial platforms require enhanced logging and monitoring",
+      "Network security controls are critical for trading systems",
+      "Customer-managed encryption keys provide better compliance posture",
+      "Proper IAM design reduces security risks in automated systems"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "sql",
+      "iam",
+      "compute"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "gcp-fintech-trading-platform",
+    "generation_timestamp": "2025-08-08T14:37:03.598564",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

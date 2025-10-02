@@ -1,0 +1,156 @@
+# CloudFormation Outputs Configuration
+# These outputs expose important resource information for integration and monitoring
+
+Outputs:
+  # Network Infrastructure Outputs
+  VPCId:
+    Description: "VPC ID for the real-time trading platform"
+    Value: !Ref TradingPlatformVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+
+  PublicSubnetId:
+    Description: "Public subnet ID for load balancers"
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub "${AWS::StackName}-Public-Subnet"
+
+  PrivateSubnetId:
+    Description: "Private subnet ID for application servers"
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-Subnet"
+
+  DataSubnetId:
+    Description: "Data subnet ID for databases and cache"
+    Value: !Ref DataSubnet
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-Subnet"
+
+  # Load Balancer Outputs
+  LoadBalancerDNS:
+    Description: "DNS name of the API gateway application load balancer"
+    Value: !GetAtt TradingPlatformALB.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-DNS"
+
+  LoadBalancerArn:
+    Description: "ARN of the application load balancer"
+    Value: !Ref TradingPlatformALB
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-ARN"
+
+  LoadBalancerHostedZoneId:
+    Description: "Hosted Zone ID of the application load balancer"
+    Value: !GetAtt TradingPlatformALB.CanonicalHostedZoneID
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-HostedZone"
+
+  # Trading Engine Outputs
+  TradingEngineInstance1Id:
+    Description: "Instance ID of first trading engine server"
+    Value: !Ref TradingEngineInstance1
+    Export:
+      Name: !Sub "${AWS::StackName}-Trading-Engine-1"
+
+  TradingEngineInstance2Id:
+    Description: "Instance ID of second trading engine server"
+    Value: !Ref TradingEngineInstance2
+    Export:
+      Name: !Sub "${AWS::StackName}-Trading-Engine-2"
+
+  TradingEngineSecurityGroupId:
+    Description: "Security Group ID for trading engine cluster"
+    Value: !Ref TradingEngineSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-Trading-Engine-SG"
+
+  # Database Outputs
+  DatabaseEndpoint:
+    Description: "RDS PostgreSQL database endpoint for trade data"
+    Value: !GetAtt TradeDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-DB-Endpoint"
+
+  DatabasePort:
+    Description: "RDS PostgreSQL database port"
+    Value: !GetAtt TradeDatabase.Endpoint.Port
+    Export:
+      Name: !Sub "${AWS::StackName}-DB-Port"
+
+  DatabaseIdentifier:
+    Description: "RDS database instance identifier"
+    Value: !Ref TradeDatabase
+    Export:
+      Name: !Sub "${AWS::StackName}-DB-Identifier"
+
+  # Cache Outputs
+  CacheEndpoint:
+    Description: "ElastiCache Redis endpoint for market data"
+    Value: !GetAtt MarketDataCache.RedisEndpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-Cache-Endpoint"
+
+  CachePort:
+    Description: "ElastiCache Redis port"
+    Value: !GetAtt MarketDataCache.RedisEndpoint.Port
+    Export:
+      Name: !Sub "${AWS::StackName}-Cache-Port"
+
+  CacheReplicationGroupId:
+    Description: "ElastiCache replication group ID"
+    Value: !Ref MarketDataCache
+    Export:
+      Name: !Sub "${AWS::StackName}-Cache-Group"
+
+  # Storage Outputs
+  ComplianceBucketName:
+    Description: "S3 bucket name for compliance logs and audit trails"
+    Value: !Ref ComplianceLogsBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-Compliance-Bucket"
+
+  ComplianceBucketArn:
+    Description: "S3 bucket ARN for compliance logs"
+    Value: !GetAtt ComplianceLogsBucket.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-Compliance-Bucket-ARN"
+
+  # Lambda Function Outputs
+  RiskManagementFunctionArn:
+    Description: "ARN of the risk management Lambda function"
+    Value: !GetAtt RiskManagementFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-Lambda-ARN"
+
+  RiskManagementFunctionName:
+    Description: "Name of the risk management Lambda function"
+    Value: !Ref RiskManagementFunction
+    Export:
+      Name: !Sub "${AWS::StackName}-Lambda-Name"
+
+  # Security Outputs
+  LoadBalancerSecurityGroupId:
+    Description: "Security Group ID for application load balancer"
+    Value: !Ref LoadBalancerSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-SG"
+
+  DatabaseSecurityGroupId:
+    Description: "Security Group ID for trade database"
+    Value: !Ref DatabaseSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-DB-SG"
+
+  # Connection Information
+  TradingPlatformURL:
+    Description: "Complete URL for accessing the trading platform API"
+    Value: !Sub "http://${TradingPlatformALB.DNSName}"
+    Export:
+      Name: !Sub "${AWS::StackName}-Platform-URL"
+
+  DatabaseConnectionString:
+    Description: "Database connection string template"
+    Value: !Sub "postgresql://${DatabaseUsername}:PASSWORD@${TradeDatabase.Endpoint.Address}:${TradeDatabase.Endpoint.Port}/trading"
+    Export:
+      Name: !Sub "${AWS::StackName}-DB-Connection"

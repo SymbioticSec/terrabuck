@@ -1,0 +1,156 @@
+{
+  "original_components": [
+    {
+      "name": "sensor_data_ingestion",
+      "service_type": "aws_iot_core",
+      "purpose": "Secure MQTT endpoint for IoT sensors to publish telemetry data with device authentication and message routing",
+      "dependencies": [],
+      "security_considerations": [
+        "device_certificates",
+        "iot_policies",
+        "message_encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "real_time_processing",
+      "service_type": "aws_kinesis_data_streams",
+      "purpose": "Stream processing service to handle high-throughput sensor data and enable real-time analytics",
+      "dependencies": [
+        "sensor_data_ingestion"
+      ],
+      "security_considerations": [
+        "stream_encryption",
+        "iam_access_control"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "anomaly_detection_lambda",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless function to analyze sensor patterns and detect equipment anomalies using statistical models",
+      "dependencies": [
+        "real_time_processing"
+      ],
+      "security_considerations": [
+        "execution_role_permissions",
+        "vpc_isolation"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "time_series_database",
+      "service_type": "aws_timestream",
+      "purpose": "Purpose-built time series database for storing and querying historical sensor data with automatic data lifecycle management",
+      "dependencies": [
+        "anomaly_detection_lambda"
+      ],
+      "security_considerations": [
+        "database_encryption",
+        "vpc_endpoints",
+        "access_policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "analytics_dashboard",
+      "service_type": "aws_ec2",
+      "purpose": "Web application server hosting Grafana dashboards for real-time monitoring and historical trend analysis",
+      "dependencies": [
+        "time_series_database"
+      ],
+      "security_considerations": [
+        "security_groups",
+        "ssl_certificates",
+        "user_authentication"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "alert_notification",
+      "service_type": "aws_sns",
+      "purpose": "Notification service to send alerts to maintenance teams when anomalies are detected or thresholds exceeded",
+      "dependencies": [
+        "anomaly_detection_lambda"
+      ],
+      "security_considerations": [
+        "topic_encryption",
+        "subscription_policies"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "sensor_data_ingestion",
+      "service_type": "aws_iot_core",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "real_time_processing",
+      "service_type": "aws_kinesis_data_streams",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "anomaly_detection_lambda",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "time_series_database",
+      "service_type": "aws_timestream",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "analytics_dashboard",
+      "service_type": "aws_ec2",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "alert_notification",
+      "service_type": "aws_sns",
+      "implementation_confidence": 0.8999999999999999
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 407,
+      "resource_count": 110,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 91,
+      "resource_count": 15,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 141,
+      "resource_count": 47,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 187,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

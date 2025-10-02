@@ -1,0 +1,167 @@
+{
+  "original_components": [
+    {
+      "name": "secure_vault_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Encrypted storage for private keys, wallet seeds, and sensitive cryptographic material with versioning and immutable backups",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_logging",
+        "versioning",
+        "mfa_delete",
+        "cross_region_replication"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "wallet_management_service",
+      "service_type": "aws_ec2_instance",
+      "purpose": "Core service managing multi-signature wallets, transaction signing, and cryptographic operations in isolated environment",
+      "dependencies": [
+        "secure_vault_storage",
+        "audit_database"
+      ],
+      "security_considerations": [
+        "instance_isolation",
+        "encrypted_ebs",
+        "security_groups",
+        "iam_roles",
+        "session_manager"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "compliance_api_gateway",
+      "service_type": "aws_api_gateway",
+      "purpose": "Secure API endpoint for compliance reporting, transaction monitoring, and regulatory data access with rate limiting",
+      "dependencies": [
+        "compliance_processor",
+        "audit_database"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "rate_limiting",
+        "request_validation",
+        "logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "compliance_processor",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless functions for AML screening, transaction monitoring, regulatory reporting, and compliance rule execution",
+      "dependencies": [
+        "audit_database",
+        "secure_vault_storage"
+      ],
+      "security_considerations": [
+        "execution_role_permissions",
+        "environment_encryption",
+        "vpc_configuration"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "audit_database",
+      "service_type": "aws_rds_instance",
+      "purpose": "Encrypted PostgreSQL database storing transaction logs, audit trails, compliance records, and wallet metadata",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "backup_encryption",
+        "network_isolation",
+        "parameter_groups"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "monitoring_dashboard",
+      "service_type": "aws_ec2_instance",
+      "purpose": "Real-time monitoring interface for wallet status, transaction processing, security alerts, and compliance metrics",
+      "dependencies": [
+        "wallet_management_service",
+        "audit_database"
+      ],
+      "security_considerations": [
+        "web_application_firewall",
+        "ssl_certificates",
+        "access_controls"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "secure_vault_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "wallet_management_service",
+      "service_type": "aws_ec2_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "compliance_api_gateway",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "compliance_processor",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "audit_database",
+      "service_type": "aws_rds_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "monitoring_dashboard",
+      "service_type": "aws_ec2_instance",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 482,
+      "resource_count": 136,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 153,
+      "resource_count": 21,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 181,
+      "resource_count": 56,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 32,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

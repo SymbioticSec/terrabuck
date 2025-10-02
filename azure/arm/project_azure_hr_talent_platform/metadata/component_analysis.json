@@ -1,0 +1,245 @@
+{
+  "original_components": [
+    {
+      "name": "hr_web_frontend",
+      "service_type": "azure_app_service",
+      "purpose": "React-based web application providing HR dashboard, employee self-service portal, and applicant tracking interface",
+      "dependencies": [
+        "hr_api_backend",
+        "azure_ad_integration"
+      ],
+      "security_considerations": [
+        "authentication_authorization",
+        "session_management",
+        "input_validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "hr_api_backend",
+      "service_type": "azure_app_service",
+      "purpose": "RESTful API handling business logic for employee management, applicant tracking, performance reviews, and workflow automation",
+      "dependencies": [
+        "hr_database",
+        "document_storage",
+        "notification_service"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "data_validation",
+        "rate_limiting",
+        "audit_logging"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "hr_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Primary database storing employee records, applicant data, performance metrics, and organizational structure",
+      "dependencies": [],
+      "security_considerations": [
+        "data_encryption",
+        "access_controls",
+        "backup_security",
+        "pii_protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "document_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Secure storage for resumes, contracts, performance documents, compliance records, and employee photos",
+      "dependencies": [],
+      "security_considerations": [
+        "blob_encryption",
+        "access_policies",
+        "retention_policies",
+        "audit_trails"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "notification_service",
+      "service_type": "azure_functions",
+      "purpose": "Serverless functions handling email notifications for hiring workflows, performance review reminders, and system alerts",
+      "dependencies": [
+        "hr_database"
+      ],
+      "security_considerations": [
+        "function_authentication",
+        "email_security",
+        "data_privacy"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "azure_ad_integration",
+      "service_type": "azure_active_directory",
+      "purpose": "Identity provider for single sign-on, role-based access control, and employee directory synchronization",
+      "dependencies": [],
+      "security_considerations": [
+        "identity_management",
+        "mfa_enforcement",
+        "conditional_access"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "purpose": "Load balancer and web application firewall providing SSL termination and traffic routing",
+      "dependencies": [
+        "hr_web_frontend",
+        "hr_api_backend"
+      ],
+      "security_considerations": [
+        "waf_rules",
+        "ssl_certificates",
+        "ddos_protection"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "hr_web_frontend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 0.7999999999999999
+    },
+    {
+      "name": "hr_api_backend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "hr_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 0.7
+    },
+    {
+      "name": "document_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 0.7999999999999999
+    },
+    {
+      "name": "notification_service",
+      "service_type": "azure_functions",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "azure_ad_integration",
+      "service_type": "azure_active_directory",
+      "implementation_confidence": 0.30000000000000004
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "implementation_confidence": 0.9999999999999999
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 622,
+      "resource_count": 21,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/publicIPAddresses"
+        },
+        {
+          "type": "Microsoft.Network/applicationGateways"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.OperationalInsights/workspaces"
+        },
+        {
+          "type": "Microsoft.Insights/components"
+        },
+        {
+          "type": "Microsoft.KeyVault/vaults"
+        },
+        {
+          "type": "Microsoft.Authorization/roleDefinitions"
+        },
+        {
+          "type": "Microsoft.Sql/servers/firewallRules"
+        },
+        {
+          "type": "Microsoft.Network/privateEndpoints"
+        },
+        {
+          "type": "Microsoft.Network/privateDnsZones"
+        },
+        {
+          "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 24,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 49,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 165,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

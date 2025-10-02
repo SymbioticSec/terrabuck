@@ -1,0 +1,353 @@
+{
+  "project_info": {
+    "project_id": "azure-legal-docmgmt-platform",
+    "project_name": "Legal Document Management Platform",
+    "description": "A secure document management system for law firms handling sensitive legal documents with client matter organization, version control, secure sharing, and comprehensive audit trails. The platform provides encrypted storage, role-based access control, document workflow automation, and compliance reporting for legal practices managing confidential client files and case documents.",
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "architecture_type": "secure_web_application",
+    "business_context": "Mid-size law firm (50-200 attorneys) needs to digitize their document management process, ensure client confidentiality, maintain attorney-client privilege, and provide secure document sharing with clients and opposing counsel while meeting legal industry compliance requirements and bar association guidelines.",
+    "components": [
+      {
+        "name": "web_application",
+        "service_type": "azure_app_service",
+        "purpose": "Hosts the main document management web application with user authentication, document upload/download, and case management interface",
+        "dependencies": [
+          "document_storage",
+          "metadata_database",
+          "application_gateway"
+        ],
+        "security_considerations": [
+          "authentication_bypass",
+          "session_management",
+          "input_validation",
+          "privilege_escalation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "document_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Encrypted blob storage for legal documents with versioning, immutable storage policies, and hierarchical namespace for matter organization",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_key_management",
+          "blob_permissions",
+          "data_retention_policies"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "metadata_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores document metadata, user permissions, matter associations, audit logs, and workflow states with encrypted sensitive data",
+        "dependencies": [],
+        "security_considerations": [
+          "sql_injection",
+          "database_encryption",
+          "connection_security",
+          "audit_logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "search_service",
+        "service_type": "azure_cognitive_search",
+        "purpose": "Provides full-text search capabilities across legal documents with OCR processing and content indexing while maintaining security boundaries",
+        "dependencies": [
+          "document_storage",
+          "metadata_database"
+        ],
+        "security_considerations": [
+          "search_result_filtering",
+          "index_security",
+          "content_exposure"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_gateway",
+        "service_type": "azure_application_gateway",
+        "purpose": "Load balancer with WAF protection, SSL termination, and traffic routing with DDoS protection for the web application",
+        "dependencies": [
+          "web_application"
+        ],
+        "security_considerations": [
+          "waf_rules",
+          "ssl_configuration",
+          "ddos_protection",
+          "traffic_filtering"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "key_vault",
+        "service_type": "azure_key_vault",
+        "purpose": "Centralized management of encryption keys, certificates, and application secrets with HSM-backed key protection",
+        "dependencies": [],
+        "security_considerations": [
+          "key_rotation",
+          "access_policies",
+          "secret_management",
+          "hsm_integration"
+        ],
+        "configuration_complexity": "high"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with multiple subnets: public subnet for Application Gateway, private subnet for App Service and supporting services, isolated subnet for database with service endpoints",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet -> Application Gateway -> App Service",
+        "App Service -> Storage Account via service endpoint",
+        "App Service -> SQL Database via private endpoint",
+        "All services -> Key Vault for secrets"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 2,
+      "storage_buckets": 1,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 4,
+      "total_estimated": 22
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:21:57.578592"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-KEYVAULT-SPECIFY_NETWORK_ACL",
+        "title": "Key Vault Missing Network Access Controls",
+        "description": "The Azure Key Vault is configured without network ACLs, allowing unrestricted access from any network location. This exposes sensitive encryption keys, certificates, and application secrets to potential unauthorized access from the internet.",
+        "severity": "high",
+        "affected_component": "key_vault",
+        "injection_strategy": "Remove or misconfigure network_acls block in azurerm_key_vault resource",
+        "business_impact": "Unauthorized access to encryption keys and client document encryption secrets could lead to data breaches, loss of attorney-client privilege, and regulatory violations under legal industry compliance requirements.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault#network_acls\n  good:\n    - |-\n      resource \"azurerm_key_vault\" \"good_example\" {\n        name                        = \"examplekeyvault\"\n        location                    = azurerm_resource_group.good_example.location\n        enabled_for_disk_encryption = true\n        soft_delete_retention_days  = 7\n        purge_protection_enabled    = false\n\n        network_acls {\n          bypass         = \"AzureServices\"\n          default_action = \"Deny\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_key_vault\" \"bad_example\" {\n        name                        = \"examplekeyvault\"\n        location                    = azurerm_resource_group.bad_example.location\n        enabled_for_disk_encryption = true\n        soft_delete_retention_days  = 7\n        purge_protection_enabled    = false\n      }",
+        "file_name": "specify_network_acl.yaml",
+        "service": "keyvault",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy Key Vault without network_acls configuration block",
+          "explanation": "Without network ACLs, the Key Vault accepts connections from any IP address, violating the principle of least privilege network access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-KEYVAULT-ENSURE_SECRET_EXPIRY",
+        "title": "Key Vault Secrets Without Expiration Dates",
+        "description": "Secrets stored in Azure Key Vault are configured without expiration dates, creating long-lived credentials that increase the risk of compromise and violate security best practices for credential rotation.",
+        "severity": "medium",
+        "affected_component": "key_vault",
+        "injection_strategy": "Remove expiration_date parameter from azurerm_key_vault_secret resources",
+        "business_impact": "Long-lived secrets increase the window of opportunity for attackers to exploit compromised credentials, potentially leading to persistent unauthorized access to client documents and case files.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret#expiration_date\n  good:\n    - |-\n      resource \"azurerm_key_vault_secret\" \"good_example\" {\n        name            = \"secret-sauce\"\n        value           = \"szechuan\"\n        key_vault_id    = azurerm_key_vault.example.id\n        expiration_date = \"1982-12-31T00:00:00Z\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_key_vault_secret\" \"bad_example\" {\n        name         = \"secret-sauce\"\n        value        = \"szechuan\"\n        key_vault_id = azurerm_key_vault.example.id\n      }",
+        "file_name": "ensure_secret_expiry.yaml",
+        "service": "keyvault",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Key Vault secrets without setting expiration_date parameter",
+          "explanation": "Secrets without expiration dates remain valid indefinitely, violating credential lifecycle management best practices"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+        "title": "SQL Database SSL Enforcement Disabled",
+        "description": "The Azure SQL Database is configured with SSL enforcement disabled, allowing unencrypted connections that could expose sensitive legal document metadata and client information during transit.",
+        "severity": "high",
+        "affected_component": "metadata_database",
+        "injection_strategy": "Set ssl_enforcement_enabled = false in azurerm_sql_server or azurerm_postgresql_server resource",
+        "business_impact": "Unencrypted database connections could allow attackers to intercept sensitive client data, case information, and document metadata, violating attorney-client privilege and legal industry compliance requirements.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#ssl_enforcement_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#ssl_enforcement_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mariadb_server#ssl_enforcement_enabled\n  good:\n    - |-\n      resource \"azurerm_postgresql_server\" \"good_example\" {\n        name = \"good_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = true\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_postgresql_server\" \"bad_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }",
+        "file_name": "enable_ssl_enforcement.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure database server with ssl_enforcement_enabled = false",
+          "explanation": "Disabling SSL enforcement allows clients to connect without encryption, exposing data in transit to potential interception"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Storage Account Using Insecure TLS Version",
+        "description": "The Azure Storage Account is configured to accept connections using outdated TLS versions (TLS 1.0/1.1), which have known security vulnerabilities and do not provide adequate encryption for sensitive legal documents.",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "Set min_tls_version to TLS1_0 or TLS1_1 in azurerm_storage_account resource",
+        "business_impact": "Weak TLS versions are vulnerable to cryptographic attacks, potentially allowing unauthorized access to encrypted legal documents and compromising client confidentiality.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = \"TLS1_0\" or \"TLS1_1\" in storage account configuration",
+          "explanation": "Older TLS versions have cryptographic weaknesses that can be exploited to decrypt communications"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENABLE_HTTP2",
+        "title": "App Service HTTP/2 Not Enabled",
+        "description": "The Azure App Service hosting the legal document management application is not configured to use HTTP/2, missing performance and security improvements including better encryption and reduced attack surface.",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "Omit http2_enabled parameter or set it to false in azurerm_app_service site_config block",
+        "business_impact": "Without HTTP/2, the application may be more vulnerable to certain network-based attacks and provides suboptimal security for client communications accessing sensitive legal documents.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#http2_enabled\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          http2_enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "enable_http2.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without http2_enabled = true in site_config block",
+          "explanation": "HTTP/1.1 lacks the security and performance improvements of HTTP/2, including better header compression and multiplexing"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+        "title": "Network Security Rule Allows SSH from Internet",
+        "description": "Network Security Group rules are configured to allow SSH access (port 22) from any internet source (0.0.0.0/0), creating an unnecessary attack vector for potential unauthorized access to infrastructure components.",
+        "severity": "high",
+        "affected_component": "application_gateway",
+        "injection_strategy": "Create network security rule with source_address_prefix = '*' and destination_port_range = '22'",
+        "business_impact": "Open SSH access from the internet significantly increases the risk of brute force attacks and unauthorized access to infrastructure, potentially compromising the entire legal document management platform.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/network_security_group#security_rule\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule#source_port_ranges\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        name                       = \"good_example_security_rule\"\n        direction                  = \"Inbound\"\n        access                     = \"Allow\"\n        protocol                   = \"TCP\"\n        source_port_range          = \"*\"\n        destination_port_range     = \"22\"\n        source_address_prefix      = \"82.102.23.23\" # specific address\n        destination_address_prefix = \"*\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        name                       = \"bad_example_security_rule\"\n        direction                  = \"Inbound\"\n        access                     = \"Allow\"\n        protocol                   = \"TCP\"\n        source_port_range          = \"*\"\n        destination_port_range     = \"22\"\n        source_address_prefix      = \"*\"\n        destination_address_prefix = \"*\"\n      }",
+        "file_name": "ssh_blocked_from_internet.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create NSG rule with source_address_prefix = '*' for SSH port 22",
+          "explanation": "Allowing SSH from any source creates an unnecessary attack vector that can be exploited for unauthorized access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET",
+        "title": "Activity Log Retention Not Properly Configured",
+        "description": "Azure Monitor activity log retention is not configured with adequate retention periods, potentially failing to meet legal industry audit and compliance requirements for maintaining access logs and security events.",
+        "severity": "medium",
+        "affected_component": "metadata_database",
+        "injection_strategy": "Configure monitor_log_profile with insufficient retention days or missing retention policy",
+        "business_impact": "Inadequate log retention could result in compliance violations and inability to conduct proper security investigations or meet legal discovery requirements for client matter documentation.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_log_profile#retention_policy\n  good:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"good_example\" {\n        name = \"good_example\"\n\n        retention_policy {\n          enabled = true\n          days    = 365\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"bad_example\" {\n        name = \"bad_example\"\n\n        retention_policy {\n          enabled = true\n          days    = 7\n        }\n      }",
+        "file_name": "activity_log_retention_set.yaml",
+        "service": "monitor",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set retention policy days to less than 365 or omit retention configuration",
+          "explanation": "Short retention periods may not meet compliance requirements and limit forensic investigation capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AZURE-KEYVAULT-SPECIFY_NETWORK_ACL",
+        "AZURE-KEYVAULT-ENSURE_SECRET_EXPIRY",
+        "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-ENABLE_HTTP2",
+        "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+        "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "monitor",
+        "keyvault"
+      ],
+      "services_covered": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "monitor",
+        "keyvault"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_name": "Legal Document Management Platform",
+    "cloud_provider": "azure",
+    "terraform_version": ">=1.0",
+    "provider_version": "azurerm ~> 3.0",
+    "total_resources": 26,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 3,
+      "storage": 2,
+      "database": 3,
+      "security": 4,
+      "monitoring": 1,
+      "other": 5
+    },
+    "estimated_deployment_time": "15-20 minutes",
+    "estimated_monthly_cost": "$770 USD",
+    "vulnerabilities_injected": 7,
+    "compliance_frameworks": [
+      "ABA Model Rules",
+      "State Bar Requirements",
+      "SOC 2 Type II"
+    ],
+    "architecture_components_implemented": [
+      "web_application",
+      "document_storage",
+      "metadata_database",
+      "search_service",
+      "application_gateway",
+      "key_vault"
+    ],
+    "deployment_regions": [
+      "East US"
+    ],
+    "high_availability": true,
+    "disaster_recovery": true,
+    "backup_enabled": true
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 24,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

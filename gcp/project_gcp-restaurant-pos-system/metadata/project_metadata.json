@@ -1,0 +1,347 @@
+{
+  "project_info": {
+    "project_id": "gcp-restaurant-pos-system",
+    "project_name": "Multi-Location Restaurant POS System",
+    "description": "A cloud-based Point of Sale system for a restaurant chain with 15+ locations. The system handles real-time order processing, inventory management, payment processing, and provides centralized reporting and analytics. Each restaurant location connects to the centralized system for menu updates, inventory tracking, sales reporting, and customer loyalty program management. The architecture supports high availability during peak dining hours and provides real-time synchronization across all locations.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "A growing restaurant chain needs to modernize their POS infrastructure to support rapid expansion, improve operational efficiency, and gain better insights into sales patterns and inventory management across all locations. The system must handle payment card data securely and provide real-time inventory updates to prevent stockouts.",
+    "components": [
+      {
+        "name": "pos_application_cluster",
+        "service_type": "google_container_cluster",
+        "purpose": "Hosts containerized POS application microservices including order management, payment processing, and inventory tracking services",
+        "dependencies": [
+          "pos_database",
+          "inventory_storage"
+        ],
+        "security_considerations": [
+          "PCI DSS compliance for payment data",
+          "network policies between services",
+          "pod security standards"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "pos_database",
+        "service_type": "google_sql_database_instance",
+        "purpose": "Stores transactional data including orders, customer information, menu items, and sales records with high availability",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption at rest and in transit",
+          "database access controls",
+          "backup encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "inventory_storage",
+        "service_type": "google_storage_bucket",
+        "purpose": "Stores inventory data files, menu images, receipt templates, and daily backup files from all restaurant locations",
+        "dependencies": [],
+        "security_considerations": [
+          "bucket access policies",
+          "object versioning",
+          "audit logging"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "payment_processor",
+        "service_type": "google_cloud_function",
+        "purpose": "Serverless payment processing service that handles credit card transactions and integrates with payment gateways",
+        "dependencies": [
+          "pos_database"
+        ],
+        "security_considerations": [
+          "PCI DSS compliance",
+          "secure API endpoints",
+          "payment token encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "analytics_pipeline",
+        "service_type": "google_dataflow",
+        "purpose": "Real-time data processing pipeline for sales analytics, inventory forecasting, and business intelligence reporting",
+        "dependencies": [
+          "pos_database",
+          "inventory_storage"
+        ],
+        "security_considerations": [
+          "data pipeline encryption",
+          "service account permissions",
+          "data masking"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "google_compute_global_forwarding_rule",
+        "purpose": "Distributes incoming requests from restaurant locations across the GKE cluster with SSL termination",
+        "dependencies": [
+          "pos_application_cluster"
+        ],
+        "security_considerations": [
+          "SSL certificate management",
+          "DDoS protection",
+          "geographic access controls"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with three subnets: public subnet for load balancer, private subnet for GKE cluster, and database subnet for Cloud SQL with private IP",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Restaurant locations connect via HTTPS to load balancer",
+        "GKE pods communicate via service mesh",
+        "Cloud Functions access database through VPC connector",
+        "Dataflow processes data through private IPs"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 6,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 4,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:33:27.661064"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-GKE-ENABLE_PRIVATE_CLUSTER",
+        "title": "Enable Private Cluster",
+        "description": "The GKE cluster hosting POS application microservices is configured with public nodes, exposing payment processing and order management services directly to the internet. This violates PCI DSS requirements and creates unnecessary attack surface for the restaurant's critical transaction processing infrastructure.",
+        "severity": "high",
+        "affected_component": "pos_application_cluster",
+        "injection_strategy": "Configure the google_container_cluster resource with private_cluster_config.enable_private_nodes = false",
+        "business_impact": "Exposes payment processing microservices to internet-based attacks, potentially compromising customer payment data and violating PCI DSS compliance requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/container_cluster#enable_private_nodes\n  good:\n    - |-\n      resource \"google_container_cluster\" \"good_example\" {\n        name     = \"my-gke-cluster\"\n        location = \"us-central1\"\n        private_cluster_config {\n          enable_private_nodes = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_container_cluster\" \"bad_example\" {\n        name     = \"my-gke-cluster\"\n        location = \"us-central1\"\n        private_cluster_config {\n          enable_private_nodes = false\n        }\n      }",
+        "file_name": "enable_private_cluster.yaml",
+        "service": "gke",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_private_nodes = false in the private_cluster_config block of the GKE cluster",
+          "explanation": "This configuration allows GKE nodes to have public IP addresses, making them directly accessible from the internet and bypassing network security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-ENABLE_BACKUP",
+        "title": "Enable Backup",
+        "description": "The Cloud SQL database instance storing critical POS transaction data, customer information, and sales records has automated backups disabled. This creates significant data loss risk for the restaurant chain's operational and financial data.",
+        "severity": "high",
+        "affected_component": "pos_database",
+        "injection_strategy": "Configure the google_sql_database_instance resource with settings.backup_configuration.enabled = false",
+        "business_impact": "Risk of permanent data loss including customer orders, payment records, and inventory data, potentially causing business disruption and regulatory compliance issues",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance#settings.backup_configuration.enabled=true\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          backup_configuration {\n            enabled = true\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          backup_configuration {\n            enabled = false\n          }\n        }\n      }",
+        "file_name": "enable_backup.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enabled = false in the backup_configuration block within the database instance settings",
+          "explanation": "This disables automated backups, leaving the database vulnerable to data loss from hardware failures, corruption, or accidental deletion"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-GKE-ENABLE_STACKDRIVER_LOGGING",
+        "title": "Enable Stackdriver Logging",
+        "description": "The GKE cluster lacks proper Kubernetes-specific logging configuration, using only basic Google Cloud logging instead of the enhanced Kubernetes logging service. This limits visibility into payment processing activities and security events across the POS microservices.",
+        "severity": "medium",
+        "affected_component": "pos_application_cluster",
+        "injection_strategy": "Configure the google_container_cluster resource with logging_service = 'logging.googleapis.com' instead of 'logging.googleapis.com/kubernetes'",
+        "business_impact": "Reduced visibility into security events and payment processing activities, hindering incident response and compliance auditing for PCI DSS requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/container_cluster#logging_service\n  good:\n    - |-\n      resource \"google_container_cluster\" \"good_example\" {\n        name            = \"my-gke-cluster\"\n        location        = \"us-central1\"\n        logging_service = \"logging.googleapis.com/kubernetes\"\n      }\n  bad:\n    - |-\n      resource \"google_container_cluster\" \"bad_example\" {\n        name            = \"my-gke-cluster\"\n        location        = \"us-central1\"\n        logging_service = \"logging.googleapis.com\"\n      }",
+        "file_name": "enable_stackdriver_logging.yaml",
+        "service": "gke",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set logging_service to 'logging.googleapis.com' instead of the Kubernetes-specific logging service",
+          "explanation": "This configuration provides only basic compute logging without Kubernetes-specific context, missing pod-level and container-level security events"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "title": "No User Granted Permissions",
+        "description": "IAM permissions are granted directly to individual user accounts instead of using service accounts or groups for accessing the payment processor Cloud Function and database resources. This violates the principle of least privilege and creates audit trail complications.",
+        "severity": "medium",
+        "affected_component": "payment_processor",
+        "injection_strategy": "Configure google_project_iam_binding or google_project_iam_member resources with members containing 'user:' prefixed accounts",
+        "business_impact": "Increased risk of unauthorized access to payment processing functions, difficulty in access management, and potential compliance violations for financial data handling",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://www.terraform.io/docs/providers/google/d/iam_policy.html#members\n  good:\n    - |-\n      resource \"google_project_iam_binding\" \"good_example\" {\n        members = [\n          \"group:test@example.com\",\n        ]\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_binding\" \"bad_example\" {\n        members = [\n          \"user:test@example.com\",\n        ]\n      }",
+        "file_name": "no_user_granted_permissions.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Include 'user:email@domain.com' entries in the members list of IAM bindings",
+          "explanation": "Direct user permissions bypass group-based access control and make it difficult to manage permissions at scale or during employee transitions"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure Tls Policy",
+        "description": "The load balancer SSL policy is configured with outdated TLS 1.1, allowing restaurant locations to connect using weak encryption protocols. This exposes payment data and order information to potential interception during transmission.",
+        "severity": "medium",
+        "affected_component": "load_balancer",
+        "injection_strategy": "Configure the google_compute_ssl_policy resource with min_tls_version = 'TLS_1_1' instead of 'TLS_1_2'",
+        "business_impact": "Vulnerable to TLS downgrade attacks and protocol-level vulnerabilities, potentially exposing customer payment data during transmission between restaurant locations and the central system",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_ssl_policy#min_tls_version\n  good:\n    - |-\n      resource \"google_compute_ssl_policy\" \"good_example\" {\n        name            = \"production-ssl-policy\"\n        profile         = \"MODERN\"\n        min_tls_version = \"TLS_1_2\"\n      }\n  bad:\n    - |-\n      resource \"google_compute_ssl_policy\" \"bad_example\" {\n        name            = \"production-ssl-policy\"\n        profile         = \"MODERN\"\n        min_tls_version = \"TLS_1_1\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version to 'TLS_1_1' in the SSL policy configuration",
+          "explanation": "TLS 1.1 has known vulnerabilities and is deprecated by security standards, making encrypted connections susceptible to various attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-GKE-NODE_METADATA_SECURITY",
+        "title": "Node Metadata Security",
+        "description": "GKE node pools are configured with legacy GCE metadata access instead of the secure GKE metadata server. This allows pods to access sensitive instance metadata that could be exploited to escalate privileges or access other GCP resources.",
+        "severity": "medium",
+        "affected_component": "pos_application_cluster",
+        "injection_strategy": "Configure google_container_node_pool with workload_metadata_config.mode = 'GCE_METADATA' instead of 'GKE_METADATA'",
+        "business_impact": "Potential for container escape attacks and unauthorized access to GCP resources, compromising the security isolation between POS microservices",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/container_cluster#node_metadata\n  good:\n    - |-\n      resource \"google_container_node_pool\" \"good_example\" {\n        cluster = google_container_cluster.primary.id\n        node_config {\n          workload_metadata_config {\n            mode = \"GKE_METADATA\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_container_node_pool\" \"bad_example\" {\n        cluster = google_container_cluster.primary.id\n        node_config {\n          workload_metadata_config {\n            mode = \"GCE_METADATA\"\n          }\n        }\n      }",
+        "file_name": "node_metadata_security.yaml",
+        "service": "gke",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set workload_metadata_config.mode to 'GCE_METADATA' in the node pool configuration",
+          "explanation": "This exposes the full GCE metadata API to pods, allowing potential access to service account tokens and instance information that should be restricted"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-GKE-USE_CLUSTER_LABELS",
+        "title": "Use Cluster Labels",
+        "description": "The GKE cluster lacks proper resource labeling, making it difficult to track costs, manage resources, and implement security policies across the multi-location restaurant POS infrastructure.",
+        "severity": "low",
+        "affected_component": "pos_application_cluster",
+        "injection_strategy": "Configure the google_container_cluster resource without the resource_labels block",
+        "business_impact": "Reduced visibility into resource usage and costs across restaurant locations, hindering proper security policy enforcement and compliance auditing",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/container_cluster#resource_labels\n  good:\n    - |-\n      resource \"google_container_cluster\" \"good_example\" {\n        name     = \"my-gke-cluster\"\n        location = \"us-central1\"\n        resource_labels = {\n          \"env\" = \"staging\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_container_cluster\" \"bad_example\" {\n        name     = \"my-gke-cluster\"\n        location = \"us-central1\"\n      }",
+        "file_name": "use_cluster_labels.yaml",
+        "service": "gke",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the resource_labels block entirely from the cluster configuration",
+          "explanation": "Without proper labeling, it becomes difficult to apply consistent security policies, track costs per location, and maintain governance over the infrastructure"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "GOOGLE-GKE-ENABLE_PRIVATE_CLUSTER",
+        "GOOGLE-SQL-ENABLE_BACKUP",
+        "GOOGLE-GKE-ENABLE_STACKDRIVER_LOGGING",
+        "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "GOOGLE-COMPUTE-USE_SECURE_TLS_POLICY",
+        "GOOGLE-GKE-NODE_METADATA_SECURITY",
+        "GOOGLE-GKE-USE_CLUSTER_LABELS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 2,
+        "medium": 4,
+        "low": 1
+      },
+      "service_categories": [
+        "gke",
+        "sql",
+        "compute",
+        "iam"
+      ],
+      "services_covered": [
+        "gke",
+        "sql",
+        "compute",
+        "iam"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_info": {
+      "total_resources": 30,
+      "resource_breakdown": {
+        "networking": 8,
+        "compute": 6,
+        "storage": 4,
+        "database": 3,
+        "security": 5,
+        "iam": 4
+      },
+      "estimated_deployment_time": "25-35 minutes",
+      "estimated_monthly_cost": "$450-650 USD",
+      "terraform_version": ">=1.0",
+      "provider_versions": {
+        "google": "~>4.0"
+      }
+    },
+    "architecture_coverage": {
+      "pos_application_cluster": "google_container_cluster + google_container_node_pool",
+      "pos_database": "google_sql_database_instance + google_sql_database",
+      "inventory_storage": "google_storage_bucket",
+      "payment_processor": "google_cloudfunctions_function",
+      "analytics_pipeline": "Implemented via GKE workloads (not separate Dataflow)",
+      "load_balancer": "google_compute_global_forwarding_rule + supporting resources"
+    },
+    "security_vulnerabilities_injected": 7,
+    "compliance_considerations": [
+      "PCI DSS requirements for payment processing",
+      "Data encryption at rest and in transit",
+      "Network segmentation and access controls",
+      "Audit logging and monitoring"
+    ],
+    "post_deployment_requirements": [
+      "Configure kubectl access to GKE cluster",
+      "Deploy application workloads to GKE",
+      "Set up monitoring and alerting",
+      "Configure backup procedures",
+      "Implement application-level security controls"
+    ]
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 31,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

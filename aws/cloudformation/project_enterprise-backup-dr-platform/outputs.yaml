@@ -1,0 +1,99 @@
+# Enterprise Backup and Disaster Recovery Platform - Outputs
+# This file contains important resource outputs for integration and management
+
+# Network Outputs
+VPCId: 
+  Description: "VPC ID for the backup platform infrastructure"
+  Export: "enterprise-backup-dr-platform-vpc-id"
+
+PublicSubnetId:
+  Description: "Public subnet ID for load balancers and NAT gateways"
+  Export: "enterprise-backup-dr-platform-public-subnet"
+
+PrivateSubnetId:
+  Description: "Private subnet ID for backup agents and internal services"
+  Export: "enterprise-backup-dr-platform-private-subnet"
+
+DataSubnetId:
+  Description: "Data subnet ID for database and sensitive resources"
+  Export: "enterprise-backup-dr-platform-data-subnet"
+
+# Storage Outputs
+BackupStorageBucketName:
+  Description: "Primary S3 bucket for backup data storage"
+  Export: "enterprise-backup-dr-platform-backup-bucket"
+
+BackupStorageBucketArn:
+  Description: "ARN of the primary backup storage bucket"
+
+ReplicationBucketName:
+  Description: "S3 bucket for cross-region backup replication"
+  Export: "enterprise-backup-dr-platform-replication-bucket"
+
+BackupStagingEFSId:
+  Description: "EFS file system ID for backup staging area"
+  Export: "enterprise-backup-dr-platform-staging-efs"
+
+# Database Outputs
+DatabaseEndpoint:
+  Description: "RDS database endpoint for backup metadata"
+  Export: "enterprise-backup-dr-platform-db-endpoint"
+
+DatabasePort:
+  Description: "RDS database port"
+  Value: "3306"
+
+# Compute Outputs
+BackupAgentsAutoScalingGroup:
+  Description: "Auto Scaling Group name for backup agents"
+  Export: "enterprise-backup-dr-platform-agents-asg"
+
+BackupAgentsSecurityGroupId:
+  Description: "Security group ID for backup agents"
+  Export: "enterprise-backup-dr-platform-agents-sg"
+
+# Lambda Function Outputs
+BackupOrchestrationFunctionArn:
+  Description: "ARN of the backup orchestration Lambda function"
+  Export: "enterprise-backup-dr-platform-orchestration-function"
+
+BackupOrchestrationFunctionName:
+  Description: "Name of the backup orchestration Lambda function"
+
+RecoveryServiceFunctionArn:
+  Description: "ARN of the recovery service Lambda function"
+  Export: "enterprise-backup-dr-platform-recovery-function"
+
+RecoveryServiceFunctionName:
+  Description: "Name of the recovery service Lambda function"
+
+# IAM Outputs
+BackupOrchestrationRoleArn:
+  Description: "IAM role ARN for backup orchestration service"
+  Export: "enterprise-backup-dr-platform-orchestration-role"
+
+BackupAgentsRoleArn:
+  Description: "IAM role ARN for backup agents"
+  Export: "enterprise-backup-dr-platform-agents-role"
+
+RecoveryServiceRoleArn:
+  Description: "IAM role ARN for recovery service"
+  Export: "enterprise-backup-dr-platform-recovery-role"
+
+# Monitoring Outputs
+BackupAlertsTopicArn:
+  Description: "SNS topic ARN for backup platform alerts"
+  Export: "enterprise-backup-dr-platform-alerts-topic"
+
+BackupJobsLogGroupName:
+  Description: "CloudWatch log group for backup jobs"
+  Export: "enterprise-backup-dr-platform-backup-logs"
+
+RecoveryLogGroupName:
+  Description: "CloudWatch log group for recovery operations"
+  Export: "enterprise-backup-dr-platform-recovery-logs"
+
+# Security Outputs
+DatabaseSecurityGroupId:
+  Description: "Security group ID for the metadata database"
+  Export: "enterprise-backup-dr-platform-database-sg"

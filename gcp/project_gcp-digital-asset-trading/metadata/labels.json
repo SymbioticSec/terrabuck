@@ -1,0 +1,435 @@
+{
+  "project_labels": {
+    "project_id": "gcp-digital-asset-trading",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8
+      },
+      "by_type": {
+        "access_control": 3,
+        "network_security": 3,
+        "logging_monitoring": 2,
+        "instance_security": 2
+      },
+      "by_trivy_service": {
+        "compute": 4,
+        "sql": 2,
+        "iam": 1,
+        "storage": 0
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "GOOGLE-SQL-ENABLE_PG_TEMP_FILE_LOGGING",
+        "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+        "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_FLOW_LOGS",
+        "GOOGLE-COMPUTE-RESTRICT_SSH_ACCESS",
+        "GOOGLE-SQL-PG_LOG_ERRORS",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM"
+      ],
+      "services_covered": [
+        "compute",
+        "sql",
+        "iam",
+        "networking"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+      "trivy_rule_info": {
+        "original_file": "no_project_wide_ssh_keys.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "project-wide SSH key access",
+        "network connectivity to instances"
+      ],
+      "mitigation_strategies": [
+        "set block-project-ssh-keys = true",
+        "use instance-specific SSH keys",
+        "implement IAM-based access controls"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "metadata = { block-project-ssh-keys = false }",
+        "secure_pattern": "metadata = { block-project-ssh-keys = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-SQL-ENABLE_PG_TEMP_FILE_LOGGING",
+      "trivy_rule_info": {
+        "original_file": "enable_pg_temp_file_logging.yaml",
+        "service_category": "sql",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/sql"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOX",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "database access",
+        "ability to create large temp files"
+      ],
+      "mitigation_strategies": [
+        "add log_temp_files database flag with value 0",
+        "configure proper PostgreSQL logging",
+        "implement database monitoring"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "database_flags block missing log_temp_files configuration",
+        "secure_pattern": "database_flags { name = \"log_temp_files\", value = \"0\" }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_monitoring",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_ingress.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet connectivity",
+        "knowledge of exposed services"
+      ],
+      "mitigation_strategies": [
+        "restrict source_ranges to specific IP blocks",
+        "use VPN or bastion hosts",
+        "implement proper network segmentation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "source_ranges = [\"0.0.0.0/0\"]",
+        "secure_pattern": "source_ranges = [\"10.0.0.0/8\", \"192.168.1.0/24\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+      "trivy_rule_info": {
+        "original_file": "no_user_granted_permissions.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/iam"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "user account compromise",
+        "existing IAM permissions"
+      ],
+      "mitigation_strategies": [
+        "use service accounts instead of user accounts",
+        "implement group-based permissions",
+        "follow principle of least privilege"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "members = [\"user:trader@company.com\"]",
+        "secure_pattern": "members = [\"serviceAccount:trading-service@project.iam.gserviceaccount.com\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_FLOW_LOGS",
+      "trivy_rule_info": {
+        "original_file": "enable_subnetwork_flow_logs.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network access",
+        "ability to generate suspicious traffic"
+      ],
+      "mitigation_strategies": [
+        "enable flow logs with log_config block",
+        "configure appropriate sampling rates",
+        "integrate with SIEM systems"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "enable_flow_logs = false or missing log_config block",
+        "secure_pattern": "log_config { aggregation_interval = \"INTERVAL_10_MIN\", flow_sampling = 0.5 }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_monitoring",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-RESTRICT_SSH_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "restrict_ssh_access.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "NIST",
+        "CIS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "SSH credentials",
+        "internet connectivity"
+      ],
+      "mitigation_strategies": [
+        "restrict SSH source ranges to specific IPs",
+        "use VPN or bastion hosts",
+        "implement key-based authentication only"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "source_ranges = [\"0.0.0.0/0\"] with ports = [\"22\"]",
+        "secure_pattern": "source_ranges = [\"192.168.1.0/24\"] with ports = [\"22\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-SQL-PG_LOG_ERRORS",
+      "trivy_rule_info": {
+        "original_file": "pg_log_errors.yaml",
+        "service_category": "sql",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/sql"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOX",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "database access",
+        "ability to trigger errors"
+      ],
+      "mitigation_strategies": [
+        "set log_min_messages to WARNING or lower",
+        "configure comprehensive database logging",
+        "implement log monitoring"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "log_min_messages = \"PANIC\"",
+        "secure_pattern": "log_min_messages = \"WARNING\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_monitoring",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+      "trivy_rule_info": {
+        "original_file": "enable_shielded_vm_vtpm.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "instance_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "NIST",
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "physical or hypervisor access",
+        "advanced persistent threat capabilities"
+      ],
+      "mitigation_strategies": [
+        "enable vTPM in shielded_instance_config",
+        "enable integrity monitoring",
+        "use secure boot"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "enable_vtpm = false",
+        "secure_pattern": "enable_vtpm = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "instance_security",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "trivy_rule_matching",
+      "security_pattern_recognition",
+      "compliance_checking",
+      "auto_remediation_planning"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "8 medium severity findings across compute, sql, and iam services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand common GCP security misconfigurations in financial systems",
+      "learn how Trivy detects infrastructure security issues",
+      "recognize patterns of access control vulnerabilities",
+      "understand the importance of logging and monitoring in trading platforms",
+      "learn network security best practices for cloud infrastructure"
+    ],
+    "prerequisite_knowledge": [
+      "basic Terraform syntax and GCP resources",
+      "understanding of cloud security principles",
+      "familiarity with network security concepts",
+      "basic knowledge of database security"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": "45",
+    "key_takeaways": [
+      "SSH access should be restricted to specific IP ranges, not 0.0.0.0/0",
+      "Database logging configuration is critical for security monitoring",
+      "IAM permissions should use service accounts rather than individual users",
+      "VPC flow logs are essential for network security monitoring",
+      "Shielded VM features provide additional protection against advanced threats"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "sql",
+      "iam",
+      "compute"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "gcp-digital-asset-trading",
+    "generation_timestamp": "2025-08-08T15:18:37.987678",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

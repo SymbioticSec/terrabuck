@@ -1,0 +1,663 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "defaultValue": "prod",
+      "metadata": {
+        "description": "Environment name (dev, test, prod)"
+      }
+    },
+    "sqlAdminUsername": {
+      "type": "string",
+      "defaultValue": "sqladmin",
+      "metadata": {
+        "description": "SQL Server administrator username"
+      }
+    },
+    "sqlAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SQL Server administrator password"
+      }
+    },
+    "appServiceSku": {
+      "type": "string",
+      "defaultValue": "S1",
+      "metadata": {
+        "description": "App Service Plan SKU"
+      }
+    },
+    "storageAccountType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "metadata": {
+        "description": "Storage Account type"
+      }
+    },
+    "searchServiceSku": {
+      "type": "string",
+      "defaultValue": "standard",
+      "metadata": {
+        "description": "Azure Cognitive Search service SKU"
+      }
+    },
+    "applicationGatewaySku": {
+      "type": "string",
+      "defaultValue": "WAF_v2",
+      "metadata": {
+        "description": "Application Gateway SKU"
+      }
+    }
+  },
+  "variables": {
+    "resourcePrefix": "[concat('legal-document-management-platform-', parameters('environmentName'))]",
+    "vnetName": "[concat(variables('resourcePrefix'), '-vnet')]",
+    "publicSubnetName": "public-subnet",
+    "privateSubnetName": "private-subnet",
+    "dataSubnetName": "data-subnet",
+    "nsgPublicName": "[concat(variables('resourcePrefix'), '-nsg-public')]",
+    "nsgPrivateName": "[concat(variables('resourcePrefix'), '-nsg-private')]",
+    "nsgDataName": "[concat(variables('resourcePrefix'), '-nsg-data')]",
+    "storageAccountName": "[concat('legaldocmgmt', uniqueString(resourceGroup().id))]",
+    "auditStorageAccountName": "[concat('auditlogs', uniqueString(resourceGroup().id))]",
+    "appServicePlanName": "[concat(variables('resourcePrefix'), '-asp')]",
+    "webAppName": "[concat(variables('resourcePrefix'), '-webapp')]",
+    "functionAppName": "[concat(variables('resourcePrefix'), '-functions')]",
+    "sqlServerName": "[concat(variables('resourcePrefix'), '-sqlserver')]",
+    "sqlDatabaseName": "[concat(variables('resourcePrefix'), '-database')]",
+    "searchServiceName": "[concat(variables('resourcePrefix'), '-search')]",
+    "applicationGatewayName": "[concat(variables('resourcePrefix'), '-appgw')]",
+    "publicIpName": "[concat(variables('resourcePrefix'), '-pip')]",
+    "keyVaultName": "[concat(variables('resourcePrefix'), '-kv')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgPublicName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgPrivateName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgDataName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('publicSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.1.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgPublicName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('privateSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.2.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgPrivateName'))]"
+              },
+              "delegations": [
+                {
+                  "name": "Microsoft.Web/serverFarms",
+                  "properties": {
+                    "serviceName": "Microsoft.Web/serverFarms"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('dataSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.3.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgDataName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgPublicName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowHTTP",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "0.0.0.0/0",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "AllowHTTPS",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "0.0.0.0/0",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgPrivateName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowAppGateway",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "10.0.1.0/24",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgDataName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowPrivateSubnet",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "1433",
+              "sourceAddressPrefix": "10.0.2.0/24",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-04-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "sku": {
+        "name": "[parameters('storageAccountType')]"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_0",
+        "allowBlobPublicAccess": false,
+        "networkAcls": {
+          "defaultAction": "Allow"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-04-01",
+      "name": "[variables('auditStorageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "sku": {
+        "name": "[parameters('appServiceSku')]"
+      },
+      "properties": {
+        "reserved": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('webAppName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "netFrameworkVersion": "v6.0",
+          "alwaysOn": true,
+          "connectionStrings": [
+            {
+              "name": "DefaultConnection",
+              "connectionString": "[concat('Server=tcp:', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('sqlDatabaseName'), ';Persist Security Info=False;User ID=', parameters('sqlAdminUsername'), ';Password=', parameters('sqlAdminPassword'), ';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]",
+              "type": "SQLAzure"
+            }
+          ]
+        },
+        "virtualNetworkSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('privateSubnetName'))]"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-04-01').keys[0].value)]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet"
+            }
+          ]
+        },
+        "virtualNetworkSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('privateSubnetName'))]"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2021-02-01-preview",
+      "name": "[variables('sqlServerName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdminUsername')]",
+        "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+        "version": "12.0",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2021-02-01-preview",
+      "name": "[concat(variables('sqlServerName'), '/', variables('sqlDatabaseName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "sku": {
+        "name": "S1",
+        "tier": "Standard"
+      },
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/securityAlertPolicies",
+      "apiVersion": "2021-02-01-preview",
+      "name": "[concat(variables('sqlServerName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('auditStorageAccountName'))]"
+      ],
+      "properties": {
+        "state": "Enabled",
+        "disabledAlerts": [
+          "Sql_Injection",
+          "Data_Exfiltration"
+        ],
+        "emailAddresses": [],
+        "emailAccountAdmins": false,
+        "storageEndpoint": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('auditStorageAccountName'))).primaryEndpoints.blob]",
+        "storageAccountAccessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('auditStorageAccountName')), '2021-04-01').keys[0].value]",
+        "retentionDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.Search/searchServices",
+      "apiVersion": "2020-08-01",
+      "name": "[variables('searchServiceName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "sku": {
+        "name": "[parameters('searchServiceSku')]"
+      },
+      "properties": {
+        "replicaCount": 1,
+        "partitionCount": 1,
+        "hostingMode": "default",
+        "publicNetworkAccess": "enabled",
+        "networkRuleSet": {
+          "ipRules": []
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/applicationGateways",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('applicationGatewayName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "sku": {
+          "name": "[parameters('applicationGatewaySku')]",
+          "tier": "WAF_v2",
+          "capacity": 2
+        },
+        "gatewayIPConfigurations": [
+          {
+            "name": "appGatewayIpConfig",
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('publicSubnetName'))]"
+              }
+            }
+          }
+        ],
+        "frontendIPConfigurations": [
+          {
+            "name": "appGwPublicFrontendIp",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              }
+            }
+          }
+        ],
+        "frontendPorts": [
+          {
+            "name": "port_80",
+            "properties": {
+              "port": 80
+            }
+          },
+          {
+            "name": "port_443",
+            "properties": {
+              "port": 443
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "appServiceBackendPool",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "fqdn": "[reference(resourceId('Microsoft.Web/sites', variables('webAppName'))).defaultHostName]"
+                }
+              ]
+            }
+          }
+        ],
+        "backendHttpSettingsCollection": [
+          {
+            "name": "appServiceBackendHttpSettings",
+            "properties": {
+              "port": 80,
+              "protocol": "Http",
+              "cookieBasedAffinity": "Disabled",
+              "pickHostNameFromBackendAddress": true,
+              "requestTimeout": 30
+            }
+          }
+        ],
+        "httpListeners": [
+          {
+            "name": "appGatewayHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', variables('applicationGatewayName'), 'appGwPublicFrontendIp')]"
+              },
+              "frontendPort": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/frontendPorts', variables('applicationGatewayName'), 'port_80')]"
+              },
+              "protocol": "Http"
+            }
+          }
+        ],
+        "requestRoutingRules": [
+          {
+            "name": "rule1",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/httpListeners', variables('applicationGatewayName'), 'appGatewayHttpListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/backendAddressPools', variables('applicationGatewayName'), 'appServiceBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', variables('applicationGatewayName'), 'appServiceBackendHttpSettings')]"
+              }
+            }
+          }
+        ],
+        "webApplicationFirewallConfiguration": {
+          "enabled": true,
+          "firewallMode": "Detection",
+          "ruleSetType": "OWASP",
+          "ruleSetVersion": "3.0"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2021-04-01-preview",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Legal Document Management Platform"
+      },
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [],
+        "enabledForDeployment": false,
+        "enabledForDiskEncryption": false,
+        "enabledForTemplateDeployment": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 90,
+        "enableRbacAuthorization": false,
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/firewallRules",
+      "apiVersion": "2021-02-01-preview",
+      "name": "[concat(variables('sqlServerName'), '/AllowAzureServices')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+      ],
+      "properties": {
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "0.0.0.0"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "deleteRetentionPolicy": {
+          "enabled": true,
+          "days": 30
+        },
+        "isVersioningEnabled": true
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default/documents')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/networkConfig",
+      "apiVersion": "2021-02-01",
+      "name": "[concat(variables('webAppName'), '/virtualNetwork')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('webAppName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ],
+      "properties": {
+        "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('privateSubnetName'))]",
+        "swiftSupported": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/networkConfig",
+      "apiVersion": "2021-02-01",
+      "name": "[concat(variables('functionAppName'), '/virtualNetwork')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ],
+      "properties": {
+        "subnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('privateSubnetName'))]",
+        "swiftSupported": true
+      }
+    }
+  ]
+}

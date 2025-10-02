@@ -1,0 +1,443 @@
+{
+  "project_labels": {
+    "project_id": "azure_fleet_management_platform",
+    "overall_security_posture": "critical",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 2,
+        "medium": 4,
+        "low": 2
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "network": 2,
+        "logging": 1
+      },
+      "by_trivy_service": {
+        "storage": 2,
+        "database": 3,
+        "appservice": 2,
+        "network": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AZURE-STORAGE-NO_PUBLIC_ACCESS",
+        "AZURE-DATABASE-NO_PUBLIC_FIREWALL_ACCESS",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+        "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+        "AZURE-APPSERVICE-ENABLE_HTTP2",
+        "AZURE-STORAGE-QUEUE_SERVICES_LOGGING_ENABLED"
+      ],
+      "services_covered": [
+        "storage",
+        "database",
+        "appservice",
+        "network"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AZURE-STORAGE-NO_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_access.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/storage/no_public_access.yaml"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "knowledge_of_storage_url"
+      ],
+      "mitigation_strategies": [
+        "set_container_access_type_to_private",
+        "implement_sas_tokens_for_authorized_access",
+        "use_azure_cdn_with_authentication"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "container_access_type = \"blob\"",
+        "secure_pattern": "container_access_type = \"private\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-NO_PUBLIC_FIREWALL_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_firewall_access.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/no_public_firewall_access.yaml"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "database_credentials_or_brute_force"
+      ],
+      "mitigation_strategies": [
+        "restrict_firewall_to_specific_ip_ranges",
+        "use_virtual_network_rules",
+        "implement_private_endpoints",
+        "enable_azure_ad_authentication"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "start_ip_address = \"0.0.0.0\" AND end_ip_address = \"255.255.255.255\"",
+        "secure_pattern": "start_ip_address = \"10.0.0.0\" AND end_ip_address = \"10.0.0.255\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 9.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+      "trivy_rule_info": {
+        "original_file": "enable_audit.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/enable_audit.yaml"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA",
+        "DOT"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "database_access",
+        "malicious_intent"
+      ],
+      "mitigation_strategies": [
+        "configure_extended_auditing_policy",
+        "set_appropriate_retention_period",
+        "configure_storage_account_for_audit_logs",
+        "enable_threat_detection"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_sql_server without azurerm_mssql_server_extended_auditing_policy",
+        "secure_pattern": "azurerm_mssql_server_extended_auditing_policy with proper configuration"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_monitoring",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+      "trivy_rule_info": {
+        "original_file": "authentication_enabled.yaml",
+        "service_category": "appservice",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/appservice/authentication_enabled.yaml"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "knowledge_of_application_url"
+      ],
+      "mitigation_strategies": [
+        "enable_app_service_authentication",
+        "configure_azure_ad_integration",
+        "implement_oauth2_providers",
+        "set_up_custom_authentication"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_app_service without auth_settings block",
+        "secure_pattern": "auth_settings { enabled = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_egress.yaml",
+        "service_category": "network",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/network/no_public_egress.yaml"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "medium",
+      "remediation_effort": "high",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "compromised_application",
+        "network_access"
+      ],
+      "mitigation_strategies": [
+        "restrict_outbound_rules_to_specific_destinations",
+        "implement_application_security_groups",
+        "use_service_endpoints",
+        "configure_nat_gateway_for_controlled_egress"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "destination_address_prefix = \"0.0.0.0/0\" AND direction = \"Outbound\"",
+        "secure_pattern": "destination_address_prefix = \"10.0.0.0/16\" AND direction = \"Outbound\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+      "trivy_rule_info": {
+        "original_file": "enable_ssl_enforcement.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/enable_ssl_enforcement.yaml"
+      },
+      "vulnerability_class": "encryption",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "man_in_the_middle_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_ssl_enforcement",
+        "set_minimum_tls_version_to_1_2",
+        "configure_certificate_validation",
+        "implement_connection_encryption"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "ssl_enforcement_enabled = false",
+        "secure_pattern": "ssl_enforcement_enabled = true AND ssl_minimal_tls_version_enforced = \"TLS1_2\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-APPSERVICE-ENABLE_HTTP2",
+      "trivy_rule_info": {
+        "original_file": "enable_http2.yaml",
+        "service_category": "appservice",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/appservice/enable_http2.yaml"
+      },
+      "vulnerability_class": "performance_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 3,
+      "compliance_relevance": [
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "http1_specific_attack_tools"
+      ],
+      "mitigation_strategies": [
+        "enable_http2_in_site_config",
+        "update_application_to_support_http2",
+        "configure_load_balancer_for_http2",
+        "test_application_compatibility"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "site_config without http2_enabled OR http2_enabled = false",
+        "secure_pattern": "site_config { http2_enabled = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "performance_security",
+        "severity_numeric": 3.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-STORAGE-QUEUE_SERVICES_LOGGING_ENABLED",
+      "trivy_rule_info": {
+        "original_file": "queue_services_logging_enabled.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/storage/queue_services_logging_enabled.yaml"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 4,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "storage_access",
+        "malicious_activity"
+      ],
+      "mitigation_strategies": [
+        "configure_queue_properties_logging",
+        "set_appropriate_retention_policy",
+        "enable_read_write_delete_logging",
+        "configure_log_analytics_integration"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "queue_properties without logging block",
+        "secure_pattern": "queue_properties { logging { delete = true, read = true, write = true } }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_monitoring",
+        "severity_numeric": 4.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_assessment",
+      "security_posture_scoring"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,CRITICAL .",
+      "expected_trivy_output": "8 vulnerabilities detected across storage, database, appservice, and network categories"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_azure_security_misconfigurations",
+      "learn_trivy_based_vulnerability_detection",
+      "master_infrastructure_as_code_security",
+      "practice_real_world_fleet_management_security_scenarios",
+      "develop_skills_in_automated_security_scanning"
+    ],
+    "prerequisite_knowledge": [
+      "basic_terraform_syntax",
+      "azure_services_fundamentals",
+      "networking_concepts",
+      "database_security_principles",
+      "web_application_security"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "public_access_controls_are_critical_for_data_protection",
+      "database_security_requires_multiple_layers_of_defense",
+      "authentication_must_be_enabled_for_all_web_applications",
+      "network_segmentation_prevents_lateral_movement",
+      "logging_and_monitoring_enable_incident_response",
+      "trivy_can_automatically_detect_these_common_misconfigurations"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "network",
+      "database",
+      "storage",
+      "appservice"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "azure_fleet_management_platform",
+    "generation_timestamp": "2025-08-06T22:29:04.068106",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

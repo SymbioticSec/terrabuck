@@ -1,0 +1,316 @@
+{
+  "project_info": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "project_name": "HIPAA-Compliant Patient Portal",
+    "description": "A secure healthcare patient portal enabling patients to access medical records, schedule appointments, communicate with providers, and manage prescriptions. Built with HIPAA compliance requirements including data encryption, audit logging, and access controls. Features include patient authentication via Azure AD B2C, encrypted document storage, secure messaging, and integration with existing EHR systems.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "multi-tier_web_application",
+    "business_context": "Mid-sized healthcare provider (regional hospital system) needs to offer patients secure digital access to their health information while maintaining HIPAA compliance. The system must handle 10,000+ registered patients with peak usage during business hours.",
+    "components": [
+      {
+        "name": "patient_web_app",
+        "service_type": "azure_app_service",
+        "purpose": "Frontend web application for patient portal interface with SSL termination and custom domain",
+        "dependencies": [
+          "patient_api",
+          "azure_ad_b2c"
+        ],
+        "security_considerations": [
+          "HTTPS enforcement",
+          "CORS configuration",
+          "authentication integration"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "patient_api",
+        "service_type": "azure_app_service",
+        "purpose": "Backend REST API handling patient data operations, appointment scheduling, and secure messaging",
+        "dependencies": [
+          "patient_database",
+          "document_storage",
+          "key_vault"
+        ],
+        "security_considerations": [
+          "API authentication",
+          "data validation",
+          "rate limiting",
+          "audit logging"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "patient_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Encrypted database storing patient records, appointments, and audit logs with automated backups",
+        "dependencies": [
+          "key_vault"
+        ],
+        "security_considerations": [
+          "transparent data encryption",
+          "firewall rules",
+          "threat detection",
+          "backup encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "document_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Encrypted blob storage for medical documents, lab results, and imaging files with lifecycle management",
+        "dependencies": [
+          "key_vault"
+        ],
+        "security_considerations": [
+          "encryption at rest",
+          "access policies",
+          "private endpoints",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "azure_ad_b2c",
+        "service_type": "azure_ad_b2c",
+        "purpose": "Patient identity and access management with MFA support and custom user flows",
+        "dependencies": [],
+        "security_considerations": [
+          "MFA enforcement",
+          "password policies",
+          "account lockout",
+          "identity protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "key_vault",
+        "service_type": "azure_key_vault",
+        "purpose": "Centralized management of encryption keys, connection strings, and certificates for HIPAA compliance",
+        "dependencies": [],
+        "security_considerations": [
+          "access policies",
+          "key rotation",
+          "HSM protection",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with three subnets: public subnet for Application Gateway, private subnet for App Services, and data subnet for SQL Database with service endpoints",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Application Gateway routes to App Services in private subnet",
+        "App Services connect to SQL Database via service endpoints",
+        "Private endpoints for storage account",
+        "Key Vault accessible via private endpoint"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 2,
+      "storage_accounts": 1,
+      "databases": 1,
+      "networking_components": 6,
+      "security_components": 8,
+      "identity_components": 2,
+      "monitoring_components": 3,
+      "total_estimated": 23
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T17:03:43.588934"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "title": "Database Public Network Access Enabled",
+        "description": "The Azure SQL Database has public network access enabled, allowing connections from the internet. This violates HIPAA security requirements for protected health information (PHI) by exposing the database to potential unauthorized access.",
+        "severity": "high",
+        "affected_component": "patient_database",
+        "injection_strategy": "Configure the Azure SQL Database with public_network_access_enabled = true in the ARM template",
+        "business_impact": "Direct exposure of patient health records to internet-based attacks, potential HIPAA violations, regulatory fines, and loss of patient trust",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mariadb_server#public_network_access_enabled\n  good:\n    - |-\n      resource \"azurerm_postgresql_server\" \"good_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_postgresql_server\" \"bad_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = true\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set the SQL Database resource with 'publicNetworkAccess': 'Enabled' in the ARM template properties",
+          "explanation": "This configuration allows the database to accept connections from any IP address on the internet, bypassing the intended private network isolation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "title": "Storage Account Network Rules Allow All Access",
+        "description": "The Azure Storage Account containing medical documents has network rules configured with default action 'Allow', permitting unrestricted access to patient documents and lab results stored in blob storage.",
+        "severity": "high",
+        "affected_component": "document_storage",
+        "injection_strategy": "Configure storage account network rules with defaultAction set to 'Allow' instead of 'Deny'",
+        "business_impact": "Unauthorized access to patient medical documents, lab results, and imaging files, leading to HIPAA violations and potential data breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account_network_rules#default_action\n  good:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"good_example\" {\n\n        default_action             = \"Deny\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"bad_example\" {\n\n        default_action             = \"Allow\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }",
+        "file_name": "default_action_deny.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure the storage account networkRuleSet with 'defaultAction': 'Allow' in the ARM template",
+          "explanation": "This allows access from all networks by default, rather than denying access and only allowing specific trusted networks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "title": "App Service HTTPS Not Enforced",
+        "description": "The patient portal web application and API do not enforce HTTPS-only connections, allowing sensitive patient data to be transmitted over unencrypted HTTP connections.",
+        "severity": "high",
+        "affected_component": "patient_web_app",
+        "injection_strategy": "Configure App Service without httpsOnly property or set it to false",
+        "business_impact": "Patient health information transmitted in plaintext, vulnerable to man-in-the-middle attacks, HIPAA encryption requirements violated",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/function_app#https_only\n  good:\n    - |-\n      resource \"azurerm_function_app\" \"good_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n        https_only                 = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_function_app\" \"bad_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the 'httpsOnly': true property from the App Service resource definition in ARM template",
+          "explanation": "Without explicit HTTPS enforcement, the application accepts both HTTP and HTTPS connections, allowing unencrypted data transmission"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-KEYVAULT-ENSURE_KEY_EXPIRY",
+        "title": "Key Vault Keys Without Expiration",
+        "description": "Encryption keys in Azure Key Vault used for patient data encryption do not have expiration dates configured, violating key rotation best practices required for HIPAA compliance.",
+        "severity": "medium",
+        "affected_component": "key_vault",
+        "injection_strategy": "Create Key Vault keys without setting the expiration_date property",
+        "business_impact": "Long-lived encryption keys increase risk of compromise, non-compliance with HIPAA key management requirements, potential regulatory violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_key#expiration_date\n  good:\n    - |-\n      resource \"azurerm_key_vault_key\" \"good_example\" {\n        name            = \"generated-certificate\"\n        key_vault_id    = azurerm_key_vault.example.id\n        key_type        = \"RSA\"\n        key_size        = 2048\n        expiration_date = \"1982-12-31T00:00:00Z\"\n\n        key_opts = [\n          \"decrypt\",\n          \"encrypt\",\n          \"sign\",\n          \"unwrapKey\",\n          \"verify\",\n          \"wrapKey\",\n        ]\n      }\n  bad:\n    - |-\n      resource \"azurerm_key_vault_key\" \"bad_example\" {\n        name         = \"generated-certificate\"\n        key_vault_id = azurerm_key_vault.example.id\n        key_type     = \"RSA\"\n        key_size     = 2048\n\n        key_opts = [\n          \"decrypt\",\n          \"encrypt\",\n          \"sign\",\n          \"unwrapKey\",\n          \"verify\",\n          \"wrapKey\",\n        ]\n      }",
+        "file_name": "ensure_key_expiry.yaml",
+        "service": "keyvault",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Define Key Vault key resources without the 'attributes.expires' property in ARM template",
+          "explanation": "Keys without expiration dates remain valid indefinitely, increasing the window of opportunity for compromise"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "SQL Server Auditing Not Configured",
+        "description": "The Azure SQL Server hosting patient data does not have extended auditing policy configured, missing critical audit trail requirements for HIPAA compliance and security monitoring.",
+        "severity": "medium",
+        "affected_component": "patient_database",
+        "injection_strategy": "Deploy SQL Server without configuring the extended auditing policy resource",
+        "business_impact": "No audit trail for database access and modifications, inability to detect unauthorized access to patient records, HIPAA compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy only the SQL Server resource without the corresponding auditingSettings or extendedAuditingPolicy configuration",
+          "explanation": "Without auditing configuration, database access and data modifications are not logged, eliminating visibility into potential security incidents"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "title": "App Service Using Weak TLS Version",
+        "description": "The patient portal applications are configured to accept TLS 1.0 connections, which is considered cryptographically weak and violates HIPAA encryption standards for protecting patient data in transit.",
+        "severity": "medium",
+        "affected_component": "patient_api",
+        "injection_strategy": "Configure App Service site_config with min_tls_version set to '1.0' instead of '1.2'",
+        "business_impact": "Vulnerable to TLS downgrade attacks, weak encryption for patient data transmission, potential HIPAA compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.2\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set the App Service siteConfig.minTlsVersion to '1.0' in the ARM template",
+          "explanation": "TLS 1.0 has known cryptographic weaknesses and is deprecated, making encrypted connections vulnerable to attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "title": "App Service Missing Managed Identity",
+        "description": "The patient portal applications do not have managed identity configured, requiring the use of connection strings and secrets for accessing Key Vault and other Azure services, increasing security risks.",
+        "severity": "medium",
+        "affected_component": "patient_web_app",
+        "injection_strategy": "Deploy App Service resources without configuring the identity block",
+        "business_impact": "Increased attack surface through stored secrets, difficulty in credential rotation, potential exposure of service credentials",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#identity\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        identity {\n          type         = \"UserAssigned\"\n          identity_ids = \"webapp1\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "account_identity_registered.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without the 'identity' property in the ARM template resource definition",
+          "explanation": "Without managed identity, applications must use stored credentials, increasing the risk of credential exposure and making rotation more difficult"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-KEYVAULT-ENSURE_KEY_EXPIRY",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "keyvault",
+        "storage",
+        "appservice",
+        "database"
+      ],
+      "services_covered": [
+        "keyvault",
+        "storage",
+        "appservice",
+        "database"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 21,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

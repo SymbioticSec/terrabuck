@@ -1,0 +1,336 @@
+{
+  "project_info": {
+    "project_id": "azure_video_streaming_platform",
+    "project_name": "Enterprise Video Streaming and Training Platform",
+    "description": "A comprehensive video streaming platform for corporate training and communications, featuring secure video upload, transcoding, content delivery, and analytics. Supports live streaming for company meetings and on-demand training content with role-based access control and detailed viewing analytics.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "microservices",
+    "business_context": "Large enterprise needs to deliver training content and corporate communications to 10,000+ employees across multiple regions. Requires secure video hosting, adaptive streaming, user authentication, progress tracking, and compliance reporting for training completion.",
+    "components": [
+      {
+        "name": "video_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Stores raw uploaded videos, transcoded outputs, thumbnails, and static assets with blob lifecycle management",
+        "dependencies": [],
+        "security_considerations": [
+          "blob_encryption",
+          "access_key_rotation",
+          "private_endpoint_access"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "media_services",
+        "service_type": "azure_media_services",
+        "purpose": "Handles video transcoding, adaptive bitrate streaming, content protection, and live streaming workflows",
+        "dependencies": [
+          "video_storage"
+        ],
+        "security_considerations": [
+          "content_key_policies",
+          "streaming_locators",
+          "token_authentication"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "api_backend",
+        "service_type": "azure_app_service",
+        "purpose": "REST API for video management, user authentication, progress tracking, and analytics aggregation",
+        "dependencies": [
+          "video_database",
+          "video_storage",
+          "media_services"
+        ],
+        "security_considerations": [
+          "managed_identity",
+          "app_service_authentication",
+          "cors_policies"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "video_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores video metadata, user profiles, viewing progress, analytics data, and access permissions",
+        "dependencies": [],
+        "security_considerations": [
+          "transparent_data_encryption",
+          "firewall_rules",
+          "azure_ad_authentication"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "web_frontend",
+        "service_type": "azure_app_service",
+        "purpose": "React-based video player interface with admin dashboard for content management and analytics",
+        "dependencies": [
+          "api_backend",
+          "cdn_endpoint"
+        ],
+        "security_considerations": [
+          "https_only",
+          "custom_domain_ssl",
+          "authentication_integration"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "cdn_endpoint",
+        "service_type": "azure_cdn",
+        "purpose": "Global content delivery for video streaming with edge caching and bandwidth optimization",
+        "dependencies": [
+          "media_services",
+          "video_storage"
+        ],
+        "security_considerations": [
+          "token_authentication",
+          "geo_filtering",
+          "https_enforcement"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with multiple subnets for web tier, application tier, and data tier isolation",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "CDN connects to Media Services streaming endpoints",
+        "Web frontend communicates with API backend via HTTPS",
+        "API backend connects to SQL Database via private endpoint",
+        "Media Services processes videos from Storage Account",
+        "All components use managed identities for authentication"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 2,
+      "storage_accounts": 1,
+      "databases": 1,
+      "networking_components": 6,
+      "media_services": 1,
+      "cdn_profiles": 1,
+      "app_service_plans": 2,
+      "security_components": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T17:58:00.300028"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "The video storage account is configured with an insecure TLS version (TLS 1.0), allowing deprecated encryption protocols that are vulnerable to attacks. This affects the security of video uploads and content delivery.",
+        "severity": "medium",
+        "affected_component": "video_storage",
+        "injection_strategy": "Configure storage account with min_tls_version set to TLS1_0 instead of TLS1_2",
+        "business_impact": "Video content and metadata could be intercepted during upload/download using weak encryption, compromising corporate training materials and user data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = \"TLS1_0\" in the video storage account configuration",
+          "explanation": "This allows clients to connect using deprecated TLS 1.0/1.1 protocols that have known vulnerabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-NO_PUBLIC_FIREWALL_ACCESS",
+        "title": "No Public Firewall Access",
+        "description": "The video database firewall is configured to allow access from all IP addresses (0.0.0.0-255.255.255.255), exposing sensitive video metadata, user profiles, and analytics data to the internet.",
+        "severity": "medium",
+        "affected_component": "video_database",
+        "injection_strategy": "Configure SQL firewall rule with start_ip_address = \"0.0.0.0\" and end_ip_address = \"255.255.255.255\"",
+        "business_impact": "Database containing user profiles, video metadata, viewing analytics, and access permissions exposed to internet-based attacks and unauthorized access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/sql_firewall_rule#end_ip_address\n  good:\n    - |-\n      resource \"azurerm_sql_firewall_rule\" \"good_example\" {\n        name                = \"good_rule\"\n        resource_group_name = azurerm_resource_group.example.name\n        server_name         = azurerm_sql_server.example.name\n        start_ip_address    = \"0.0.0.0\"\n        end_ip_address      = \"0.0.0.0\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_firewall_rule\" \"bad_example\" {\n        name                = \"bad_rule\"\n        resource_group_name = azurerm_resource_group.example.name\n        server_name         = azurerm_sql_server.example.name\n        start_ip_address    = \"0.0.0.0\"\n        end_ip_address      = \"255.255.255.255\"\n      }",
+        "file_name": "no_public_firewall_access.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create firewall rule allowing full internet access: start_ip_address = \"0.0.0.0\", end_ip_address = \"255.255.255.255\"",
+          "explanation": "This creates a firewall rule that allows database connections from any IP address on the internet"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "The API backend and web frontend App Services are configured with insecure TLS version 1.0, allowing weak encryption for API communications and user authentication flows.",
+        "severity": "medium",
+        "affected_component": "api_backend",
+        "injection_strategy": "Configure App Service site_config with min_tls_version = \"1.0\"",
+        "business_impact": "API communications, user authentication tokens, and video streaming requests vulnerable to man-in-the-middle attacks using weak TLS protocols",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.2\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = \"1.0\" in the App Service site_config block",
+          "explanation": "This allows the App Service to accept connections using deprecated TLS 1.0 protocol with known security vulnerabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "title": "Enforce HTTPS",
+        "description": "The web frontend App Service does not enforce HTTPS-only connections, allowing unencrypted HTTP traffic that could expose user sessions and video streaming URLs.",
+        "severity": "medium",
+        "affected_component": "web_frontend",
+        "injection_strategy": "Omit https_only = true configuration or set it to false in App Service",
+        "business_impact": "User authentication credentials, session tokens, and video streaming URLs transmitted in plaintext, vulnerable to interception and session hijacking",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/function_app#https_only\n  good:\n    - |-\n      resource \"azurerm_function_app\" \"good_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n        https_only                 = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_function_app\" \"bad_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without https_only = true configuration",
+          "explanation": "This allows the App Service to accept both HTTP and HTTPS connections, enabling plaintext communication"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-THREAT_ALERT_EMAIL_SET",
+        "title": "Threat Alert Email Set",
+        "description": "The video database security alert policy is configured without email addresses for threat notifications, preventing security teams from receiving alerts about potential SQL injection or data exfiltration attempts.",
+        "severity": "medium",
+        "affected_component": "video_database",
+        "injection_strategy": "Configure security alert policy with empty email_addresses array",
+        "business_impact": "Security incidents targeting video metadata and user data go unnoticed, delaying incident response and allowing prolonged unauthorized access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#email_addresses\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        email_addresses = [\"db-security@acme.org\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        email_addresses = []\n      }",
+        "file_name": "threat_alert_email_set.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set email_addresses = [] in the security alert policy configuration",
+          "explanation": "This enables threat detection but provides no notification mechanism, making alerts ineffective"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "title": "No Public Ingress",
+        "description": "Network security rules allow inbound traffic from all internet sources (0.0.0.0/0) to internal services, bypassing the intended network segmentation for the video streaming platform.",
+        "severity": "medium",
+        "affected_component": "video_storage",
+        "injection_strategy": "Create network security rule with source_address_prefix = \"0.0.0.0/0\" and access = \"Allow\"",
+        "business_impact": "Internal video processing services and storage endpoints exposed to internet-based attacks, potentially allowing unauthorized video access or service disruption",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Inbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction             = \"Inbound\"\n        source_address_prefix = \"0.0.0.0/0\"\n        access                = \"Allow\"\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create NSG rule with source_address_prefix = \"0.0.0.0/0\" and access = \"Allow\"",
+          "explanation": "This creates a network rule that allows inbound traffic from any internet source, bypassing network segmentation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-SECURITYCENTER-ALERT_ON_SEVERE_NOTIFICATIONS",
+        "title": "Alert On Severe Notifications",
+        "description": "Azure Security Center contact configuration has alert notifications disabled, preventing the security team from receiving critical alerts about the video streaming platform infrastructure.",
+        "severity": "medium",
+        "affected_component": "video_storage",
+        "injection_strategy": "Configure Security Center contact with alert_notifications = false",
+        "business_impact": "Critical security incidents affecting video content, user data, or infrastructure go unnoticed, delaying incident response and potentially allowing data breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/security_center_contact#alert_notifications\n  good:\n    - |-\n      resource \"azurerm_security_center_contact\" \"good_example\" {\n        email = \"good_example@example.com\"\n        phone = \"+1-555-555-5555\"\n\n        alert_notifications = true\n        alerts_to_admins    = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_security_center_contact\" \"bad_example\" {\n        email = \"bad_example@example.com\"\n        phone = \"+1-555-555-5555\"\n\n        alert_notifications = false\n        alerts_to_admins    = false\n      }",
+        "file_name": "alert_on_severe_notifications.yaml",
+        "service": "securitycenter",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set alert_notifications = false in Security Center contact configuration",
+          "explanation": "This disables automatic notifications for security alerts, creating a blind spot in security monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-QUEUE_SERVICES_LOGGING_ENABLED",
+        "title": "Queue Services Logging Enabled",
+        "description": "The video storage account lacks proper logging configuration for queue operations, preventing audit trails of video processing workflows and content management activities.",
+        "severity": "medium",
+        "affected_component": "video_storage",
+        "injection_strategy": "Configure storage account queue_properties without logging block",
+        "business_impact": "No audit trail for video upload queues, transcoding workflows, and content management operations, hindering security investigations and compliance reporting",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#logging\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                     = \"example\"\n        resource_group_name      = data.azurerm_resource_group.example.name\n        location                 = data.azurerm_resource_group.example.location\n        account_tier             = \"Standard\"\n        account_replication_type = \"GRS\"\n        queue_properties {\n          logging {\n            delete                = true\n            read                  = true\n            write                 = true\n            version               = \"1.0\"\n            retention_policy_days = 10\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                     = \"example\"\n        resource_group_name      = data.azurerm_resource_group.example.name\n        location                 = data.azurerm_resource_group.example.location\n        account_tier             = \"Standard\"\n        account_replication_type = \"GRS\"\n        queue_properties {\n        }\n      }",
+        "file_name": "queue_services_logging_enabled.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure queue_properties block without logging configuration",
+          "explanation": "This disables logging for queue operations, removing audit trails for video processing workflows"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-DATABASE-NO_PUBLIC_FIREWALL_ACCESS",
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-DATABASE-THREAT_ALERT_EMAIL_SET",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-SECURITYCENTER-ALERT_ON_SEVERE_NOTIFICATIONS",
+        "AZURE-STORAGE-QUEUE_SERVICES_LOGGING_ENABLED"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "securitycenter",
+        "database",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "services_covered": [
+        "securitycenter",
+        "database",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 19,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

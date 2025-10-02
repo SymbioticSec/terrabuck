@@ -1,0 +1,312 @@
+{
+  "project_info": {
+    "project_id": "azure_legal_docmgmt_platform",
+    "project_name": "Legal Document Management Platform",
+    "description": "A secure document management platform for law firms handling sensitive legal documents with client matter organization, document versioning, secure sharing, and comprehensive audit trails. The platform supports multiple file types, automated document classification, and role-based access controls for attorneys, paralegals, and clients.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "secure_web_application",
+    "business_context": "Mid-sized law firm (50-200 employees) needs to digitize their document management process, ensure client confidentiality, maintain attorney-client privilege, and comply with legal industry regulations while enabling secure collaboration on cases and client matters.",
+    "components": [
+      {
+        "name": "web_application",
+        "service_type": "azure_app_service",
+        "purpose": "Hosts the main web application for document upload, management, and user interface",
+        "dependencies": [
+          "document_storage",
+          "application_database",
+          "search_service"
+        ],
+        "security_considerations": [
+          "authentication",
+          "authorization",
+          "ssl_termination",
+          "input_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "document_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Secure blob storage for legal documents with encryption at rest and versioning",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_policies",
+          "immutable_storage",
+          "private_endpoints"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores document metadata, user information, case details, and audit logs",
+        "dependencies": [],
+        "security_considerations": [
+          "data_encryption",
+          "access_controls",
+          "backup_encryption",
+          "threat_detection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "search_service",
+        "service_type": "azure_cognitive_search",
+        "purpose": "Provides full-text search capabilities across documents and metadata",
+        "dependencies": [
+          "document_storage",
+          "application_database"
+        ],
+        "security_considerations": [
+          "index_encryption",
+          "api_key_management",
+          "network_isolation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "document_processor",
+        "service_type": "azure_functions",
+        "purpose": "Serverless functions for document processing, OCR, and automated classification",
+        "dependencies": [
+          "document_storage",
+          "application_database"
+        ],
+        "security_considerations": [
+          "managed_identity",
+          "secure_configuration",
+          "input_sanitization"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_gateway",
+        "service_type": "azure_application_gateway",
+        "purpose": "Web application firewall and load balancer with SSL termination",
+        "dependencies": [
+          "web_application"
+        ],
+        "security_considerations": [
+          "waf_rules",
+          "ssl_certificates",
+          "ddos_protection"
+        ],
+        "configuration_complexity": "high"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with multiple subnets for application tier, data tier, and gateway tier with network security groups controlling traffic flow",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Application Gateway in public subnet routes to App Service in private subnet",
+        "App Service connects to SQL Database and Storage via private endpoints",
+        "Functions access storage and database through VNet integration"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_accounts": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T18:03:25.498676"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "title": "Database Threat Alerts Disabled",
+        "description": "The SQL Database security alert policy has critical threat alerts disabled, including SQL injection and data exfiltration detection. This leaves the legal document database vulnerable to advanced persistent threats without proper alerting mechanisms.",
+        "severity": "medium",
+        "affected_component": "application_database",
+        "injection_strategy": "Configure azurerm_mssql_server_security_alert_policy with disabled_alerts containing critical alert types",
+        "business_impact": "Undetected SQL injection attacks or data exfiltration attempts on sensitive legal documents could compromise client confidentiality and attorney-client privilege",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#disabled_alerts\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts            = []\n        retention_days             = 20\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        retention_days = 20\n      }",
+        "file_name": "all_threat_alerts_enabled.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set disabled_alerts to include 'Sql_Injection' and 'Data_Exfiltration' in the security alert policy",
+          "explanation": "Disabling these critical alerts means the system won't detect or alert on SQL injection attempts or suspicious data access patterns that could indicate a breach"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Insecure TLS Policy on Document Storage",
+        "description": "The Azure Storage Account used for legal document storage is configured to accept TLS 1.0 connections, which is cryptographically weak and vulnerable to protocol downgrade attacks.",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "Set min_tls_version to 'TLS1_0' in azurerm_storage_account configuration",
+        "business_impact": "Sensitive legal documents could be intercepted during transmission due to weak encryption protocols, potentially exposing confidential client information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure storage account with min_tls_version = 'TLS1_0' instead of 'TLS1_2'",
+          "explanation": "TLS 1.0 has known vulnerabilities and can be exploited through protocol downgrade attacks, compromising data in transit"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "title": "HTTP Traffic Allowed on Web Application",
+        "description": "The Azure App Service hosting the legal document management web application allows HTTP traffic, potentially exposing sensitive legal data in transit without encryption.",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "Omit https_only property or set it to false in azurerm_app_service configuration",
+        "business_impact": "Legal documents and client communications could be intercepted over unencrypted HTTP connections, violating attorney-client privilege and regulatory compliance",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/function_app#https_only\n  good:\n    - |-\n      resource \"azurerm_function_app\" \"good_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n        https_only                 = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_function_app\" \"bad_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without https_only = true configuration",
+          "explanation": "Without HTTPS enforcement, the application accepts HTTP requests, transmitting sensitive legal data in plaintext"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "title": "Overpermissive Network Security Rules",
+        "description": "Network Security Group rules allow inbound traffic from any source (0.0.0.0/0) to the legal document management platform, creating unnecessary attack surface.",
+        "severity": "medium",
+        "affected_component": "application_gateway",
+        "injection_strategy": "Configure azurerm_network_security_rule with source_address_prefix = '0.0.0.0/0' and access = 'Allow'",
+        "business_impact": "Unrestricted network access increases the risk of unauthorized access attempts, DDoS attacks, and potential data breaches of confidential legal documents",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Inbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n    - |-\n      resource \"azurerm_network_security_rule\" \"allow_lb_prober\" {\n        direction               = \"Inbound\"\n        access                  = \"Allow\"\n        protocol                = \"Tcp\" # Probes are always TCP\n        source_port_range       = \"*\"\n        destination_port_ranges = \"443\"\n        source_address_prefix   = \"168.63.129.16\" // single public IP (Azure well known)\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction             = \"Inbound\"\n        source_address_prefix = \"0.0.0.0/0\"\n        access                = \"Allow\"\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create NSG rule with source_address_prefix = '0.0.0.0/0' allowing inbound access from anywhere",
+          "explanation": "This configuration allows traffic from any IP address on the internet, significantly expanding the attack surface"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-THREAT_ALERT_EMAIL_SET",
+        "title": "Missing Threat Alert Email Configuration",
+        "description": "The SQL Database security alert policy is not configured to send threat notifications to security administrators, potentially delaying incident response for the legal document database.",
+        "severity": "medium",
+        "affected_component": "application_database",
+        "injection_strategy": "Configure azurerm_mssql_server_security_alert_policy with empty email_addresses array",
+        "business_impact": "Security incidents affecting client data may go unnoticed, delaying breach response and potentially violating legal industry notification requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#email_addresses\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        email_addresses = [\"db-security@acme.org\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        email_addresses = []\n      }",
+        "file_name": "threat_alert_email_set.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set email_addresses = [] in the security alert policy configuration",
+          "explanation": "Without email notifications, security teams won't receive immediate alerts about potential database threats"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENABLE_HTTP2",
+        "title": "HTTP/2 Not Enabled on Web Application",
+        "description": "The Azure App Service hosting the legal document management platform is not configured to use HTTP/2, missing performance and security improvements for handling sensitive legal document transfers.",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "Omit http2_enabled property or set it to false in azurerm_app_service site_config",
+        "business_impact": "Slower document uploads/downloads and missing HTTP/2 security features could impact user experience and potentially expose the application to HTTP/1.1 specific vulnerabilities",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#http2_enabled\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          http2_enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n        site_config {\n          http2_enabled = false\n        }\n      }",
+        "file_name": "enable_http2.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without http2_enabled = true in site_config block",
+          "explanation": "HTTP/1.1 lacks the multiplexing and header compression security features of HTTP/2, potentially exposing more metadata"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "Database Auditing Not Configured",
+        "description": "Extended auditing policy is not configured for the SQL Server hosting legal document metadata, preventing comprehensive audit trail generation required for legal compliance.",
+        "severity": "medium",
+        "affected_component": "application_database",
+        "injection_strategy": "Deploy azurerm_sql_server without corresponding azurerm_mssql_server_extended_auditing_policy resource",
+        "business_impact": "Lack of comprehensive database audit logs could violate legal industry compliance requirements and hinder forensic investigation of potential data breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy SQL Server without the azurerm_mssql_server_extended_auditing_policy resource",
+          "explanation": "Without extended auditing, detailed database access logs are not captured, limiting forensic capabilities and compliance"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-DATABASE-THREAT_ALERT_EMAIL_SET",
+        "AZURE-APPSERVICE-ENABLE_HTTP2",
+        "AZURE-DATABASE-ENABLE_AUDIT"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "storage",
+        "network",
+        "appservice",
+        "database"
+      ],
+      "services_covered": [
+        "storage",
+        "network",
+        "appservice",
+        "database"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 21,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

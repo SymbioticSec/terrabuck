@@ -1,0 +1,258 @@
+{
+  "original_components": [
+    {
+      "name": "sensor_data_ingestion",
+      "service_type": "google_pubsub_topic",
+      "purpose": "Ingests high-frequency sensor data from production line equipment including temperature, pressure, vibration, and cycle counts",
+      "dependencies": [],
+      "security_considerations": [
+        "device_authentication",
+        "message_encryption",
+        "rate_limiting"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "data_processing_pipeline",
+      "service_type": "google_cloud_functions",
+      "purpose": "Processes incoming sensor data, performs real-time anomaly detection, calculates OEE metrics, and triggers maintenance alerts",
+      "dependencies": [
+        "sensor_data_ingestion"
+      ],
+      "security_considerations": [
+        "function_permissions",
+        "environment_variables",
+        "vpc_connector"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "production_database",
+      "service_type": "google_sql_database_instance",
+      "purpose": "Stores work orders, production schedules, quality inspection records, and processed manufacturing metrics",
+      "dependencies": [
+        "data_processing_pipeline"
+      ],
+      "security_considerations": [
+        "database_encryption",
+        "private_ip",
+        "authorized_networks",
+        "backup_encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "time_series_storage",
+      "service_type": "google_storage_bucket",
+      "purpose": "Archives raw sensor data and historical production metrics for trend analysis and compliance reporting",
+      "dependencies": [
+        "data_processing_pipeline"
+      ],
+      "security_considerations": [
+        "bucket_encryption",
+        "lifecycle_policies",
+        "access_controls"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "mes_application",
+      "service_type": "google_compute_instance",
+      "purpose": "Hosts the main MES web application for production monitoring, work order management, and quality control interfaces",
+      "dependencies": [
+        "production_database",
+        "time_series_storage"
+      ],
+      "security_considerations": [
+        "os_hardening",
+        "application_firewall",
+        "ssl_certificates"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "reporting_service",
+      "service_type": "google_cloud_functions",
+      "purpose": "Generates automated production reports, quality compliance documents, and maintenance schedules",
+      "dependencies": [
+        "production_database",
+        "time_series_storage"
+      ],
+      "security_considerations": [
+        "report_access_controls",
+        "data_anonymization"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "sensor_data_ingestion",
+      "service_type": "google_pubsub_topic",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "data_processing_pipeline",
+      "service_type": "google_cloud_functions",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "production_database",
+      "service_type": "google_sql_database_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "time_series_storage",
+      "service_type": "google_storage_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "mes_application",
+      "service_type": "google_compute_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "reporting_service",
+      "service_type": "google_cloud_functions",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 360,
+      "resource_count": 24,
+      "resources_found": [
+        {
+          "type": "google_project_service",
+          "name": "required_apis"
+        },
+        {
+          "type": "google_compute_project_metadata",
+          "name": "default"
+        },
+        {
+          "type": "google_compute_network",
+          "name": "mes_vpc"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "public_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "private_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "data_subnet"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_ssh_public"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_http_https"
+        },
+        {
+          "type": "google_pubsub_topic",
+          "name": "sensor_data_ingestion"
+        },
+        {
+          "type": "google_pubsub_topic",
+          "name": "quality_data"
+        },
+        {
+          "type": "google_pubsub_subscription",
+          "name": "sensor_data_subscription"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "time_series_storage"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "archive_storage"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "google_sql_database_instance",
+          "name": "production_database"
+        },
+        {
+          "type": "random_id",
+          "name": "db_suffix"
+        },
+        {
+          "type": "google_sql_database",
+          "name": "mes_database"
+        },
+        {
+          "type": "google_sql_user",
+          "name": "mes_user"
+        },
+        {
+          "type": "google_service_account",
+          "name": "function_service_account"
+        },
+        {
+          "type": "google_project_iam_member",
+          "name": "function_permissions"
+        },
+        {
+          "type": "google_cloudfunctions_function",
+          "name": "data_processing_pipeline"
+        },
+        {
+          "type": "google_cloudfunctions_function",
+          "name": "reporting_service"
+        },
+        {
+          "type": "google_compute_instance",
+          "name": "mes_application"
+        },
+        {
+          "type": "google_compute_instance_group",
+          "name": "mes_instance_group"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 46,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 49,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 208,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

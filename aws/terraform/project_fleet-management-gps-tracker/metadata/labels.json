@@ -1,0 +1,414 @@
+{
+  "project_labels": {
+    "project_id": "fleet-management-gps-tracker",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 1,
+        "high": 2,
+        "medium": 4
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "network": 1,
+        "logging": 1
+      },
+      "by_trivy_service": {
+        "apigateway": 1,
+        "rds": 1,
+        "sns": 1,
+        "ec2": 1,
+        "cloudwatch": 1,
+        "iam": 1,
+        "cloudtrail": 1
+      }
+    },
+    "complexity_score": 7,
+    "realism_score": 9,
+    "educational_value": 8,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-APIGATEWAY-NO_PUBLIC_ACCESS",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-SNS-ENABLE_TOPIC_ENCRYPTION",
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION"
+      ],
+      "services_covered": [
+        "apigateway",
+        "rds",
+        "sns",
+        "ec2",
+        "cloudwatch",
+        "iam",
+        "cloudtrail"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-APIGATEWAY-NO_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_access.yaml",
+        "service_category": "apigateway",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/apigateway"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "api_endpoint_discovery"
+      ],
+      "mitigation_strategies": [
+        "implement_aws_iam_authorization",
+        "require_api_keys",
+        "use_cognito_user_pools",
+        "implement_request_validation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "authorization = \"NONE\" without api_key_required",
+        "secure_pattern": "authorization = \"AWS_IAM\" or authorization = \"COGNITO_USER_POOLS\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "disable_public_access.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/rds"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "PCI-DSS",
+        "HIPAA",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "database_credentials"
+      ],
+      "mitigation_strategies": [
+        "set_publicly_accessible_false",
+        "use_vpc_security_groups",
+        "implement_database_subnet_groups",
+        "enable_ssl_connections"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "publicly_accessible = true",
+        "secure_pattern": "publicly_accessible = false with proper VPC configuration"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 9.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-SNS-ENABLE_TOPIC_ENCRYPTION",
+      "trivy_rule_info": {
+        "original_file": "enable_topic_encryption.yaml",
+        "service_category": "sns",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/sns"
+      },
+      "vulnerability_class": "encryption",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "message_interception_capability",
+        "network_access"
+      ],
+      "mitigation_strategies": [
+        "configure_kms_master_key_id",
+        "use_customer_managed_keys",
+        "implement_message_encryption",
+        "enable_delivery_status_logging"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_sns_topic without kms_master_key_id",
+        "secure_pattern": "kms_master_key_id = aws_kms_key.sns_key.arn"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+      "trivy_rule_info": {
+        "original_file": "no_public_ingress_sgr.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "port_scanning_tools"
+      ],
+      "mitigation_strategies": [
+        "restrict_cidr_blocks_to_specific_ranges",
+        "use_application_load_balancer",
+        "implement_web_application_firewall",
+        "configure_vpc_endpoints"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "cidr_blocks = [\"0.0.0.0/0\"] for ingress rules",
+        "secure_pattern": "cidr_blocks = [\"10.0.0.0/16\"] or specific IP ranges"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+      "trivy_rule_info": {
+        "original_file": "log_group_customer_key.yaml",
+        "service_category": "cloudwatch",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudwatch"
+      },
+      "vulnerability_class": "encryption",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "aws_account_access",
+        "cloudwatch_permissions"
+      ],
+      "mitigation_strategies": [
+        "configure_customer_managed_kms_key",
+        "implement_key_rotation_policy",
+        "set_appropriate_key_permissions",
+        "enable_cloudtrail_for_key_usage"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_cloudwatch_log_group without kms_key_id",
+        "secure_pattern": "kms_key_id = aws_kms_key.cloudwatch.arn"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 4.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+      "trivy_rule_info": {
+        "original_file": "require_symbols_in_passwords.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "authentication",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "password_attack_tools",
+        "user_enumeration"
+      ],
+      "mitigation_strategies": [
+        "set_require_symbols_true",
+        "implement_mfa_requirements",
+        "set_minimum_password_length",
+        "enable_password_expiration"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_iam_account_password_policy without require_symbols",
+        "secure_pattern": "require_symbols = true with comprehensive password policy"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "authentication",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+      "trivy_rule_info": {
+        "original_file": "enable_log_validation.yaml",
+        "service_category": "cloudtrail",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudtrail"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "ISO27001"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "aws_account_compromise",
+        "cloudtrail_access"
+      ],
+      "mitigation_strategies": [
+        "enable_log_file_validation",
+        "configure_cloudtrail_encryption",
+        "implement_log_integrity_monitoring",
+        "set_up_cloudwatch_alarms"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_cloudtrail without enable_log_file_validation",
+        "secure_pattern": "enable_log_file_validation = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_monitoring",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "security_posture_assessment",
+      "compliance_checking"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,CRITICAL .",
+      "expected_trivy_output": "7 vulnerabilities detected across apigateway, rds, sns, ec2, cloudwatch, iam, cloudtrail services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_common_aws_security_misconfigurations",
+      "learn_trivy_security_scanning_capabilities",
+      "practice_terraform_security_best_practices",
+      "recognize_access_control_vulnerabilities",
+      "implement_encryption_at_rest_and_transit",
+      "configure_proper_network_security_controls"
+    ],
+    "prerequisite_knowledge": [
+      "basic_terraform_syntax",
+      "aws_services_fundamentals",
+      "security_principles",
+      "infrastructure_as_code_concepts"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "default_configurations_often_insecure",
+      "layered_security_approach_essential",
+      "encryption_should_be_enabled_everywhere",
+      "network_access_should_be_restricted",
+      "trivy_catches_common_misconfigurations",
+      "automated_scanning_prevents_vulnerabilities"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": true,
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "apigateway",
+      "cloudwatch",
+      "cloudtrail",
+      "ec2",
+      "iam",
+      "rds",
+      "sns"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "fleet-management-gps-tracker",
+    "generation_timestamp": "2025-08-06T23:13:45.885131",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

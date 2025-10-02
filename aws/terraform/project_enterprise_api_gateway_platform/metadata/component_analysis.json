@@ -1,0 +1,317 @@
+{
+  "original_components": [
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "purpose": "Main API gateway handling all incoming requests, authentication, rate limiting, and routing to backend services",
+      "dependencies": [
+        "lambda_authorizer",
+        "cloudwatch_monitoring"
+      ],
+      "security_considerations": [
+        "API key management",
+        "OAuth2 token validation",
+        "request/response filtering",
+        "DDoS protection"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "lambda_authorizer",
+      "service_type": "aws_lambda",
+      "purpose": "Custom authorization logic for validating JWT tokens, API keys, and implementing role-based access control",
+      "dependencies": [
+        "dynamodb_tokens",
+        "secrets_manager"
+      ],
+      "security_considerations": [
+        "Token validation",
+        "IAM role permissions",
+        "secure environment variables"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "dynamodb_tokens",
+      "service_type": "aws_dynamodb",
+      "purpose": "Stores API keys, rate limiting counters, and user session data with high-performance access patterns",
+      "dependencies": [],
+      "security_considerations": [
+        "Encryption at rest",
+        "fine-grained access control",
+        "audit logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "s3_api_docs",
+      "service_type": "aws_s3",
+      "purpose": "Hosts API documentation, OpenAPI specifications, and developer portal static assets",
+      "dependencies": [
+        "cloudfront_cdn"
+      ],
+      "security_considerations": [
+        "Bucket policies",
+        "versioning",
+        "access logging"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "cloudfront_cdn",
+      "service_type": "aws_cloudfront",
+      "purpose": "CDN for developer portal and API documentation with global edge locations for performance",
+      "dependencies": [
+        "s3_api_docs"
+      ],
+      "security_considerations": [
+        "Origin access identity",
+        "SSL/TLS termination",
+        "geographic restrictions"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "cloudwatch_monitoring",
+      "service_type": "aws_cloudwatch",
+      "purpose": "Comprehensive monitoring, alerting, and analytics for API usage, performance metrics, and error tracking",
+      "dependencies": [
+        "api_gateway",
+        "lambda_authorizer"
+      ],
+      "security_considerations": [
+        "Log retention policies",
+        "metric access controls",
+        "sensitive data filtering"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "secrets_manager",
+      "service_type": "aws_secrets_manager",
+      "purpose": "Secure storage and rotation of API keys, database credentials, and third-party service tokens",
+      "dependencies": [],
+      "security_considerations": [
+        "Encryption in transit and at rest",
+        "automatic rotation",
+        "access policies"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "lambda_authorizer",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "dynamodb_tokens",
+      "service_type": "aws_dynamodb",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "s3_api_docs",
+      "service_type": "aws_s3",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "cloudfront_cdn",
+      "service_type": "aws_cloudfront",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "cloudwatch_monitoring",
+      "service_type": "aws_cloudwatch",
+      "implementation_confidence": 0.5
+    },
+    {
+      "name": "secrets_manager",
+      "service_type": "aws_secrets_manager",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 496,
+      "resource_count": 34,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "main"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "main"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "api_gateway"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "lambda"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "api_docs"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_s3_bucket_public_access_block",
+          "name": "api_docs"
+        },
+        {
+          "type": "aws_dynamodb_table",
+          "name": "tokens"
+        },
+        {
+          "type": "aws_secretsmanager_secret",
+          "name": "api_keys"
+        },
+        {
+          "type": "aws_secretsmanager_secret_version",
+          "name": "api_keys"
+        },
+        {
+          "type": "random_password",
+          "name": "jwt_secret"
+        },
+        {
+          "type": "random_password",
+          "name": "admin_key"
+        },
+        {
+          "type": "random_password",
+          "name": "partner_key"
+        },
+        {
+          "type": "aws_iam_user",
+          "name": "root_user"
+        },
+        {
+          "type": "aws_iam_access_key",
+          "name": "root_access"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_authorizer"
+        },
+        {
+          "type": "aws_iam_role_policy",
+          "name": "lambda_authorizer_policy"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_vpc_execution"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "authorizer"
+        },
+        {
+          "type": "aws_api_gateway_rest_api",
+          "name": "main"
+        },
+        {
+          "type": "aws_api_gateway_resource",
+          "name": "api_resource"
+        },
+        {
+          "type": "aws_api_gateway_method",
+          "name": "api_method"
+        },
+        {
+          "type": "aws_api_gateway_integration",
+          "name": "api_integration"
+        },
+        {
+          "type": "aws_api_gateway_method_response",
+          "name": "api_response"
+        },
+        {
+          "type": "aws_api_gateway_integration_response",
+          "name": "api_integration_response"
+        },
+        {
+          "type": "aws_api_gateway_deployment",
+          "name": "main"
+        },
+        {
+          "type": "aws_cloudfront_distribution",
+          "name": "api_docs"
+        },
+        {
+          "type": "aws_cloudfront_origin_access_identity",
+          "name": "api_docs"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "api_gateway"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "lambda_authorizer"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 29,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 56,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 215,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

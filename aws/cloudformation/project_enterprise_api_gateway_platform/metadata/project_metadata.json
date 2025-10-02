@@ -1,0 +1,332 @@
+{
+  "project_info": {
+    "project_id": "enterprise_api_gateway_platform",
+    "project_name": "Enterprise API Gateway and Management Platform",
+    "description": "A comprehensive API gateway platform for a large enterprise to manage, secure, and monitor all internal and external API traffic. The platform provides centralized API management, authentication, rate limiting, analytics, and developer portal capabilities. It serves as the single entry point for all microservices and legacy systems, enabling the enterprise to expose APIs securely to partners, mobile apps, and third-party integrations while maintaining governance and compliance.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "Large enterprise (Fortune 500 company) needs to modernize their API strategy and provide a unified gateway for 200+ internal microservices and legacy systems. The platform must handle 10M+ API calls per day from various clients including mobile apps, partner integrations, and internal systems. Critical requirements include enterprise-grade security, detailed analytics, developer self-service capabilities, and 99.9% uptime SLA.",
+    "components": [
+      {
+        "name": "api_gateway_cluster",
+        "service_type": "aws_api_gateway",
+        "purpose": "Primary API gateway handling all incoming requests with throttling, authentication, and routing to backend services",
+        "dependencies": [
+          "authentication_service",
+          "backend_services",
+          "analytics_storage"
+        ],
+        "security_considerations": [
+          "API key management",
+          "OAuth 2.0 integration",
+          "rate limiting",
+          "DDoS protection"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "authentication_service",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless authentication and authorization service handling JWT tokens, API keys, and enterprise SSO integration",
+        "dependencies": [
+          "user_database",
+          "api_gateway_cluster"
+        ],
+        "security_considerations": [
+          "JWT token validation",
+          "credential encryption",
+          "session management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "backend_services",
+        "service_type": "aws_ecs",
+        "purpose": "Containerized backend microservices running business logic and data processing behind the API gateway",
+        "dependencies": [
+          "application_database",
+          "api_gateway_cluster"
+        ],
+        "security_considerations": [
+          "container security",
+          "service-to-service authentication",
+          "network isolation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_database",
+        "service_type": "aws_rds",
+        "purpose": "Primary PostgreSQL database storing application data, API configurations, and business records",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption at rest",
+          "backup security",
+          "access control",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "user_database",
+        "service_type": "aws_dynamodb",
+        "purpose": "NoSQL database storing user profiles, API keys, authentication tokens, and session data for fast lookups",
+        "dependencies": [],
+        "security_considerations": [
+          "data encryption",
+          "fine-grained access control",
+          "audit trails"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "analytics_storage",
+        "service_type": "aws_s3",
+        "purpose": "Data lake storing API usage logs, performance metrics, and analytics data for reporting and monitoring",
+        "dependencies": [],
+        "security_considerations": [
+          "bucket policies",
+          "data lifecycle management",
+          "access logging"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "developer_portal",
+        "service_type": "aws_cloudfront",
+        "purpose": "CDN-hosted developer portal providing API documentation, testing tools, and self-service API key management",
+        "dependencies": [
+          "analytics_storage",
+          "authentication_service"
+        ],
+        "security_considerations": [
+          "SSL/TLS termination",
+          "origin access control",
+          "geographic restrictions"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancers and CDN, private subnets for application services, and isolated data subnets for databases",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet Gateway for public access",
+        "NAT Gateway for private subnet outbound",
+        "VPC Endpoints for AWS services",
+        "Application Load Balancer distributing traffic to ECS services"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3,
+      "total_estimated": 25
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:47:18.743996"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-CLOUDFRONT-ENFORCE_HTTPS",
+        "title": "CloudFront Distribution Not Enforcing HTTPS",
+        "description": "The developer portal CloudFront distribution allows HTTP traffic instead of enforcing HTTPS-only connections. This exposes API documentation, developer credentials, and authentication tokens to potential interception during transit.",
+        "severity": "medium",
+        "affected_component": "developer_portal",
+        "injection_strategy": "Configure CloudFront distribution with ViewerProtocolPolicy set to 'allow-all' instead of 'redirect-to-https' or 'https-only'",
+        "business_impact": "API keys and developer credentials transmitted over unencrypted HTTP can be intercepted, leading to unauthorized API access and potential data breaches affecting the enterprise's API ecosystem",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::CloudFront::Distribution\n          Properties:\n            DistributionConfig:\n              DefaultCacheBehavior:\n                TargetOriginId: target\n                ViewerProtocolPolicy: https-only\n              Enabled: true\n              Logging:\n                Bucket: logging-bucket\n              Origins:\n                - DomainName: https://some.domain\n                  Id: somedomain1\n              WebACLId: waf_id\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::CloudFront::Distribution\n          Properties:\n            DistributionConfig:\n              DefaultCacheBehavior:\n                TargetOriginId: target\n                ViewerProtocolPolicy: allow-all\n              Enabled: true\n              Logging:\n                Bucket: logging-bucket\n              Origins:\n                - DomainName: https://some.domain\n                  Id: somedomain1\n              WebACLId: waf_id",
+        "file_name": "enforce_https.yaml",
+        "service": "cloudfront",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set ViewerProtocolPolicy to 'allow-all' in the CloudFront distribution configuration",
+          "explanation": "This allows both HTTP and HTTPS traffic, creating a security vulnerability where sensitive developer portal data can be transmitted unencrypted"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-SPECIFY_PUBLIC_ACCESS_BLOCK",
+        "title": "S3 Analytics Storage Missing Public Access Block",
+        "description": "The S3 bucket storing API analytics data lacks proper public access block configuration, potentially allowing unauthorized public access to sensitive API usage patterns, performance metrics, and business intelligence data.",
+        "severity": "medium",
+        "affected_component": "analytics_storage",
+        "injection_strategy": "Create S3 bucket without PublicAccessBlockConfiguration or with permissive settings",
+        "business_impact": "Exposure of API usage patterns, customer behavior data, and business metrics could provide competitors with strategic insights and violate customer privacy agreements",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            AccessControl: Private\n            PublicAccessBlockConfiguration:\n              BlockPublicAcls: true\n              BlockPublicPolicy: true\n              IgnorePublicAcls: true\n              RestrictPublicBuckets: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            AccessControl: AuthenticatedRead",
+        "file_name": "specify_public_access_block.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without PublicAccessBlockConfiguration properties",
+          "explanation": "Without explicit public access blocks, the bucket relies on ACLs and policies which can be misconfigured, potentially exposing sensitive analytics data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-DYNAMODB-ENABLE_AT_REST_ENCRYPTION",
+        "title": "DynamoDB User Database Lacks Encryption at Rest",
+        "description": "The DynamoDB table storing user profiles, API keys, and authentication tokens is not configured with server-side encryption, leaving sensitive authentication data vulnerable if the underlying storage is compromised.",
+        "severity": "medium",
+        "affected_component": "user_database",
+        "injection_strategy": "Configure DynamoDB table without SSESpecification or with SSEEnabled set to false",
+        "business_impact": "Compromise of user credentials, API keys, and session tokens could lead to unauthorized API access, account takeovers, and regulatory compliance violations",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::DAX::Cluster\n          Properties:\n            ClusterName: MyDAXCluster\n            IAMRoleARN: arn:aws:iam::111122223333:role/DaxAccess\n            NodeType: dax.r3.large\n            ReplicationFactor: 1\n            SSESpecification:\n              SSEEnabled: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::DAX::Cluster\n          Properties:\n            ClusterName: MyDAXCluster\n            IAMRoleARN: arn:aws:iam::111122223333:role/DaxAccess\n            NodeType: dax.r3.large\n            ReplicationFactor: 1\n            SubnetGroupName: !Ref subnetGroupClu",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "dynamodb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create DynamoDB table without server_side_encryption configuration block",
+          "explanation": "Without encryption at rest, sensitive user authentication data stored in DynamoDB is vulnerable to unauthorized access if AWS storage is compromised"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-ENABLE_PERFORMANCE_INSIGHTS",
+        "title": "RDS Application Database Missing Performance Insights",
+        "description": "The PostgreSQL RDS instance lacks Performance Insights monitoring, reducing visibility into database performance issues that could impact API response times and making it harder to detect potential security-related performance anomalies.",
+        "severity": "medium",
+        "affected_component": "application_database",
+        "injection_strategy": "Configure RDS instance with EnablePerformanceInsights set to false or omitted",
+        "business_impact": "Limited database monitoring reduces ability to detect performance-based attacks, optimize API response times, and maintain the required 99.9% uptime SLA",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            EnablePerformanceInsights: true\n            PerformanceInsightsKMSKeyId: something\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            EnablePerformanceInsights: false",
+        "file_name": "enable_performance_insights.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set EnablePerformanceInsights to false in RDS instance configuration",
+          "explanation": "Without Performance Insights, the database lacks detailed monitoring capabilities needed for enterprise-grade performance management and security monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ECR-ENABLE_IMAGE_SCANS",
+        "title": "ECR Repository Missing Container Image Scanning",
+        "description": "The ECR repository used by the ECS backend services has image scanning disabled, allowing potentially vulnerable container images to be deployed without security validation.",
+        "severity": "medium",
+        "affected_component": "backend_services",
+        "injection_strategy": "Configure ECR repository with ScanOnPush set to false in ImageScanningConfiguration",
+        "business_impact": "Deployment of vulnerable container images could expose the API gateway platform to known security vulnerabilities, potentially compromising the entire microservices architecture",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ECR::Repository\n          Properties:\n            ImageScanningConfiguration:\n              ScanOnPush: true\n            RepositoryName: test-repository\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ECR::Repository\n          Properties:\n            ImageScanningConfiguration:\n              ScanOnPush: false\n            RepositoryName: test-repository",
+        "file_name": "enable_image_scans.yaml",
+        "service": "ecr",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set ScanOnPush to false in ECR repository ImageScanningConfiguration",
+          "explanation": "Disabling image scanning allows vulnerable container images to be deployed, potentially introducing security vulnerabilities into the microservices environment"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-SET_MAX_PASSWORD_AGE",
+        "title": "IAM Password Policy Missing Maximum Age Requirement",
+        "description": "The IAM account password policy lacks a maximum password age requirement, allowing user passwords to remain unchanged indefinitely and increasing the risk of credential compromise over time.",
+        "severity": "medium",
+        "affected_component": "authentication_service",
+        "injection_strategy": "Configure IAM password policy without max_password_age setting",
+        "business_impact": "Long-lived passwords increase the risk of credential compromise, potentially allowing unauthorized access to the API management platform and associated enterprise systems",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        max_password_age = 90\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # max_password_age not set\n        # ...\n      }",
+        "file_name": "set_max_password_age.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM password policy without specifying max_password_age parameter",
+          "explanation": "Without password expiration requirements, user credentials can remain static for extended periods, increasing vulnerability to credential-based attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELB-DROP_INVALID_HEADERS",
+        "title": "Application Load Balancer Not Dropping Invalid Headers",
+        "description": "The Application Load Balancer distributing traffic to ECS services is not configured to drop invalid HTTP headers, potentially allowing header injection attacks and malformed requests to reach backend services.",
+        "severity": "medium",
+        "affected_component": "backend_services",
+        "injection_strategy": "Configure ALB with drop_invalid_header_fields set to false or omitted",
+        "business_impact": "Invalid headers could be used for HTTP request smuggling or header injection attacks, potentially bypassing API gateway security controls and compromising backend microservices",
+        "trivy_yaml_content": "cloudformation:\n  links:\n    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ElasticLoadBalancingV2::LoadBalancer\n          Properties:\n            LoadBalancerAttributes:\n              - Key: routing.http.drop_invalid_header_fields.enabled\n                Value: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ElasticLoadBalancingV2::LoadBalancer\n          Properties:\n            LoadBalancerAttributes:\n              - Key: routing.http.drop_invalid_header_fields.enabled\n                Value: false",
+        "file_name": "drop_invalid_headers.yaml",
+        "service": "elb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set routing.http.drop_invalid_header_fields.enabled to false in LoadBalancer attributes",
+          "explanation": "Allowing invalid headers to pass through increases the attack surface for HTTP-based attacks against the backend microservices"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-CLOUDFRONT-ENFORCE_HTTPS",
+        "AWS-S3-SPECIFY_PUBLIC_ACCESS_BLOCK",
+        "AWS-DYNAMODB-ENABLE_AT_REST_ENCRYPTION",
+        "AWS-RDS-ENABLE_PERFORMANCE_INSIGHTS",
+        "AWS-ECR-ENABLE_IMAGE_SCANS",
+        "AWS-IAM-SET_MAX_PASSWORD_AGE",
+        "AWS-ELB-DROP_INVALID_HEADERS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "ecr",
+        "elb",
+        "cloudfront",
+        "s3",
+        "iam",
+        "dynamodb",
+        "rds"
+      ],
+      "services_covered": [
+        "ecr",
+        "elb",
+        "cloudfront",
+        "s3",
+        "iam",
+        "dynamodb",
+        "rds"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 230,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

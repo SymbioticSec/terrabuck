@@ -1,0 +1,14 @@
+{
+  "project_id": "enterprise_api_gateway_platform",
+  "security_posture": "vulnerable",
+  "vulnerability_count": 7,
+  "data_quality": "medium",
+  "suitable_for": [
+    "vulnerability_detection",
+    "severity_classification",
+    "auto_remediation",
+    "trivy_rule_matching",
+    "compliance_mapping",
+    "security_posture_assessment"
+  ]
+}

@@ -1,0 +1,263 @@
+{
+  "original_components": [
+    {
+      "name": "content_storage",
+      "service_type": "google_storage_bucket",
+      "purpose": "Stores original video files, transcoded variants, thumbnails, and metadata with lifecycle management",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket_access_controls",
+        "encryption_at_rest",
+        "signed_urls",
+        "cors_policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "transcoding_service",
+      "service_type": "google_cloud_functions",
+      "purpose": "Serverless video transcoding triggered by uploads to create multiple bitrate variants and formats",
+      "dependencies": [
+        "content_storage"
+      ],
+      "security_considerations": [
+        "function_permissions",
+        "vpc_connector",
+        "environment_variables"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "streaming_api",
+      "service_type": "google_compute_engine",
+      "purpose": "RESTful API service handling user authentication, content catalog, streaming URLs, and user preferences",
+      "dependencies": [
+        "user_database",
+        "content_storage"
+      ],
+      "security_considerations": [
+        "instance_identity",
+        "firewall_rules",
+        "ssl_certificates",
+        "api_authentication"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "user_database",
+      "service_type": "google_sql_database_instance",
+      "purpose": "Managed PostgreSQL storing user accounts, subscriptions, viewing history, and content metadata",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "private_ip",
+        "authorized_networks",
+        "backup_encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "cdn_distribution",
+      "service_type": "google_compute_global_forwarding_rule",
+      "purpose": "Global CDN for low-latency video delivery with edge caching and geographic distribution",
+      "dependencies": [
+        "content_storage",
+        "streaming_api"
+      ],
+      "security_considerations": [
+        "ssl_policies",
+        "ddos_protection",
+        "origin_access_control"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "analytics_pipeline",
+      "service_type": "google_pubsub_topic",
+      "purpose": "Real-time event streaming for viewing analytics, user behavior tracking, and performance monitoring",
+      "dependencies": [
+        "streaming_api"
+      ],
+      "security_considerations": [
+        "topic_permissions",
+        "message_encryption",
+        "subscriber_authentication"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "content_storage",
+      "service_type": "google_storage_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "transcoding_service",
+      "service_type": "google_cloud_functions",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "streaming_api",
+      "service_type": "google_compute_engine",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "user_database",
+      "service_type": "google_sql_database_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "cdn_distribution",
+      "service_type": "google_compute_global_forwarding_rule",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "analytics_pipeline",
+      "service_type": "google_pubsub_topic",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 363,
+      "resource_count": 25,
+      "resources_found": [
+        {
+          "type": "google_compute_network",
+          "name": "media_streaming_vpc"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "public_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "private_subnet"
+        },
+        {
+          "type": "google_compute_project_metadata",
+          "name": "streaming_metadata"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "streaming_api_firewall"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "ssh_firewall"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "content_storage"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "transcoded_storage"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "google_cloudfunctions_function",
+          "name": "transcoding_service"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "function_source"
+        },
+        {
+          "type": "google_storage_bucket_object",
+          "name": "function_source"
+        },
+        {
+          "type": "google_sql_database_instance",
+          "name": "user_database"
+        },
+        {
+          "type": "google_sql_database",
+          "name": "streaming_db"
+        },
+        {
+          "type": "google_sql_user",
+          "name": "streaming_user"
+        },
+        {
+          "type": "google_compute_global_address",
+          "name": "private_ip_address"
+        },
+        {
+          "type": "google_service_networking_connection",
+          "name": "private_vpc_connection"
+        },
+        {
+          "type": "google_compute_instance",
+          "name": "streaming_api"
+        },
+        {
+          "type": "google_pubsub_topic",
+          "name": "analytics_pipeline"
+        },
+        {
+          "type": "google_pubsub_subscription",
+          "name": "analytics_subscription"
+        },
+        {
+          "type": "google_compute_backend_bucket",
+          "name": "cdn_backend"
+        },
+        {
+          "type": "google_compute_url_map",
+          "name": "cdn_url_map"
+        },
+        {
+          "type": "google_compute_target_https_proxy",
+          "name": "cdn_https_proxy"
+        },
+        {
+          "type": "google_compute_managed_ssl_certificate",
+          "name": "cdn_ssl_cert"
+        },
+        {
+          "type": "google_compute_global_forwarding_rule",
+          "name": "cdn_distribution"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 33,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 49,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 148,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

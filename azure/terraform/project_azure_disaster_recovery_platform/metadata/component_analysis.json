@@ -1,0 +1,261 @@
+{
+  "original_components": [
+    {
+      "name": "dr_orchestration_engine",
+      "service_type": "azure_function_app",
+      "purpose": "Serverless orchestration engine that manages backup schedules, monitors replication status, executes failover procedures, and coordinates recovery testing workflows",
+      "dependencies": [
+        "backup_storage",
+        "monitoring_analytics",
+        "recovery_database"
+      ],
+      "security_considerations": [
+        "function_authentication",
+        "managed_identity_access",
+        "secure_api_endpoints"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Geo-redundant storage for application backups, configuration snapshots, and recovery artifacts with cross-region replication and immutable blob policies",
+      "dependencies": [],
+      "security_considerations": [
+        "storage_encryption",
+        "access_key_rotation",
+        "network_access_restrictions"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "recovery_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores DR policies, recovery procedures, compliance metadata, audit logs, and tracks RTO/RPO metrics with automated geo-replication",
+      "dependencies": [
+        "backup_storage"
+      ],
+      "security_considerations": [
+        "database_encryption",
+        "sql_injection_protection",
+        "audit_logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "monitoring_analytics",
+      "service_type": "azure_log_analytics_workspace",
+      "purpose": "Centralized logging and analytics for DR operations, infrastructure health monitoring, compliance reporting, and automated alerting",
+      "dependencies": [
+        "recovery_database"
+      ],
+      "security_considerations": [
+        "log_data_retention",
+        "access_control",
+        "data_classification"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "dr_web_portal",
+      "service_type": "azure_app_service",
+      "purpose": "Web-based management portal for DR administrators to configure policies, initiate recovery procedures, view compliance dashboards, and generate audit reports",
+      "dependencies": [
+        "dr_orchestration_engine",
+        "recovery_database",
+        "monitoring_analytics"
+      ],
+      "security_considerations": [
+        "web_application_firewall",
+        "ssl_certificates",
+        "authentication_integration"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "notification_service",
+      "service_type": "azure_communication_services",
+      "purpose": "Multi-channel notification system for DR events, compliance alerts, recovery status updates, and executive reporting via email, SMS, and Teams integration",
+      "dependencies": [
+        "monitoring_analytics",
+        "dr_orchestration_engine"
+      ],
+      "security_considerations": [
+        "message_encryption",
+        "contact_data_protection",
+        "delivery_verification"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "dr_orchestration_engine",
+      "service_type": "azure_function_app",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "recovery_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "monitoring_analytics",
+      "service_type": "azure_log_analytics_workspace",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "dr_web_portal",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "notification_service",
+      "service_type": "azure_communication_services",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 325,
+      "resource_count": 24,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "dr_platform"
+        },
+        {
+          "type": "azurerm_resource_group",
+          "name": "dr_platform_secondary"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "dr_vnet_primary"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "dr_vnet_secondary"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "web_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "compute_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "azurerm_log_analytics_workspace",
+          "name": "monitoring_analytics"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "backup_storage"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "backup_container"
+        },
+        {
+          "type": "azurerm_mssql_server",
+          "name": "recovery_sql_server"
+        },
+        {
+          "type": "azurerm_mssql_database",
+          "name": "recovery_database"
+        },
+        {
+          "type": "azurerm_mssql_server_security_alert_policy",
+          "name": "recovery_db_alerts"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "dr_service_plan"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "function_storage"
+        },
+        {
+          "type": "azurerm_linux_function_app",
+          "name": "dr_orchestration_engine"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "dr_web_portal"
+        },
+        {
+          "type": "azurerm_application_insights",
+          "name": "dr_insights"
+        },
+        {
+          "type": "azurerm_communication_service",
+          "name": "notification_service"
+        },
+        {
+          "type": "azurerm_monitor_log_profile",
+          "name": "dr_log_profile"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "web_nsg"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "data_nsg"
+        },
+        {
+          "type": "azurerm_subnet_network_security_group_association",
+          "name": "web_nsg_association"
+        },
+        {
+          "type": "azurerm_subnet_network_security_group_association",
+          "name": "data_nsg_association"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 52,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 77,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 191,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

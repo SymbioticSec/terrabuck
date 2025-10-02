@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "variables": {},
+  "resources": [],
+  "outputs": {
+    "webAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('webAppName'))).defaultHostName)]",
+      "metadata": {
+        "description": "URL of the fleet management web application"
+      }
+    },
+    "functionAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('functionAppName'))).defaultHostName)]",
+      "metadata": {
+        "description": "URL of the telemetry processing function app"
+      }
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName'))).fullyQualifiedDomainName]",
+      "metadata": {
+        "description": "Fully qualified domain name of the SQL server"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[variables('storageAccountName')]",
+      "metadata": {
+        "description": "Name of the telemetry storage account"
+      }
+    },
+    "serviceBusNamespace": {
+      "type": "string",
+      "value": "[variables('serviceBusNamespace')]",
+      "metadata": {
+        "description": "Service Bus namespace for message queuing"
+      }
+    },
+    "apiManagementUrl": {
+      "type": "string",
+      "value": "[concat('https://', reference(resourceId('Microsoft.ApiManagement/service', variables('apiManagementName'))).gatewayUrl)]",
+      "metadata": {
+        "description": "API Management gateway URL"
+      }
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', concat(variables('resourcePrefix'), '-keyvault'))).vaultUri]",
+      "metadata": {
+        "description": "Key Vault URI for secrets management"
+      }
+    },
+    "applicationInsightsInstrumentationKey": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))).InstrumentationKey]",
+      "metadata": {
+        "description": "Application Insights instrumentation key"
+      }
+    }
+  }
+}

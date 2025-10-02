@@ -1,0 +1,313 @@
+{
+  "project_info": {
+    "project_id": "fleet-management-gps-platform",
+    "project_name": "Fleet Management GPS Tracking Platform",
+    "description": "A comprehensive fleet management system for a logistics company managing 500+ delivery vehicles. The platform provides real-time GPS tracking, route optimization, driver behavior monitoring, and maintenance scheduling. Features include geofencing alerts, fuel consumption analytics, delivery proof capture, and compliance reporting for DOT regulations. The system handles 50,000+ GPS pings per minute and serves fleet managers, dispatchers, and drivers through web and mobile interfaces.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "Mid-size logistics company needs to optimize delivery routes, monitor driver safety, reduce fuel costs, and maintain DOT compliance. The platform replaces legacy on-premise tracking systems and integrates with existing ERP and customer notification systems.",
+    "components": [
+      {
+        "name": "vehicle_data_ingestion",
+        "service_type": "aws_kinesis_data_streams",
+        "purpose": "Ingests real-time GPS coordinates, speed, fuel level, and diagnostic data from vehicle telematics devices",
+        "dependencies": [],
+        "security_considerations": [
+          "device_authentication",
+          "data_encryption_in_transit",
+          "rate_limiting"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "fleet_api_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API for fleet management operations, driver mobile app, and third-party integrations",
+        "dependencies": [
+          "fleet_application_server"
+        ],
+        "security_considerations": [
+          "api_key_management",
+          "request_throttling",
+          "cors_configuration"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "fleet_application_server",
+        "service_type": "aws_ec2_auto_scaling_group",
+        "purpose": "Core business logic for route optimization, geofencing, driver scoring, and maintenance scheduling",
+        "dependencies": [
+          "fleet_database",
+          "tracking_data_storage"
+        ],
+        "security_considerations": [
+          "instance_hardening",
+          "application_secrets_management",
+          "network_isolation"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "fleet_database",
+        "service_type": "aws_rds_mysql",
+        "purpose": "Stores vehicle profiles, driver information, routes, maintenance records, and compliance data",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "backup_security",
+          "access_control"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "tracking_data_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Long-term storage of GPS tracking history, delivery photos, and compliance documentation",
+        "dependencies": [],
+        "security_considerations": [
+          "bucket_policies",
+          "object_encryption",
+          "access_logging"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "fleet_web_interface",
+        "service_type": "aws_cloudfront_distribution",
+        "purpose": "Content delivery for fleet manager dashboard and dispatcher web application",
+        "dependencies": [
+          "fleet_api_gateway"
+        ],
+        "security_considerations": [
+          "ssl_termination",
+          "geographic_restrictions",
+          "ddos_protection"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two availability zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Vehicle devices connect to Kinesis via internet gateway",
+        "API Gateway in public subnet routes to application servers in private subnet",
+        "Application servers access RDS in data subnet via private routing",
+        "CloudFront serves static content and proxies API calls"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "streaming_services": 1,
+      "api_services": 1,
+      "cdn_services": 1,
+      "security_groups": 4,
+      "iam_roles": 3,
+      "load_balancers": 1,
+      "auto_scaling_groups": 1,
+      "cloudwatch_alarms": 2
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:19:19.003576"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-NO_PUBLIC_BUCKETS",
+        "title": "No Public Buckets",
+        "description": "S3 bucket storing GPS tracking history and delivery photos lacks proper public access restrictions, potentially exposing sensitive fleet data and customer delivery information to unauthorized access",
+        "severity": "high",
+        "affected_component": "tracking_data_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Exposure of GPS tracking data, delivery photos, and compliance documentation could lead to privacy violations, competitive intelligence theft, and regulatory non-compliance with DOT requirements",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            PublicAccessBlockConfiguration:\n              RestrictPublicBuckets: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "no_public_buckets.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without PublicAccessBlockConfiguration or with RestrictPublicBuckets set to false",
+          "explanation": "Missing public access restrictions allows potential unauthorized access to sensitive fleet tracking data and delivery documentation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "title": "Disable Public Access",
+        "description": "Fleet database containing vehicle profiles, driver information, and compliance records is configured with public accessibility enabled, exposing sensitive operational data to internet-based attacks",
+        "severity": "critical",
+        "affected_component": "fleet_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Public database access could expose driver personal information, vehicle locations, maintenance records, and DOT compliance data, leading to privacy breaches and potential safety risks for drivers",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            PubliclyAccessible: false\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            PubliclyAccessible: true",
+        "file_name": "disable_public_access.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set PubliclyAccessible property to true in RDS instance configuration",
+          "explanation": "Enables direct internet access to the database, bypassing VPC security controls and exposing sensitive fleet management data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+        "title": "Add Description To Security Group Rule",
+        "description": "Security group rules for fleet application servers lack descriptive documentation, making it difficult to audit access controls and maintain proper network security for the fleet management system",
+        "severity": "medium",
+        "affected_component": "fleet_application_server",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Undocumented security group rules increase risk of misconfigurations, make security audits difficult, and can lead to unintended access to critical fleet management services",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupEgress:\n              - CidrIp: 127.0.0.1/32\n                Description: Can connect to loopback\n                IpProtocol: \"-1\"\n  bad:\n    - |-\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupEgress:\n              - CidrIp: 127.0.0.1/32\n                IpProtocol: \"-1\"",
+        "file_name": "add_description_to_security_group_rule.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create security group rules without Description field in ingress/egress rules",
+          "explanation": "Missing descriptions make it difficult to understand the purpose of each rule, leading to potential security misconfigurations and audit failures"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "API Gateway for fleet management operations lacks X-Ray tracing configuration, reducing visibility into API performance and security events for the fleet tracking platform",
+        "severity": "medium",
+        "affected_component": "fleet_api_gateway",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without proper tracing, it becomes difficult to detect API abuse, monitor performance issues, and investigate security incidents affecting fleet operations and driver mobile apps",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_api_gateway_stage\" \"good_example\" {\n        stage_name           = \"prod\"\n        rest_api_id          = aws_api_gateway_rest_api.test.id\n        deployment_id        = aws_api_gateway_deployment.test.id\n        xray_tracing_enabled = true\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_stage\" \"bad_example\" {\n        stage_name           = \"prod\"\n        rest_api_id          = aws_api_gateway_rest_api.test.id\n        deployment_id        = aws_api_gateway_deployment.test.id\n        xray_tracing_enabled = false\n      }",
+        "file_name": "enable_tracing.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set xray_tracing_enabled to false or omit the property in API Gateway stage configuration",
+          "explanation": "Disables distributed tracing, reducing visibility into API request flows and making security monitoring and performance troubleshooting more difficult"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure Tls Policy",
+        "description": "CloudFront distribution serving the fleet management dashboard uses outdated TLS protocol versions, potentially exposing fleet manager and dispatcher communications to protocol-level attacks",
+        "severity": "medium",
+        "affected_component": "fleet_web_interface",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak TLS configurations could allow man-in-the-middle attacks on fleet management communications, potentially exposing real-time vehicle locations and operational data",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::CloudFront::Distribution\n          Properties:\n            DistributionConfig:\n              ViewerCertificate:\n                MinimumProtocolVersion: TLSv1.2_2021\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::CloudFront::Distribution\n          Properties:\n            DistributionConfig:\n              ViewerCertificate:\n                MinimumProtocolVersion: TLSv1.0",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "cloudfront",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set MinimumProtocolVersion to TLSv1.0 or other outdated TLS versions in CloudFront viewer certificate configuration",
+          "explanation": "Older TLS versions have known vulnerabilities that could be exploited to intercept or manipulate fleet management communications"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "title": "Encrypt Cluster Storage Data",
+        "description": "Fleet database cluster storing sensitive vehicle and driver information lacks proper encryption configuration with customer-managed KMS keys, using default encryption or no encryption at all",
+        "severity": "high",
+        "affected_component": "fleet_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted or poorly encrypted database storage could expose driver personal information, vehicle tracking history, and compliance records if storage media is compromised",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBCluster\n          Properties:\n            KmsKeyId: something\n            StorageEncrypted: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBCluster\n          Properties:\n            StorageEncrypted: false",
+        "file_name": "encrypt_cluster_storage_data.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set StorageEncrypted to false or omit KmsKeyId for customer-managed encryption keys in RDS cluster configuration",
+          "explanation": "Missing or weak encryption leaves sensitive fleet data vulnerable to unauthorized access if the underlying storage is compromised"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+        "title": "No Public Ip Subnet",
+        "description": "Private subnets hosting fleet application servers are configured to automatically assign public IP addresses, potentially exposing internal fleet management services to direct internet access",
+        "severity": "medium",
+        "affected_component": "fleet_application_server",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unintended public IP assignment increases attack surface and could allow direct access to fleet management services, bypassing intended network security controls",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EC2::Subnet\n          Properties:\n            VpcId: vpc-123456\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EC2::Subnet\n          Properties:\n            MapPublicIpOnLaunch: true\n            VpcId: vpc-123456",
+        "file_name": "no_public_ip_subnet.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set MapPublicIpOnLaunch to true in subnet configuration for private subnets",
+          "explanation": "Automatically assigns public IPs to instances in private subnets, potentially exposing internal services to internet-based attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-S3-NO_PUBLIC_BUCKETS",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+        "AWS-APIGATEWAY-ENABLE_TRACING",
+        "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "AWS-EC2-NO_PUBLIC_IP_SUBNET"
+      ],
+      "severity_distribution": {
+        "critical": 1,
+        "high": 2,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "cloudfront",
+        "s3",
+        "ec2",
+        "rds"
+      ],
+      "services_covered": [
+        "apigateway",
+        "cloudfront",
+        "s3",
+        "ec2",
+        "rds"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 166,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

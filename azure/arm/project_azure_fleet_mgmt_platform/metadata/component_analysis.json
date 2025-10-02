@@ -1,0 +1,228 @@
+{
+  "original_components": [
+    {
+      "name": "fleet_web_app",
+      "service_type": "azure_app_service",
+      "purpose": "Web application hosting the fleet management dashboard for dispatchers and managers to monitor vehicles, assign routes, and view analytics",
+      "dependencies": [
+        "fleet_database",
+        "telemetry_storage"
+      ],
+      "security_considerations": [
+        "role_based_access_control",
+        "ssl_termination",
+        "session_management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "telemetry_processor",
+      "service_type": "azure_functions",
+      "purpose": "Serverless functions processing real-time GPS telemetry, speed data, and vehicle diagnostics from mobile devices and OBD-II sensors",
+      "dependencies": [
+        "service_bus",
+        "telemetry_storage",
+        "fleet_database"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "data_validation",
+        "rate_limiting"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "fleet_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Primary database storing vehicle information, driver profiles, route history, maintenance records, and operational analytics",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "backup_security",
+        "connection_string_protection",
+        "sql_injection_prevention"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "telemetry_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Time-series storage for GPS coordinates, vehicle telemetry data, and driver behavior analytics with hot/cool tier management",
+      "dependencies": [],
+      "security_considerations": [
+        "storage_encryption",
+        "access_key_rotation",
+        "blob_access_policies"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "service_bus",
+      "service_type": "azure_service_bus",
+      "purpose": "Message queue handling high-volume GPS telemetry ingestion, route updates, and alert notifications between mobile apps and backend services",
+      "dependencies": [],
+      "security_considerations": [
+        "message_encryption",
+        "namespace_access_control",
+        "dead_letter_queue_security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "azure_api_management",
+      "purpose": "API gateway providing secure endpoints for mobile driver apps, third-party integrations, and webhook notifications to customer systems",
+      "dependencies": [
+        "telemetry_processor",
+        "fleet_database"
+      ],
+      "security_considerations": [
+        "api_key_management",
+        "throttling_policies",
+        "cors_configuration",
+        "oauth_integration"
+      ],
+      "configuration_complexity": "high"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "fleet_web_app",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "telemetry_processor",
+      "service_type": "azure_functions",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "fleet_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "telemetry_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "service_bus",
+      "service_type": "azure_service_bus",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "azure_api_management",
+      "implementation_confidence": 0.8999999999999999
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 532,
+      "resource_count": 22,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Sql/servers/firewallRules"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.ServiceBus/namespaces"
+        },
+        {
+          "type": "Microsoft.ServiceBus/namespaces/queues"
+        },
+        {
+          "type": "Microsoft.ServiceBus/namespaces/queues"
+        },
+        {
+          "type": "Microsoft.ApiManagement/service"
+        },
+        {
+          "type": "Microsoft.OperationalInsights/workspaces"
+        },
+        {
+          "type": "Microsoft.Insights/components"
+        },
+        {
+          "type": "Microsoft.Insights/activityLogAlerts"
+        },
+        {
+          "type": "Microsoft.KeyVault/vaults"
+        },
+        {
+          "type": "Microsoft.Network/privateEndpoints"
+        },
+        {
+          "type": "Microsoft.Network/privateDnsZones"
+        },
+        {
+          "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 24,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 65,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 183,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

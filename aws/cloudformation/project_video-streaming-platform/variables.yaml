@@ -1,0 +1,24 @@
+# CloudFormation Parameters are defined in the main template
+# This file would contain additional configuration for nested stacks or parameter files
+
+# Example parameter file content for deployment:
+Parameters:
+  Environment: production
+  ProjectName: enterprise-video-streaming-platform
+  DBUsername: videoplatform
+  DBPassword: TempPassword123!
+  DBInstanceClass: db.t3.micro
+  VpcCidr: 10.0.0.0/16
+  PublicSubnetCidr1: 10.0.1.0/24
+  PrivateSubnetCidr1: 10.0.2.0/24
+  DataSubnetCidr1: 10.0.3.0/24
+
+# Environment-specific overrides
+Development:
+  DBInstanceClass: db.t3.micro
+  
+Staging:
+  DBInstanceClass: db.t3.small
+  
+Production:
+  DBInstanceClass: db.t3.medium

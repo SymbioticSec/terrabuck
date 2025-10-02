@@ -1,0 +1,336 @@
+{
+  "project_info": {
+    "project_id": "gcp-digital-library-platform",
+    "project_name": "Digital Library Content Management Platform",
+    "description": "A comprehensive digital library platform for academic institutions that manages digital book collections, handles user authentication, provides full-text search capabilities, and tracks usage analytics. The system supports multiple file formats (PDF, EPUB, audio), implements access controls for licensed content, and provides APIs for integration with existing library management systems.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "Academic libraries and educational institutions need to digitize their collections and provide secure, searchable access to students and faculty. The platform must handle copyright restrictions, track usage for licensing compliance, and integrate with existing student information systems.",
+    "components": [
+      {
+        "name": "content_storage",
+        "service_type": "google_storage_bucket",
+        "purpose": "Stores digital books, documents, and media files with lifecycle management and CDN integration",
+        "dependencies": [],
+        "security_considerations": [
+          "access_control_lists",
+          "encryption_at_rest",
+          "signed_urls_for_content_access"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "google_cloud_run",
+        "purpose": "Main API service handling authentication, authorization, and routing requests to backend services",
+        "dependencies": [
+          "user_database",
+          "content_storage"
+        ],
+        "security_considerations": [
+          "jwt_token_validation",
+          "rate_limiting",
+          "cors_configuration"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "search_service",
+        "service_type": "google_cloud_run",
+        "purpose": "Full-text search service using Cloud Search API for indexing and querying digital content",
+        "dependencies": [
+          "content_storage",
+          "metadata_database"
+        ],
+        "security_considerations": [
+          "search_result_filtering",
+          "content_access_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "user_database",
+        "service_type": "google_sql_database_instance",
+        "purpose": "Stores user profiles, authentication data, access permissions, and reading history",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "ssl_connections",
+          "backup_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "metadata_database",
+        "service_type": "google_sql_database_instance",
+        "purpose": "Stores book metadata, catalog information, licensing details, and usage statistics",
+        "dependencies": [],
+        "security_considerations": [
+          "data_classification",
+          "audit_logging",
+          "read_replicas"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "analytics_processor",
+        "service_type": "google_cloud_functions",
+        "purpose": "Processes usage events, generates reports, and handles licensing compliance tracking",
+        "dependencies": [
+          "metadata_database",
+          "usage_logs"
+        ],
+        "security_considerations": [
+          "event_data_validation",
+          "secure_api_calls"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "usage_logs",
+        "service_type": "google_storage_bucket",
+        "purpose": "Stores application logs, user activity logs, and audit trails for compliance reporting",
+        "dependencies": [],
+        "security_considerations": [
+          "log_retention_policies",
+          "access_logging",
+          "immutable_storage"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across multiple zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Load balancer routes traffic to Cloud Run services in public zone",
+        "Cloud Run services connect to Cloud SQL instances in private zone",
+        "Cloud Functions triggered by storage events and database changes",
+        "All database connections use private IP and SSL encryption"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 6,
+      "security_components": 8,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:28:20.133716"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-SQL-ENABLE_BACKUP",
+        "title": "SQL Database Backup Disabled",
+        "description": "The Cloud SQL database instances for user and metadata storage have backup configuration disabled, creating risk of permanent data loss in case of corruption, accidental deletion, or security incidents affecting the digital library's critical data.",
+        "severity": "medium",
+        "affected_component": "user_database",
+        "injection_strategy": "Configure google_sql_database_instance with backup_configuration.enabled = false",
+        "business_impact": "Loss of user accounts, reading history, book metadata, and licensing information could shut down the digital library platform permanently",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance#settings.backup_configuration.enabled=true\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          backup_configuration {\n            enabled = true\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          backup_configuration {\n            enabled = false\n          }\n        }\n      }",
+        "file_name": "enable_backup.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set backup_configuration { enabled = false } in both user_database and metadata_database instances",
+          "explanation": "Without backups, any data corruption or security incident could result in permanent loss of user data and digital library catalog"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "title": "SQL Database Unencrypted Transit",
+        "description": "Cloud SQL instances are configured to allow unencrypted connections, exposing sensitive user authentication data, personal reading history, and licensed content metadata to potential interception during transmission.",
+        "severity": "medium",
+        "affected_component": "metadata_database",
+        "injection_strategy": "Configure google_sql_database_instance with require_ssl = false or ssl_mode = ALLOW_UNENCRYPTED_AND_ENCRYPTED",
+        "business_impact": "Sensitive academic data, user credentials, and licensing information could be intercepted, violating privacy regulations and licensing agreements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n        settings {\n          tier = \"db-f1-micro\"\n          ip_configuration {\n            require_ssl = true\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n        settings {\n          tier = \"db-f1-micro\"\n          ip_configuration {\n            require_ssl = false\n          }\n        }\n      }",
+        "file_name": "encrypt_in_transit_data.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set ip_configuration { require_ssl = false } in database instances to allow unencrypted connections",
+          "explanation": "Database connections without SSL encryption expose sensitive academic and personal data to network-based attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "title": "Direct User IAM Permissions",
+        "description": "IAM permissions are granted directly to individual user accounts instead of using service accounts or groups, creating security risks for the digital library platform's access control and making permission management difficult to audit.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Use google_project_iam_binding or google_project_iam_member with user: principals instead of serviceAccount: or group:",
+        "business_impact": "Difficult to track access permissions, increased risk of unauthorized access to digital content, and challenges in compliance auditing for academic licensing",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://www.terraform.io/docs/providers/google/d/iam_policy.html#members\n  good:\n    - |-\n      resource \"google_project_iam_binding\" \"good_example\" {\n        members = [\n          \"group:test@example.com\",\n        ]\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_binding\" \"bad_example\" {\n        members = [\n          \"user:test@example.com\",\n        ]\n      }",
+        "file_name": "no_user_granted_permissions.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Grant IAM roles directly to user accounts like 'user:admin@university.edu' instead of using service accounts",
+          "explanation": "Direct user permissions bypass proper access control patterns and make it difficult to manage permissions at scale"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_PERSONAL_EMAILS",
+        "title": "Personal Email Accounts in IAM",
+        "description": "Personal email accounts (gmail.com, hotmail.com, yahoo.com) are granted access to the digital library platform resources, violating organizational security policies and creating risks for academic data access control.",
+        "severity": "medium",
+        "affected_component": "content_storage",
+        "injection_strategy": "Add personal email domains to google_project_iam_binding or google_storage_bucket_iam_member resources",
+        "business_impact": "Unauthorized access to copyrighted digital content, potential licensing violations, and loss of control over academic resources",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/google_project_iam#google_project_iam_binding\n  good:\n    - |-\n      resource \"google_project_iam_binding\" \"good_example\" {\n        members = [\n          \"user:employee@company.com\",\n          \"serviceAccount:service@company.iam.gserviceaccount.com\",\n        ]\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_binding\" \"bad_example\" {\n        members = [\n          \"user:personal@gmail.com\",\n          \"user:someone@hotmail.com\",\n        ]\n      }",
+        "file_name": "no_personal_emails.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Include members like 'user:librarian@gmail.com' or 'user:admin@yahoo.com' in IAM bindings",
+          "explanation": "Personal email accounts are outside organizational control and violate access governance policies for academic institutions"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_ERRORS",
+        "title": "Insufficient Database Error Logging",
+        "description": "PostgreSQL database instances have inadequate error logging configuration (log_min_messages set to PANIC), preventing proper monitoring of security incidents, failed authentication attempts, and data access violations in the digital library system.",
+        "severity": "medium",
+        "affected_component": "user_database",
+        "injection_strategy": "Configure google_sql_database_instance with database_flags setting log_min_messages to PANIC instead of WARNING or ERROR",
+        "business_impact": "Security incidents, unauthorized access attempts, and data breaches may go undetected, hindering incident response and compliance reporting",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"WARNING\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"PANIC\"\n          }\n        }\n      }",
+        "file_name": "pg_log_errors.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set database_flags { name = 'log_min_messages', value = 'PANIC' } to only log the most severe errors",
+          "explanation": "Insufficient logging prevents detection of security issues, failed login attempts, and unauthorized data access patterns"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-USE_SECURE_TLS_POLICY",
+        "title": "Weak TLS Configuration",
+        "description": "SSL policies for the digital library platform are configured with weak TLS versions (TLS 1.1 or lower), exposing encrypted communications between users and the platform to potential cryptographic attacks and compromising the security of academic content access.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Configure google_compute_ssl_policy with min_tls_version set to TLS_1_1 or lower instead of TLS_1_2",
+        "business_impact": "Weak encryption could allow attackers to decrypt communications, potentially exposing user credentials and access to licensed digital content",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_ssl_policy#min_tls_version\n  good:\n    - |-\n      resource \"google_compute_ssl_policy\" \"good_example\" {\n        name            = \"production-ssl-policy\"\n        profile         = \"MODERN\"\n        min_tls_version = \"TLS_1_2\"\n      }\n  bad:\n    - |-\n      resource \"google_compute_ssl_policy\" \"bad_example\" {\n        name            = \"production-ssl-policy\"\n        profile         = \"MODERN\"\n        min_tls_version = \"TLS_1_1\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = 'TLS_1_1' in SSL policy configuration for load balancers",
+          "explanation": "Older TLS versions have known vulnerabilities that could be exploited to decrypt communications with the digital library platform"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_PROJECT_LEVEL_SERVICE_ACCOUNT_IMPERSONATION",
+        "title": "Excessive Service Account Permissions",
+        "description": "Project-level service account impersonation roles (serviceAccountUser, serviceAccountTokenCreator) are granted, allowing broad privilege escalation that could compromise the entire digital library platform's security model.",
+        "severity": "medium",
+        "affected_component": "analytics_processor",
+        "injection_strategy": "Grant roles/iam.serviceAccountUser or roles/iam.serviceAccountTokenCreator at project level in google_project_iam_binding",
+        "business_impact": "Attackers could impersonate service accounts to gain unauthorized access to digital content, user data, and licensing information across the entire platform",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/google_project_iam\n  good:\n    - |-\n      resource \"google_project_iam_binding\" \"project-123\" {\n        project = \"project-123\"\n        role    = \"roles/nothingInParticular\"\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_binding\" \"project-123\" {\n        project = \"project-123\"\n        role    = \"roles/iam.serviceAccountUser\"\n      }",
+        "file_name": "no_project_level_service_account_impersonation.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Grant 'roles/iam.serviceAccountUser' at the project level instead of limiting to specific resources",
+          "explanation": "Project-level service account impersonation allows privilege escalation across all services in the digital library platform"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_LOCK_WAITS",
+        "title": "Database Lock Wait Logging Disabled",
+        "description": "PostgreSQL database instances have lock wait logging disabled, preventing detection of potential performance issues, deadlocks, and possible denial-of-service attacks against the digital library's database layer.",
+        "severity": "medium",
+        "affected_component": "metadata_database",
+        "injection_strategy": "Configure google_sql_database_instance with database_flags setting log_lock_waits to 'off'",
+        "business_impact": "Database performance issues and potential security attacks involving resource exhaustion may go undetected, affecting platform availability",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_lock_waits\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_lock_waits\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_lock_waits.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set database_flags { name = 'log_lock_waits', value = 'off' } to disable lock monitoring",
+          "explanation": "Without lock wait logging, database performance issues and potential DoS attacks through resource exhaustion cannot be properly monitored"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "GOOGLE-SQL-ENABLE_BACKUP",
+        "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "GOOGLE-IAM-NO_PERSONAL_EMAILS",
+        "GOOGLE-SQL-PG_LOG_ERRORS",
+        "GOOGLE-COMPUTE-USE_SECURE_TLS_POLICY",
+        "GOOGLE-IAM-NO_PROJECT_LEVEL_SERVICE_ACCOUNT_IMPERSONATION",
+        "GOOGLE-SQL-PG_LOG_LOCK_WAITS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 25,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

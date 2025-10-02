@@ -1,0 +1,13 @@
+{
+  "project_id": "enterprise-backup-dr-platform",
+  "security_posture": "vulnerable",
+  "vulnerability_count": 8,
+  "data_quality": "medium",
+  "suitable_for": [
+    "vulnerability_detection",
+    "severity_classification",
+    "trivy_rule_matching",
+    "compliance_gap_analysis",
+    "security_posture_assessment"
+  ]
+}

@@ -1,0 +1,75 @@
+# CloudFormation Outputs Configuration
+# These outputs provide essential information for connecting to and managing the deployed infrastructure
+
+## Network Outputs
+VPCId:
+  Description: "VPC ID for the Enterprise API Gateway Platform"
+  Value: !Ref EnterpriseVPC
+  Export:
+    Name: !Sub "${AWS::StackName}-VPC-ID"
+  Usage: "Reference this VPC ID when deploying additional resources or configuring peering"
+
+## API Gateway Outputs  
+ApiGatewayUrl:
+  Description: "Primary API Gateway endpoint URL"
+  Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  Export:
+    Name: !Sub "${AWS::StackName}-API-Gateway-URL"
+  Usage: "Use this URL as the primary endpoint for all API calls"
+
+## Load Balancer Outputs
+LoadBalancerDNS:
+  Description: "Application Load Balancer DNS name for backend services"
+  Value: !GetAtt ApplicationLoadBalancer.DNSName
+  Export:
+    Name: !Sub "${AWS::StackName}-ALB-DNS"
+  Usage: "Internal endpoint for direct backend service access"
+
+## Content Delivery Network
+CloudFrontDistributionDomain:
+  Description: "CloudFront distribution domain for developer portal"
+  Value: !GetAtt DeveloperPortalDistribution.DomainName
+  Export:
+    Name: !Sub "${AWS::StackName}-CloudFront-Domain"
+  Usage: "Access the developer portal and API documentation via this domain"
+
+## Database Outputs
+DatabaseEndpoint:
+  Description: "RDS PostgreSQL database endpoint"
+  Value: !GetAtt ApplicationDatabase.Endpoint.Address
+  Export:
+    Name: !Sub "${AWS::StackName}-Database-Endpoint"
+  Usage: "Connect to the application database using this endpoint"
+
+DynamoDBTableName:
+  Description: "DynamoDB table name for user data"
+  Value: !Ref UserDatabase
+  Export:
+    Name: !Sub "${AWS::StackName}-DynamoDB-Table"
+  Usage: "Reference this table name in application code for user data operations"
+
+## Storage Outputs
+S3BucketName:
+  Description: "S3 bucket name for analytics storage"
+  Value: !Ref AnalyticsStorageBucket
+  Export:
+    Name: !Sub "${AWS::StackName}-S3-Bucket"
+  Usage: "Store API analytics and logs in this bucket"
+
+## Container Registry
+ECRRepositoryURI:
+  Description: "ECR repository URI for backend service images"
+  Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${BackendServicesRepository}"
+  Export:
+    Name: !Sub "${AWS::StackName}-ECR-Repository-URI"
+  Usage: "Push container images to this repository for ECS deployment"
+
+## Output Usage Instructions
+# 1. API Gateway URL: Primary endpoint for external API consumers
+# 2. CloudFront Domain: Developer portal access for API documentation
+# 3. Database Endpoint: Configure application connection strings
+# 4. ECR Repository: CI/CD pipeline container image destination
+# 5. S3 Bucket: Analytics data storage and log aggregation
+# 6. DynamoDB Table: User authentication and session management
+# 7. Load Balancer DNS: Internal service-to-service communication
+# 8. VPC ID: Network infrastructure reference for additional deployments

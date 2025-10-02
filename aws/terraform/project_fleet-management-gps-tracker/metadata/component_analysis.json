@@ -1,0 +1,267 @@
+{
+  "original_components": [
+    {
+      "name": "gps_data_ingestion",
+      "service_type": "aws_api_gateway",
+      "purpose": "Receives GPS coordinates, speed, and telemetry data from vehicle-mounted IoT devices via REST API endpoints",
+      "dependencies": [],
+      "security_considerations": [
+        "device_authentication",
+        "api_rate_limiting",
+        "data_encryption_in_transit"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "telemetry_processor",
+      "service_type": "aws_lambda",
+      "purpose": "Processes incoming GPS data, calculates route deviations, detects speeding violations, and triggers maintenance alerts",
+      "dependencies": [
+        "gps_data_ingestion"
+      ],
+      "security_considerations": [
+        "function_permissions",
+        "environment_variable_encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "vehicle_database",
+      "service_type": "aws_rds_postgresql",
+      "purpose": "Stores vehicle profiles, driver information, maintenance records, and processed tracking analytics",
+      "dependencies": [
+        "telemetry_processor"
+      ],
+      "security_considerations": [
+        "database_encryption",
+        "connection_security",
+        "backup_encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "tracking_data_storage",
+      "service_type": "aws_s3",
+      "purpose": "Archives raw GPS tracking data for compliance reporting and historical route analysis",
+      "dependencies": [
+        "telemetry_processor"
+      ],
+      "security_considerations": [
+        "bucket_encryption",
+        "access_logging",
+        "lifecycle_policies"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "fleet_dashboard",
+      "service_type": "aws_ec2",
+      "purpose": "Web application providing real-time fleet monitoring, route optimization tools, and management reporting interface",
+      "dependencies": [
+        "vehicle_database",
+        "tracking_data_storage"
+      ],
+      "security_considerations": [
+        "instance_hardening",
+        "ssl_certificates",
+        "session_management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "alert_notification",
+      "service_type": "aws_sns",
+      "purpose": "Sends SMS and email alerts for emergency situations, maintenance due dates, and route violations",
+      "dependencies": [
+        "telemetry_processor"
+      ],
+      "security_considerations": [
+        "topic_access_control",
+        "message_encryption"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "gps_data_ingestion",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "telemetry_processor",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "vehicle_database",
+      "service_type": "aws_rds_postgresql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "tracking_data_storage",
+      "service_type": "aws_s3",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "fleet_dashboard",
+      "service_type": "aws_ec2",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "alert_notification",
+      "service_type": "aws_sns",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 393,
+      "resource_count": 27,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "fleet_management_vpc"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "fleet_management_igw"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_subnet_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_subnet_2"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_subnet_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_subnet_2"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public_rt"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_rta_1"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "dashboard_sg"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "rds_sg"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_execution_role"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_basic_execution"
+        },
+        {
+          "type": "aws_iam_account_password_policy",
+          "name": "fleet_password_policy"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "tracking_data_storage"
+        },
+        {
+          "type": "random_string",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "vehicle_db_subnet_group"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "vehicle_database"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "telemetry_processor_logs"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "telemetry_processor"
+        },
+        {
+          "type": "aws_api_gateway_rest_api",
+          "name": "gps_data_ingestion"
+        },
+        {
+          "type": "aws_api_gateway_resource",
+          "name": "gps_data_resource"
+        },
+        {
+          "type": "aws_api_gateway_method",
+          "name": "gps_data_post"
+        },
+        {
+          "type": "aws_api_gateway_integration",
+          "name": "lambda_integration"
+        },
+        {
+          "type": "aws_sns_topic",
+          "name": "alert_notification"
+        },
+        {
+          "type": "aws_instance",
+          "name": "fleet_dashboard"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "cloudtrail_logs"
+        },
+        {
+          "type": "aws_cloudtrail",
+          "name": "fleet_audit_trail"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 72,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 40,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 168,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

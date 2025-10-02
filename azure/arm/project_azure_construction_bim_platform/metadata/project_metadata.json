@@ -1,0 +1,311 @@
+{
+  "project_info": {
+    "project_id": "azure_construction_bim_platform",
+    "project_name": "Construction BIM Collaboration Platform",
+    "description": "A cloud-based Building Information Modeling (BIM) platform for construction companies to manage large CAD files, enable real-time collaboration between architects, engineers, and contractors, and track project progress. The platform handles file versioning, 3D model rendering, and project timeline management with role-based access control for different stakeholders.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "hybrid_web_application",
+    "business_context": "Mid-size construction firms need to collaborate on complex building projects with multiple stakeholders accessing and modifying large BIM files. The platform reduces project delays by enabling real-time collaboration, version control, and progress tracking while maintaining security for sensitive architectural data.",
+    "components": [
+      {
+        "name": "web_frontend",
+        "service_type": "azure_app_service",
+        "purpose": "React-based web application for BIM file viewing, project management, and collaboration tools",
+        "dependencies": [
+          "api_backend",
+          "file_storage"
+        ],
+        "security_considerations": [
+          "authentication",
+          "session_management",
+          "input_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_backend",
+        "service_type": "azure_app_service",
+        "purpose": "REST API handling user management, project operations, file metadata, and collaboration features",
+        "dependencies": [
+          "project_database",
+          "file_storage",
+          "cache_layer"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "authorization",
+          "data_validation",
+          "rate_limiting"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "file_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Blob storage for large BIM files, CAD drawings, and project documents with versioning",
+        "dependencies": [],
+        "security_considerations": [
+          "access_control",
+          "encryption_at_rest",
+          "secure_file_upload"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "project_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores project metadata, user roles, file versions, comments, and collaboration history",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "connection_security",
+          "backup_security"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "cache_layer",
+        "service_type": "azure_redis_cache",
+        "purpose": "Caches frequently accessed file metadata, user sessions, and project data for performance",
+        "dependencies": [],
+        "security_considerations": [
+          "cache_encryption",
+          "network_isolation"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "azure_application_gateway",
+        "purpose": "Distributes traffic, provides SSL termination, and includes WAF protection",
+        "dependencies": [
+          "web_frontend",
+          "api_backend"
+        ],
+        "security_considerations": [
+          "ssl_configuration",
+          "waf_rules",
+          "ddos_protection"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with multiple subnets for web tier, application tier, and data tier separation",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Application Gateway in public subnet routes to App Services in private subnets",
+        "App Services connect to SQL Database and Redis Cache in data subnet",
+        "Storage Account accessible via private endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 6,
+      "storage_buckets": 3,
+      "databases": 4,
+      "networking_components": 8,
+      "security_components": 4,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T18:13:53.316788"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "title": "Authentication Enabled",
+        "description": "Azure App Service instances lack proper authentication configuration, allowing unauthenticated access to the BIM collaboration platform's web frontend and API backend",
+        "severity": "high",
+        "affected_component": "web_frontend",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unauthorized access to sensitive architectural data and BIM files, potential data theft of proprietary construction designs",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#enabled\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        auth_settings {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "authentication_enabled.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without auth_settings block or with enabled = false",
+          "explanation": "Missing authentication configuration allows direct access to the BIM platform without proper user verification"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-NO_PUBLIC_FIREWALL_ACCESS",
+        "title": "No Public Firewall Access",
+        "description": "Azure SQL Database firewall rules allow unrestricted public access (0.0.0.0/0) to the project database containing sensitive BIM metadata and user information",
+        "severity": "critical",
+        "affected_component": "project_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Complete exposure of construction project data, user credentials, and proprietary architectural information to internet-based attackers",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/sql_firewall_rule#end_ip_address\n  good:\n    - |-\n      resource \"azurerm_sql_firewall_rule\" \"good_example\" {\n        name                = \"good_rule\"\n        resource_group_name = azurerm_resource_group.example.name\n        server_name         = azurerm_sql_server.example.name\n        start_ip_address    = \"0.0.0.0\"\n        end_ip_address      = \"0.0.0.0\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_firewall_rule\" \"bad_example\" {\n        name                = \"bad_rule\"\n        resource_group_name = azurerm_resource_group.example.name\n        server_name         = azurerm_sql_server.example.name\n        start_ip_address    = \"0.0.0.0\"\n        end_ip_address      = \"255.255.255.255\"\n      }",
+        "file_name": "no_public_firewall_access.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure SQL firewall rule with end_ip_address = '255.255.255.255' allowing global access",
+          "explanation": "Overly permissive firewall rules expose the database to attacks from any internet location"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-ENFORCE_HTTPS",
+        "title": "Enforce Https",
+        "description": "Azure Storage Account for BIM file storage does not enforce HTTPS-only traffic, allowing unencrypted transmission of large CAD files and sensitive architectural documents",
+        "severity": "medium",
+        "affected_component": "file_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Interception of sensitive BIM files during transmission, potential industrial espionage of construction designs",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#enable_https_traffic_only\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = false\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_https_traffic_only = false in storage account configuration",
+          "explanation": "Allows HTTP traffic which can be intercepted, exposing BIM files and project documents in transit"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "Enable Audit",
+        "description": "Azure SQL Database lacks extended auditing policy configuration, preventing detection of unauthorized access to sensitive construction project data and user activities",
+        "severity": "medium",
+        "affected_component": "project_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Inability to detect data breaches, compliance violations, and unauthorized access to proprietary architectural information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy SQL Server without corresponding azurerm_mssql_server_extended_auditing_policy resource",
+          "explanation": "Missing audit configuration prevents tracking of database access patterns and potential security incidents"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure Tls Policy",
+        "description": "Azure App Service instances use outdated TLS versions (1.0/1.1) for the BIM collaboration platform, exposing encrypted communications to known cryptographic vulnerabilities",
+        "severity": "medium",
+        "affected_component": "api_backend",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Potential decryption of API communications containing sensitive project data and user credentials through TLS downgrade attacks",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.2\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure site_config with min_tls_version = '1.0' or '1.1'",
+          "explanation": "Older TLS versions have known vulnerabilities that can be exploited to decrypt communications"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES",
+        "title": "Capture All Activities",
+        "description": "Azure Monitor Log Profile fails to capture all activity categories (Action, Delete, Write), limiting visibility into critical operations on the BIM platform infrastructure",
+        "severity": "medium",
+        "affected_component": "load_balancer",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Incomplete audit trail for security incidents, compliance violations, and unauthorized modifications to construction project resources",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_log_profile#categories\n  good:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"good_example\" {\n        name = \"good_example\"\n\n        categories = [\n          \"Action\",\n          \"Delete\",\n          \"Write\",\n        ]\n\n        retention_policy {\n          enabled = true\n          days    = 365\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"bad_example\" {\n        name = \"bad_example\"\n\n        categories = []\n\n        retention_policy {\n          enabled = true\n          days    = 7\n        }\n      }",
+        "file_name": "capture_all_activities.yaml",
+        "service": "monitor",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure monitor_log_profile with empty categories array",
+          "explanation": "Missing activity categories prevents comprehensive monitoring of infrastructure changes and security events"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+        "title": "No Public Egress",
+        "description": "Network Security Group rules allow unrestricted outbound traffic (0.0.0.0/0) from the BIM platform's private subnets, enabling potential data exfiltration and command-and-control communications",
+        "severity": "medium",
+        "affected_component": "load_balancer",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Potential exfiltration of sensitive BIM files and project data, establishment of persistent backdoors in the construction collaboration environment",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Outbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction                  = \"Outbound\"\n        destination_address_prefix = \"0.0.0.0/0\"\n        access                     = \"Allow\"\n      }",
+        "file_name": "no_public_egress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure outbound NSG rule with destination_address_prefix = '0.0.0.0/0'",
+          "explanation": "Unrestricted egress allows compromised systems to communicate with external attackers and exfiltrate data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "AZURE-DATABASE-NO_PUBLIC_FIREWALL_ACCESS",
+        "AZURE-STORAGE-ENFORCE_HTTPS",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES",
+        "AZURE-NETWORK-NO_PUBLIC_EGRESS"
+      ],
+      "severity_distribution": {
+        "critical": 1,
+        "high": 1,
+        "medium": 5,
+        "low": 0
+      },
+      "service_categories": [
+        "database",
+        "monitor",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "services_covered": [
+        "database",
+        "monitor",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 0.8333333333333334,
+    "resource_count": 19,
+    "components_implemented": 5,
+    "components_missing": 1,
+    "recommendations": [
+      "Missing components: load_balancer. Add corresponding resources to the templates."
+    ]
+  }
+}

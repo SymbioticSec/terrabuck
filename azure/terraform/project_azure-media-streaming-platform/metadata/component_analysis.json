@@ -1,0 +1,232 @@
+{
+  "original_components": [
+    {
+      "name": "media_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Stores raw uploaded videos and transcoded media files with different quality levels",
+      "dependencies": [],
+      "security_considerations": [
+        "blob_encryption",
+        "private_endpoints",
+        "access_policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "media_services",
+      "service_type": "azure_media_services",
+      "purpose": "Handles video transcoding, streaming endpoint configuration, and content protection",
+      "dependencies": [
+        "media_storage"
+      ],
+      "security_considerations": [
+        "content_key_policies",
+        "streaming_policies",
+        "drm_protection"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "web_application",
+      "service_type": "azure_app_service",
+      "purpose": "Frontend web application for video upload, management, and streaming interface",
+      "dependencies": [
+        "application_database",
+        "media_services"
+      ],
+      "security_considerations": [
+        "managed_identity",
+        "app_service_authentication",
+        "ssl_certificates"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_backend",
+      "service_type": "azure_app_service",
+      "purpose": "REST API backend handling user authentication, video metadata, and analytics",
+      "dependencies": [
+        "application_database",
+        "media_services"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "cors_policies",
+        "rate_limiting"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "application_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores user profiles, video metadata, viewing analytics, and access permissions",
+      "dependencies": [],
+      "security_considerations": [
+        "transparent_data_encryption",
+        "firewall_rules",
+        "private_endpoints"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "cdn_distribution",
+      "service_type": "azure_cdn",
+      "purpose": "Global content delivery network for optimized video streaming performance",
+      "dependencies": [
+        "media_services"
+      ],
+      "security_considerations": [
+        "token_authentication",
+        "geo_filtering",
+        "https_enforcement"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "media_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "media_services",
+      "service_type": "azure_media_services",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "web_application",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_backend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "cdn_distribution",
+      "service_type": "azure_cdn",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 332,
+      "resource_count": 18,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "corporate_media_streaming"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "corporate_media_vnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "web_tier_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_tier_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "integration_subnet"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "corporate_media_nsg"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "media_storage"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "raw_videos"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "transcoded_videos"
+        },
+        {
+          "type": "random_string",
+          "name": "storage_suffix"
+        },
+        {
+          "type": "azurerm_mssql_server",
+          "name": "application_database_server"
+        },
+        {
+          "type": "azurerm_mssql_database",
+          "name": "application_database"
+        },
+        {
+          "type": "azurerm_media_services_account",
+          "name": "media_services"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "corporate_media_plan"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "web_application"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "api_backend"
+        },
+        {
+          "type": "azurerm_cdn_profile",
+          "name": "cdn_distribution"
+        },
+        {
+          "type": "azurerm_cdn_endpoint",
+          "name": "media_endpoint"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 34,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 50,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 190,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

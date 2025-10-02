@@ -1,0 +1,585 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "defaultValue": "prod",
+      "metadata": {
+        "description": "Environment name (dev, staging, prod)"
+      }
+    },
+    "sqlAdminUsername": {
+      "type": "string",
+      "defaultValue": "bimsqladmin",
+      "metadata": {
+        "description": "SQL Server administrator username"
+      }
+    },
+    "sqlAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SQL Server administrator password"
+      }
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "S1",
+      "metadata": {
+        "description": "App Service Plan SKU"
+      }
+    },
+    "storageAccountType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "metadata": {
+        "description": "Storage Account replication type"
+      }
+    },
+    "redisCacheSku": {
+      "type": "string",
+      "defaultValue": "Basic",
+      "metadata": {
+        "description": "Redis Cache SKU"
+      }
+    },
+    "applicationGatewayTier": {
+      "type": "string",
+      "defaultValue": "Standard_v2",
+      "metadata": {
+        "description": "Application Gateway tier"
+      }
+    }
+  },
+  "variables": {
+    "projectPrefix": "construction-bim-collaboration-platform",
+    "vnetName": "[concat(variables('projectPrefix'), '-vnet-', parameters('environmentName'))]",
+    "publicSubnetName": "[concat(variables('projectPrefix'), '-public-subnet')]",
+    "privateSubnetName": "[concat(variables('projectPrefix'), '-private-subnet')]",
+    "dataSubnetName": "[concat(variables('projectPrefix'), '-data-subnet')]",
+    "nsgPublicName": "[concat(variables('projectPrefix'), '-nsg-public')]",
+    "nsgPrivateName": "[concat(variables('projectPrefix'), '-nsg-private')]",
+    "nsgDataName": "[concat(variables('projectPrefix'), '-nsg-data')]",
+    "storageAccountName": "[concat('constructionbim', uniqueString(resourceGroup().id))]",
+    "appServicePlanName": "[concat(variables('projectPrefix'), '-asp-', parameters('environmentName'))]",
+    "webAppName": "[concat(variables('projectPrefix'), '-web-', parameters('environmentName'))]",
+    "apiAppName": "[concat(variables('projectPrefix'), '-api-', parameters('environmentName'))]",
+    "sqlServerName": "[concat(variables('projectPrefix'), '-sql-', parameters('environmentName'))]",
+    "sqlDatabaseName": "[concat(variables('projectPrefix'), '-db-', parameters('environmentName'))]",
+    "redisCacheName": "[concat(variables('projectPrefix'), '-redis-', parameters('environmentName'))]",
+    "applicationGatewayName": "[concat(variables('projectPrefix'), '-appgw-', parameters('environmentName'))]",
+    "publicIpName": "[concat(variables('projectPrefix'), '-pip-', parameters('environmentName'))]",
+    "logAnalyticsName": "[concat(variables('projectPrefix'), '-logs-', parameters('environmentName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('publicSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.1.0/24"
+            }
+          },
+          {
+            "name": "[variables('privateSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.2.0/24"
+            }
+          },
+          {
+            "name": "[variables('dataSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.3.0/24"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgPublicName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowHTTPS",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "AllowHTTP",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1001,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgPrivateName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowVnetInbound",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "AllowAllOutbound",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "0.0.0.0/0",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Outbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgDataName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowPrivateSubnet",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "10.0.2.0/24",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-04-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "sku": {
+        "name": "[parameters('storageAccountType')]"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": false,
+        "accessTier": "Hot",
+        "allowBlobPublicAccess": true,
+        "minimumTlsVersion": "TLS1_0"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "versioning": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default/bim-files')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+      ],
+      "properties": {
+        "publicAccess": "Container"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default/cad-drawings')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+      ],
+      "properties": {
+        "publicAccess": "Blob"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default/project-documents')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2021-02-01-preview",
+      "name": "[variables('sqlServerName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdminUsername')]",
+        "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+        "version": "12.0"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/firewallRules",
+      "apiVersion": "2021-02-01-preview",
+      "name": "[concat(variables('sqlServerName'), '/AllowAllWindowsAzureIps')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+      ],
+      "properties": {
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "255.255.255.255"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2021-02-01-preview",
+      "name": "[concat(variables('sqlServerName'), '/', variables('sqlDatabaseName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "sku": {
+        "name": "S1",
+        "tier": "Standard"
+      },
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/Redis",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "sku": {
+          "name": "[parameters('redisCacheSku')]",
+          "family": "C",
+          "capacity": 0
+        },
+        "enableNonSslPort": true,
+        "minimumTlsVersion": "1.0"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "sku": {
+        "name": "[parameters('appServicePlanSku')]"
+      },
+      "properties": {
+        "reserved": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('webAppName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "minTlsVersion": "1.0",
+          "ftpsState": "AllAllowed"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('apiAppName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "minTlsVersion": "1.1",
+          "ftpsState": "AllAllowed"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/applicationGateways",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('applicationGatewayName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+      ],
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "sku": {
+          "name": "Standard_v2",
+          "tier": "[parameters('applicationGatewayTier')]",
+          "capacity": 2
+        },
+        "gatewayIPConfigurations": [
+          {
+            "name": "appGatewayIpConfig",
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('publicSubnetName'))]"
+              }
+            }
+          }
+        ],
+        "frontendIPConfigurations": [
+          {
+            "name": "appGwPublicFrontendIp",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              }
+            }
+          }
+        ],
+        "frontendPorts": [
+          {
+            "name": "port_80",
+            "properties": {
+              "port": 80
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "webAppBackendPool",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "fqdn": "[concat(variables('webAppName'), '.azurewebsites.net')]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "apiAppBackendPool",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "fqdn": "[concat(variables('apiAppName'), '.azurewebsites.net')]"
+                }
+              ]
+            }
+          }
+        ],
+        "backendHttpSettingsCollection": [
+          {
+            "name": "appGatewayBackendHttpSettings",
+            "properties": {
+              "port": 80,
+              "protocol": "Http",
+              "cookieBasedAffinity": "Disabled"
+            }
+          }
+        ],
+        "httpListeners": [
+          {
+            "name": "appGatewayHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', variables('applicationGatewayName'), 'appGwPublicFrontendIp')]"
+              },
+              "frontendPort": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/frontendPorts', variables('applicationGatewayName'), 'port_80')]"
+              },
+              "protocol": "Http"
+            }
+          }
+        ],
+        "requestRoutingRules": [
+          {
+            "name": "rule1",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/httpListeners', variables('applicationGatewayName'), 'appGatewayHttpListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/backendAddressPools', variables('applicationGatewayName'), 'webAppBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', variables('applicationGatewayName'), 'appGatewayBackendHttpSettings')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "BIM-Collaboration-Platform"
+      },
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 7
+      }
+    }
+  ],
+  "outputs": {
+    "storageAccountName": {
+      "type": "string",
+      "value": "[variables('storageAccountName')]"
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName'))).fullyQualifiedDomainName]"
+    },
+    "webAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', variables('webAppName'), '.azurewebsites.net')]"
+    },
+    "apiAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', variables('apiAppName'), '.azurewebsites.net')]"
+    },
+    "applicationGatewayPublicIp": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).ipAddress]"
+    },
+    "redisCacheHostName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Cache/Redis', variables('redisCacheName'))).hostName]"
+    }
+  }
+}

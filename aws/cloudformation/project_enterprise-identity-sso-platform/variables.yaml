@@ -1,0 +1,141 @@
+# CloudFormation Parameters Configuration
+# This file documents all configurable parameters for the Enterprise Identity SSO Platform
+
+Parameters:
+  Environment:
+    Description: "Environment name for resource tagging and configuration"
+    Type: String
+    Default: production
+    AllowedValues: 
+      - development
+      - staging  
+      - production
+    ConstraintDescription: "Must be development, staging, or production"
+
+  ProjectName:
+    Description: "Project name used for resource naming and tagging"
+    Type: String
+    Default: enterprise-identity-sso-platform
+    MinLength: 3
+    MaxLength: 50
+    AllowedPattern: "^[a-z0-9-]+$"
+    ConstraintDescription: "Must contain only lowercase letters, numbers, and hyphens"
+
+  # Network Configuration
+  VpcCidr:
+    Description: "CIDR block for the main VPC"
+    Type: String
+    Default: 10.0.0.0/16
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    ConstraintDescription: "Must be a valid IP CIDR range of the form x.x.x.x/x"
+
+  PublicSubnet1Cidr:
+    Description: "CIDR block for public subnet in first AZ"
+    Type: String
+    Default: 10.0.1.0/24
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  PublicSubnet2Cidr:
+    Description: "CIDR block for public subnet in second AZ"
+    Type: String
+    Default: 10.0.2.0/24
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  PrivateSubnet1Cidr:
+    Description: "CIDR block for private subnet in first AZ"
+    Type: String
+    Default: 10.0.10.0/24
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  PrivateSubnet2Cidr:
+    Description: "CIDR block for private subnet in second AZ"
+    Type: String
+    Default: 10.0.20.0/24
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  DataSubnet1Cidr:
+    Description: "CIDR block for data subnet in first AZ"
+    Type: String
+    Default: 10.0.100.0/24
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  DataSubnet2Cidr:
+    Description: "CIDR block for data subnet in second AZ"
+    Type: String
+    Default: 10.0.200.0/24
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  # Database Configuration
+  DatabaseInstanceClass:
+    Description: "RDS instance class for PostgreSQL database"
+    Type: String
+    Default: db.t3.medium
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+      - db.t3.large
+      - db.r5.large
+      - db.r5.xlarge
+    ConstraintDescription: "Must be a valid RDS instance type"
+
+  DatabaseUsername:
+    Description: "Master username for PostgreSQL database"
+    Type: String
+    Default: identityuser
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+    ConstraintDescription: "Must begin with a letter and contain only alphanumeric characters"
+
+  DatabasePassword:
+    Description: "Master password for PostgreSQL database"
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: "^[a-zA-Z0-9!@#$%^&*()_+=-]*$"
+    ConstraintDescription: "Must be 8-41 characters and contain only alphanumeric and special characters"
+
+  # Cache Configuration
+  CacheNodeType:
+    Description: "ElastiCache node type for Redis cluster"
+    Type: String
+    Default: cache.t3.micro
+    AllowedValues:
+      - cache.t3.micro
+      - cache.t3.small
+      - cache.t3.medium
+      - cache.r5.large
+      - cache.r5.xlarge
+    ConstraintDescription: "Must be a valid ElastiCache node type"
+
+  CacheNumNodes:
+    Description: "Number of cache nodes in Redis replication group"
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 6
+    ConstraintDescription: "Must be between 1 and 6"
+
+# Environment-specific configurations
+Mappings:
+  EnvironmentMap:
+    development:
+      DatabaseInstanceClass: db.t3.micro
+      CacheNodeType: cache.t3.micro
+      DesiredCapacity: 1
+    staging:
+      DatabaseInstanceClass: db.t3.small
+      CacheNodeType: cache.t3.small
+      DesiredCapacity: 2
+    production:
+      DatabaseInstanceClass: db.t3.medium
+      CacheNodeType: cache.t3.medium
+      DesiredCapacity: 3
+
+# Conditions for conditional resource creation
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+  IsNotProduction: !Not [!Equals [!Ref Environment, production]]
+  EnableMultiAZ: !Equals [!Ref Environment, production]

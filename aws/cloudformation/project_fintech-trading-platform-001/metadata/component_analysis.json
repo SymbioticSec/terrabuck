@@ -1,0 +1,160 @@
+{
+  "original_components": [
+    {
+      "name": "trading_engine_cluster",
+      "service_type": "aws_ec2_instance",
+      "purpose": "High-performance compute cluster running the core trading engine with order matching and execution logic",
+      "dependencies": [
+        "market_data_cache",
+        "trade_database",
+        "risk_management_service"
+      ],
+      "security_considerations": [
+        "instance_isolation",
+        "encrypted_inter_service_communication",
+        "privileged_access_controls"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "market_data_cache",
+      "service_type": "aws_elasticache_redis",
+      "purpose": "In-memory cache for real-time market data feeds and price information with microsecond access times",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "vpc_isolation",
+        "access_control_lists"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "trade_database",
+      "service_type": "aws_rds_postgresql",
+      "purpose": "ACID-compliant database storing trade records, account balances, and transaction history for audit compliance",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "encryption_in_transit",
+        "automated_backups",
+        "point_in_time_recovery"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "risk_management_service",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless functions for real-time risk assessment, position limits validation, and compliance checks",
+      "dependencies": [
+        "trade_database",
+        "compliance_logs"
+      ],
+      "security_considerations": [
+        "iam_role_restrictions",
+        "vpc_configuration",
+        "environment_variable_encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_gateway_cluster",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Load balancer distributing client API requests across trading engine instances with SSL termination",
+      "dependencies": [
+        "trading_engine_cluster"
+      ],
+      "security_considerations": [
+        "ssl_certificate_management",
+        "ddos_protection",
+        "rate_limiting"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "compliance_logs",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Immutable audit log storage for all trading activities, regulatory reporting, and compliance documentation",
+      "dependencies": [],
+      "security_considerations": [
+        "object_lock",
+        "versioning",
+        "cross_region_replication",
+        "access_logging"
+      ],
+      "configuration_complexity": "high"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "trading_engine_cluster",
+      "service_type": "aws_ec2_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "market_data_cache",
+      "service_type": "aws_elasticache_redis",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "trade_database",
+      "service_type": "aws_rds_postgresql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "risk_management_service",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway_cluster",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "compliance_logs",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 500,
+      "resource_count": 146,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 100,
+      "resource_count": 15,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 156,
+      "resource_count": 49,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 59,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

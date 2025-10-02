@@ -1,0 +1,353 @@
+{
+  "project_info": {
+    "project_id": "iot-manufacturing-monitoring",
+    "project_name": "Smart Manufacturing IoT Monitoring Platform",
+    "description": "A production-grade IoT platform for monitoring manufacturing equipment across multiple factory floors. The system collects real-time sensor data from industrial equipment (temperature, vibration, pressure), processes it for anomaly detection, stores historical data for analytics, and provides a dashboard for plant managers. Includes automated alerting for equipment failures and predictive maintenance scheduling.",
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "architecture_type": "event_driven_iot",
+    "business_context": "Manufacturing company with 3-5 production facilities needs to monitor 200+ pieces of industrial equipment to reduce downtime, optimize maintenance schedules, and improve overall equipment effectiveness (OEE). System must handle 10,000+ sensor readings per minute with sub-second alerting for critical failures.",
+    "components": [
+      {
+        "name": "iot_hub",
+        "service_type": "azure_iothub",
+        "purpose": "Ingests telemetry data from manufacturing equipment sensors via MQTT/HTTPS protocols",
+        "dependencies": [],
+        "security_considerations": [
+          "device authentication",
+          "message encryption",
+          "connection throttling"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "stream_processor",
+        "service_type": "azure_stream_analytics",
+        "purpose": "Real-time processing of sensor data for anomaly detection and threshold monitoring",
+        "dependencies": [
+          "iot_hub"
+        ],
+        "security_considerations": [
+          "data validation",
+          "processing isolation"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "alert_function",
+        "service_type": "azure_function_app",
+        "purpose": "Serverless functions to send immediate alerts for equipment failures and maintenance needs",
+        "dependencies": [
+          "stream_processor"
+        ],
+        "security_considerations": [
+          "function authorization",
+          "secret management",
+          "output validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "time_series_database",
+        "service_type": "azure_data_explorer",
+        "purpose": "Stores historical sensor data optimized for time-series queries and analytics",
+        "dependencies": [
+          "stream_processor"
+        ],
+        "security_considerations": [
+          "data encryption at rest",
+          "access control",
+          "backup security"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "dashboard_app",
+        "service_type": "azure_app_service",
+        "purpose": "Web application providing real-time dashboards and historical analytics for plant managers",
+        "dependencies": [
+          "time_series_database"
+        ],
+        "security_considerations": [
+          "authentication",
+          "authorization",
+          "HTTPS enforcement"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "blob_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Stores raw sensor data archives, maintenance reports, and equipment documentation",
+        "dependencies": [
+          "stream_processor"
+        ],
+        "security_considerations": [
+          "access policies",
+          "encryption",
+          "lifecycle management"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with three subnets: public subnet for load balancer and app gateway, private subnet for app services and functions, data subnet for databases with no internet access",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "IoT devices connect to IoT Hub via internet",
+        "Stream Analytics processes data in private subnet",
+        "Functions and App Service communicate via private endpoints",
+        "Database access restricted to private subnet only",
+        "Application Gateway provides public access to dashboard"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_accounts": 2,
+      "databases": 1,
+      "networking_components": 6,
+      "iot_services": 2,
+      "security_components": 4,
+      "monitoring_components": 2,
+      "total_estimated": 20
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:09:09.166806"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-STORAGE-NO_PUBLIC_ACCESS",
+        "title": "Storage Container Public Access Misconfiguration",
+        "description": "The blob storage container for manufacturing data archives is configured with public access, exposing sensitive equipment documentation and maintenance reports to unauthorized access",
+        "severity": "high",
+        "affected_component": "blob_storage",
+        "injection_strategy": "Configure storage container with 'blob' or 'container' access type instead of 'private'",
+        "business_impact": "Confidential manufacturing processes, equipment specifications, and maintenance schedules could be exposed to competitors or malicious actors, potentially leading to industrial espionage or targeted attacks on critical infrastructure",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://www.terraform.io/docs/providers/azure/r/storage_container.html#properties\n  good:\n    - |-\n      resource \"azurerm_storage_container\" \"good_example\" {\n        name                  = \"terraform-container-storage\"\n        container_access_type = \"private\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_container\" \"bad_example\" {\n        name                  = \"terraform-container-storage\"\n        container_access_type = \"blob\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set container_access_type = \"blob\" in azurerm_storage_container resource",
+          "explanation": "This allows anonymous read access to blob data, making manufacturing documentation publicly accessible"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "title": "Function App HTTPS Enforcement Disabled",
+        "description": "The alert function app responsible for critical equipment failure notifications is not enforcing HTTPS-only connections, allowing sensitive alert data to be transmitted over unencrypted HTTP",
+        "severity": "medium",
+        "affected_component": "alert_function",
+        "injection_strategy": "Omit https_only parameter or set it to false in azurerm_function_app resource",
+        "business_impact": "Manufacturing alert data including equipment failure details and maintenance schedules could be intercepted in transit, potentially allowing attackers to predict system vulnerabilities or disrupt critical maintenance operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/function_app#https_only\n  good:\n    - |-\n      resource \"azurerm_function_app\" \"good_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n        https_only                 = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_function_app\" \"bad_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Remove https_only = true from azurerm_function_app configuration",
+          "explanation": "Without HTTPS enforcement, the function app accepts HTTP connections, exposing alert data to man-in-the-middle attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "title": "Dashboard App Service Authentication Disabled",
+        "description": "The manufacturing dashboard web application lacks proper authentication configuration, potentially allowing unauthorized access to sensitive production metrics and equipment status information",
+        "severity": "high",
+        "affected_component": "dashboard_app",
+        "injection_strategy": "Omit auth_settings block or set enabled = false in azurerm_app_service resource",
+        "business_impact": "Unauthorized personnel could access real-time production data, equipment performance metrics, and operational insights, leading to potential sabotage, competitive intelligence theft, or disruption of manufacturing operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#enabled\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        auth_settings {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "authentication_enabled.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Remove auth_settings block entirely from azurerm_app_service resource",
+          "explanation": "Without authentication settings, the dashboard becomes publicly accessible without proper user verification"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "title": "Storage Account Network Rules Default Allow",
+        "description": "The storage account network rules are configured with default action 'Allow', permitting unrestricted network access to manufacturing data archives and sensor data backups",
+        "severity": "medium",
+        "affected_component": "blob_storage",
+        "injection_strategy": "Set default_action = \"Allow\" in azurerm_storage_account_network_rules resource",
+        "business_impact": "Manufacturing data including sensor readings, equipment performance metrics, and maintenance records could be accessed from any network location, increasing the risk of data exfiltration and unauthorized access to sensitive industrial information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account_network_rules#default_action\n  good:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"good_example\" {\n\n        default_action             = \"Deny\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"bad_example\" {\n\n        default_action             = \"Allow\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }",
+        "file_name": "default_action_deny.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure default_action = \"Allow\" in storage account network rules",
+          "explanation": "This permits access from any network by default, bypassing network-level security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+        "title": "Network Security Rule Allows Public Outbound Traffic",
+        "description": "Network security rules permit unrestricted outbound traffic to the internet (0.0.0.0/0), potentially allowing data exfiltration from the manufacturing monitoring network",
+        "severity": "medium",
+        "affected_component": "stream_processor",
+        "injection_strategy": "Configure outbound security rule with destination_address_prefix = \"0.0.0.0/0\"",
+        "business_impact": "Compromised systems within the manufacturing network could exfiltrate sensitive production data, equipment configurations, or proprietary manufacturing processes to external attackers without network-level restrictions",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Outbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction                  = \"Outbound\"\n        destination_address_prefix = \"0.0.0.0/0\"\n        access                     = \"Allow\"\n      }",
+        "file_name": "no_public_egress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set destination_address_prefix = \"0.0.0.0/0\" in outbound network security rule",
+          "explanation": "This allows unrestricted outbound internet access, enabling potential data exfiltration"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "Data Explorer Database Auditing Disabled",
+        "description": "The Azure Data Explorer cluster storing time-series manufacturing data lacks proper auditing configuration, preventing detection of unauthorized access to historical sensor data and analytics queries",
+        "severity": "medium",
+        "affected_component": "time_series_database",
+        "injection_strategy": "Omit azurerm_mssql_server_extended_auditing_policy resource for database server",
+        "business_impact": "Without audit logging, unauthorized access to manufacturing analytics, equipment performance trends, and predictive maintenance data would go undetected, hindering incident response and compliance with industrial security standards",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy database server without corresponding auditing policy resource",
+          "explanation": "Missing audit configuration prevents logging of database access and query activities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET",
+        "title": "Activity Log Retention Insufficient",
+        "description": "Azure Monitor activity log retention is configured for only 7 days, insufficient for forensic analysis of security incidents in the manufacturing environment",
+        "severity": "medium",
+        "affected_component": "stream_processor",
+        "injection_strategy": "Set retention_policy days to less than 90 in azurerm_monitor_log_profile",
+        "business_impact": "Short log retention periods limit the ability to investigate security incidents, track unauthorized access patterns, or maintain compliance with industrial security regulations that require extended audit trails for critical infrastructure",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_log_profile#retention_policy\n  good:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"good_example\" {\n        name = \"good_example\"\n\n        retention_policy {\n          enabled = true\n          days    = 365\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"bad_example\" {\n        name = \"bad_example\"\n\n        retention_policy {\n          enabled = true\n          days    = 7\n        }\n      }",
+        "file_name": "activity_log_retention_set.yaml",
+        "service": "monitor",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set retention_policy days = 7 in monitor log profile",
+          "explanation": "Short retention periods limit forensic capabilities and compliance with security standards"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AZURE-STORAGE-NO_PUBLIC_ACCESS",
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 0
+      },
+      "service_categories": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "monitor"
+      ],
+      "services_covered": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "monitor"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_name": "smart-manufacturing-iot-monitoring-platform",
+    "architecture_type": "event_driven_iot",
+    "cloud_provider": "azure",
+    "iac_tool": "terraform",
+    "total_resources": 24,
+    "resource_breakdown": {
+      "networking": 6,
+      "compute": 4,
+      "storage": 3,
+      "iot_services": 2,
+      "analytics": 2,
+      "security": 2,
+      "monitoring": 1,
+      "data": 2,
+      "gateway": 2
+    },
+    "estimated_monthly_cost": "$2500-4000",
+    "deployment_time": "15-20 minutes",
+    "components_implemented": [
+      "iot_hub",
+      "stream_processor",
+      "alert_function",
+      "time_series_database",
+      "dashboard_app",
+      "blob_storage"
+    ],
+    "vulnerabilities_injected": 7,
+    "security_misconfigurations": [
+      "Public blob storage access",
+      "Missing HTTPS enforcement",
+      "No authentication on dashboard",
+      "Permissive storage network rules",
+      "Unrestricted outbound network access",
+      "Missing database auditing",
+      "Insufficient log retention"
+    ],
+    "compliance_frameworks": [
+      "NIST Cybersecurity Framework",
+      "IEC 62443 Industrial Security",
+      "ISO 27001"
+    ]
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 21,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

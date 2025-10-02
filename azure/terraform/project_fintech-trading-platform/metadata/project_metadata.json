@@ -1,0 +1,367 @@
+{
+  "project_info": {
+    "project_id": "fintech-trading-platform",
+    "project_name": "Real-Time Financial Trading Platform",
+    "description": "A high-performance trading platform for a mid-sized financial services firm that processes real-time market data, executes trades, and provides portfolio analytics. The system handles sensitive financial data with strict compliance requirements including SOX, PCI-DSS, and financial regulatory standards. Features include real-time price feeds, order management, risk analytics, and audit logging.",
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "A regional investment firm needs a secure, scalable trading platform to serve 500+ institutional clients with real-time market access, portfolio management, and regulatory reporting capabilities. The platform must handle 10,000+ transactions per day with sub-second latency requirements.",
+    "components": [
+      {
+        "name": "trading_web_frontend",
+        "service_type": "azure_app_service",
+        "purpose": "React-based trading dashboard and client portal with real-time market data visualization",
+        "dependencies": [
+          "api_gateway",
+          "cdn_distribution"
+        ],
+        "security_considerations": [
+          "authentication",
+          "session_management",
+          "xss_protection",
+          "csrf_tokens"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "azure_api_management",
+        "purpose": "Central API gateway for routing, authentication, rate limiting, and API versioning",
+        "dependencies": [
+          "trading_engine",
+          "portfolio_service"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "rate_limiting",
+          "request_validation",
+          "oauth_integration"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "trading_engine",
+        "service_type": "azure_container_instances",
+        "purpose": "Core trading engine processing buy/sell orders with real-time market data integration",
+        "dependencies": [
+          "trading_database",
+          "market_data_cache"
+        ],
+        "security_considerations": [
+          "container_security",
+          "secrets_management",
+          "network_isolation",
+          "audit_logging"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "portfolio_service",
+        "service_type": "azure_functions",
+        "purpose": "Serverless portfolio analytics and risk calculation service",
+        "dependencies": [
+          "trading_database",
+          "market_data_cache"
+        ],
+        "security_considerations": [
+          "function_authentication",
+          "data_encryption",
+          "access_controls"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "trading_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Primary database storing trades, portfolios, client data with encryption and backup",
+        "dependencies": [],
+        "security_considerations": [
+          "data_encryption",
+          "backup_security",
+          "access_controls",
+          "audit_trails"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "market_data_cache",
+        "service_type": "azure_cache_redis",
+        "purpose": "High-performance cache for real-time market prices and trading data",
+        "dependencies": [],
+        "security_considerations": [
+          "data_encryption",
+          "network_isolation",
+          "access_authentication"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "cdn_distribution",
+        "service_type": "azure_cdn",
+        "purpose": "Content delivery network for static assets and improved global performance",
+        "dependencies": [
+          "trading_web_frontend"
+        ],
+        "security_considerations": [
+          "ssl_termination",
+          "ddos_protection",
+          "geo_blocking"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-tier VNet with separate subnets for web tier, application tier, and data tier with network security groups controlling traffic flow",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet Gateway to public subnet for CDN and App Service",
+        "Private subnets for container instances and functions",
+        "Isolated data subnet for SQL Database and Redis cache",
+        "VNet peering for cross-subnet communication"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_accounts": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3,
+      "total_estimated": 25
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:05:47.199144"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "The trading web frontend App Service is configured with an insecure TLS version (1.0), allowing deprecated encryption protocols that can be exploited by attackers to intercept financial trading data and client communications.",
+        "severity": "high",
+        "affected_component": "trading_web_frontend",
+        "injection_strategy": "Configure App Service with min_tls_version set to '1.0' instead of '1.2'",
+        "business_impact": "Sensitive financial data and trading communications could be intercepted through TLS downgrade attacks, potentially exposing client portfolios, trading strategies, and personal financial information, leading to regulatory violations and client trust loss.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.2\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = '1.0' in the App Service site_config block",
+          "explanation": "TLS 1.0 has known cryptographic weaknesses and is deprecated by security standards, making encrypted connections vulnerable to protocol downgrade attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-THREAT_ALERT_EMAIL_TO_OWNER",
+        "title": "Threat Alert Email To Owner",
+        "description": "The trading database SQL Server security alert policy is configured with email_account_admins set to false, preventing database administrators from receiving critical security threat notifications for the financial trading database.",
+        "severity": "medium",
+        "affected_component": "trading_database",
+        "injection_strategy": "Configure mssql_server_security_alert_policy with email_account_admins = false",
+        "business_impact": "Security incidents affecting the trading database may go unnoticed, allowing attackers to maintain persistence, exfiltrate financial data, or manipulate trading records without triggering administrative alerts, potentially leading to significant financial losses and regulatory violations.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#email_account_admins\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts            = []\n\n        email_account_admins = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n        ]\n        email_account_admins = false\n      }",
+        "file_name": "threat_alert_email_to_owner.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set email_account_admins = false in the mssql_server_security_alert_policy resource",
+          "explanation": "Without administrator email notifications, security threats like SQL injection attempts or data exfiltration may not be promptly detected and responded to"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "title": "Default Action Deny",
+        "description": "Storage account network rules are configured with default_action set to 'Allow', permitting unrestricted network access to storage accounts containing trading data backups and application assets.",
+        "severity": "high",
+        "affected_component": "trading_database",
+        "injection_strategy": "Configure storage_account_network_rules with default_action = 'Allow'",
+        "business_impact": "Unrestricted network access to storage accounts could allow unauthorized access to sensitive trading data backups, client information, and application secrets, potentially leading to data breaches and regulatory compliance violations in the financial sector.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account_network_rules#default_action\n  good:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"good_example\" {\n\n        default_action             = \"Deny\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"bad_example\" {\n\n        default_action             = \"Allow\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }",
+        "file_name": "default_action_deny.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set default_action = 'Allow' in azurerm_storage_account_network_rules",
+          "explanation": "Allowing all network access by default bypasses network-level security controls and exposes storage data to potential unauthorized access from any network location"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "title": "Enforce HTTPS",
+        "description": "The portfolio service Azure Functions is not configured to enforce HTTPS-only connections, allowing unencrypted HTTP traffic that could expose sensitive portfolio analytics and risk calculation data.",
+        "severity": "high",
+        "affected_component": "portfolio_service",
+        "injection_strategy": "Omit https_only = true configuration in azurerm_function_app resource",
+        "business_impact": "Portfolio data and risk calculations transmitted over unencrypted HTTP connections could be intercepted by attackers, exposing client investment strategies, financial positions, and proprietary trading algorithms, potentially causing significant financial and reputational damage.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/function_app#https_only\n  good:\n    - |-\n      resource \"azurerm_function_app\" \"good_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n        https_only                 = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_function_app\" \"bad_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the https_only = true setting in the azurerm_function_app resource configuration",
+          "explanation": "Without HTTPS enforcement, the function app accepts both HTTP and HTTPS connections, allowing sensitive data to be transmitted in plaintext"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "title": "No Public Ingress",
+        "description": "Network security group rules are configured to allow inbound traffic from 0.0.0.0/0 (any source), creating overly permissive network access to the trading platform infrastructure.",
+        "severity": "high",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Configure network security rule with source_address_prefix = '0.0.0.0/0' and access = 'Allow'",
+        "business_impact": "Unrestricted inbound network access could allow attackers to directly target the API gateway and trading services, potentially leading to unauthorized trading operations, data exfiltration, or denial of service attacks that could disrupt trading operations and cause financial losses.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Inbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction             = \"Inbound\"\n        source_address_prefix = \"0.0.0.0/0\"\n        access                = \"Allow\"\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set source_address_prefix = '0.0.0.0/0' in network security rule for inbound traffic",
+          "explanation": "Allowing traffic from any source IP address (0.0.0.0/0) removes network-level access controls and exposes services to attacks from anywhere on the internet"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-KEYVAULT-SPECIFY_NETWORK_ACL",
+        "title": "Specify Network ACL",
+        "description": "Key Vault used for storing trading application secrets and encryption keys lacks network access control lists, allowing unrestricted network access to sensitive cryptographic material.",
+        "severity": "medium",
+        "affected_component": "trading_engine",
+        "injection_strategy": "Omit network_acls block in azurerm_key_vault resource configuration",
+        "business_impact": "Unrestricted network access to Key Vault could allow attackers to attempt unauthorized access to trading system secrets, database connection strings, and encryption keys, potentially compromising the entire trading platform's security posture.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault#network_acls\n  good:\n    - |-\n      resource \"azurerm_key_vault\" \"good_example\" {\n        name                        = \"examplekeyvault\"\n        location                    = azurerm_resource_group.good_example.location\n        enabled_for_disk_encryption = true\n        soft_delete_retention_days  = 7\n        purge_protection_enabled    = false\n\n        network_acls {\n          bypass         = \"AzureServices\"\n          default_action = \"Deny\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_key_vault\" \"bad_example\" {\n        name                        = \"examplekeyvault\"\n        location                    = azurerm_resource_group.bad_example.location\n        enabled_for_disk_encryption = true\n        soft_delete_retention_days  = 7\n        purge_protection_enabled    = false\n      }",
+        "file_name": "specify_network_acl.yaml",
+        "service": "keyvault",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the network_acls configuration block in the azurerm_key_vault resource",
+          "explanation": "Without network ACLs, Key Vault accepts connections from any network location, bypassing network-level security controls for sensitive secrets and keys"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-SECURE_TLS_POLICY",
+        "title": "Secure TLS Policy",
+        "description": "The trading database SQL Server is configured with minimum_tls_version set to '1.1', using a deprecated TLS version that has known security vulnerabilities for database connections.",
+        "severity": "medium",
+        "affected_component": "trading_database",
+        "injection_strategy": "Configure azurerm_mssql_server with minimum_tls_version = '1.1'",
+        "business_impact": "Database connections using weak TLS encryption could be vulnerable to man-in-the-middle attacks, potentially exposing sensitive trading data, client portfolios, and financial transactions during transmission between application services and the database.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server#minimum_tls_version\n  good:\n    - |-\n      resource \"azurerm_mssql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"missadministrator\"\n        administrator_login_password = \"thisIsKat11\"\n        minimum_tls_version          = \"1.2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"missadministrator\"\n        administrator_login_password = \"thisIsKat11\"\n        minimum_tls_version          = \"1.1\"\n      }",
+        "file_name": "secure_tls_policy.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set minimum_tls_version = '1.1' in the azurerm_mssql_server resource",
+          "explanation": "TLS 1.1 has known cryptographic weaknesses and is deprecated by security standards, making database connections vulnerable to interception and manipulation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-DATABASE-THREAT_ALERT_EMAIL_TO_OWNER",
+        "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-KEYVAULT-SPECIFY_NETWORK_ACL",
+        "AZURE-DATABASE-SECURE_TLS_POLICY"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 4,
+        "medium": 3,
+        "low": 0
+      },
+      "service_categories": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "keyvault"
+      ],
+      "services_covered": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "keyvault"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "Real-Time Financial Trading Platform",
+    "architecture_type": "microservices",
+    "cloud_provider": "azure",
+    "iac_tool": "terraform",
+    "total_resources": 25,
+    "resource_breakdown": {
+      "compute": 4,
+      "storage": 2,
+      "database": 3,
+      "networking": 8,
+      "security": 3,
+      "cdn": 2,
+      "random": 3
+    },
+    "components_implemented": [
+      "trading_web_frontend",
+      "api_gateway",
+      "trading_engine",
+      "portfolio_service",
+      "trading_database",
+      "market_data_cache",
+      "cdn_distribution"
+    ],
+    "vulnerabilities_injected": 7,
+    "estimated_deployment_time": "15-20 minutes",
+    "estimated_monthly_cost": "$800-1200 USD",
+    "compliance_frameworks": [
+      "SOX",
+      "PCI-DSS",
+      "Financial Regulatory Standards"
+    ],
+    "deployment_regions": [
+      "East US"
+    ],
+    "high_availability": false,
+    "disaster_recovery": "Basic backup policies implemented"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 28,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

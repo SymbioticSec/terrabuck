@@ -1,0 +1,108 @@
+Outputs:
+  VpcId:
+    Description: ID of the VPC created for the HIPAA patient portal system
+    Value: !Ref HipaaPatientPortalVpc
+    Export:
+      Name: !Sub '${AWS::StackName}-VPC-ID'
+
+  ApplicationLoadBalancerDNS:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-ALB-DNS'
+
+  ApplicationLoadBalancerArn:
+    Description: ARN of the Application Load Balancer
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub '${AWS::StackName}-ALB-ARN'
+
+  DatabaseEndpoint:
+    Description: RDS instance endpoint for patient database
+    Value: !GetAtt PatientDatabase.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-DB-ENDPOINT'
+
+  DatabasePort:
+    Description: RDS instance port for patient database
+    Value: !GetAtt PatientDatabase.Endpoint.Port
+    Export:
+      Name: !Sub '${AWS::StackName}-DB-PORT'
+
+  DocumentStorageBucketName:
+    Description: Name of the S3 bucket for document storage
+    Value: !Ref DocumentStorageBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-DOCUMENTS-BUCKET'
+
+  BackupStorageBucketName:
+    Description: Name of the S3 bucket for backup storage
+    Value: !Ref BackupStorageBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BACKUP-BUCKET'
+
+  AuditLogGroupName:
+    Description: Name of the CloudWatch Log Group for audit logging
+    Value: !Ref AuditLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-AUDIT-LOGS'
+
+  CloudTrailArn:
+    Description: ARN of the CloudTrail for audit logging
+    Value: !GetAtt AuditCloudTrail.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-CLOUDTRAIL-ARN'
+
+  PatientCommunicationQueueUrl:
+    Description: URL of the SQS queue for patient communications
+    Value: !Ref PatientCommunicationQueue
+    Export:
+      Name: !Sub '${AWS::StackName}-COMM-QUEUE-URL'
+
+  PatientCommunicationQueueArn:
+    Description: ARN of the SQS queue for patient communications
+    Value: !GetAtt PatientCommunicationQueue.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-COMM-QUEUE-ARN'
+
+  PublicSubnet1Id:
+    Description: ID of public subnet 1
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PUBLIC-SUBNET-1'
+
+  PublicSubnet2Id:
+    Description: ID of public subnet 2
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PUBLIC-SUBNET-2'
+
+  PrivateSubnet1Id:
+    Description: ID of private subnet 1
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PRIVATE-SUBNET-1'
+
+  PrivateSubnet2Id:
+    Description: ID of private subnet 2
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PRIVATE-SUBNET-2'
+
+  WebAppSecurityGroupId:
+    Description: ID of the security group for web application instances
+    Value: !Ref WebAppSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-WEBAPP-SG'
+
+  DatabaseSecurityGroupId:
+    Description: ID of the security group for the database
+    Value: !Ref DatabaseSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-DB-SG'
+
+  AutoScalingGroupName:
+    Description: Name of the Auto Scaling Group for web applications
+    Value: !Ref WebAppAutoScalingGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ASG-NAME'

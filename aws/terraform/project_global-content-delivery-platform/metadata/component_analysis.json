@@ -1,0 +1,293 @@
+{
+  "original_components": [
+    {
+      "name": "content_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Primary storage for original content uploads with versioning and lifecycle policies",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket_policy_restrictions",
+        "encryption_at_rest",
+        "access_logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "content_processing",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless functions for image resizing, video transcoding, and content optimization triggered by S3 uploads",
+      "dependencies": [
+        "content_storage",
+        "processed_content_storage"
+      ],
+      "security_considerations": [
+        "iam_execution_roles",
+        "vpc_isolation",
+        "environment_variable_encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "processed_content_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Storage for processed and optimized content ready for CDN distribution",
+      "dependencies": [
+        "content_processing"
+      ],
+      "security_considerations": [
+        "cross_region_replication",
+        "bucket_versioning",
+        "access_controls"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "global_cdn",
+      "service_type": "aws_cloudfront",
+      "purpose": "Global content distribution network for fast content delivery with caching and edge locations",
+      "dependencies": [
+        "processed_content_storage",
+        "api_gateway"
+      ],
+      "security_considerations": [
+        "origin_access_identity",
+        "ssl_certificates",
+        "geo_restrictions"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "user_database",
+      "service_type": "aws_rds",
+      "purpose": "PostgreSQL database storing user accounts, content metadata, and access permissions",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "vpc_isolation",
+        "backup_encryption",
+        "parameter_group_hardening"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "purpose": "RESTful API for content management, user authentication, and analytics data collection",
+      "dependencies": [
+        "user_database",
+        "backend_services"
+      ],
+      "security_considerations": [
+        "api_key_management",
+        "throttling_limits",
+        "cors_configuration"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "backend_services",
+      "service_type": "aws_ecs",
+      "purpose": "Containerized application services for user management, content cataloging, and analytics processing",
+      "dependencies": [
+        "user_database"
+      ],
+      "security_considerations": [
+        "task_role_permissions",
+        "secrets_management",
+        "network_isolation"
+      ],
+      "configuration_complexity": "high"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "content_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "content_processing",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "processed_content_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "global_cdn",
+      "service_type": "aws_cloudfront",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "user_database",
+      "service_type": "aws_rds",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backend_services",
+      "service_type": "aws_ecs",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 461,
+      "resource_count": 28,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "main"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "main"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "content_storage"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "processed_content_storage"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "main"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "rds"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "user_database"
+        },
+        {
+          "type": "aws_ecr_repository",
+          "name": "backend_services"
+        },
+        {
+          "type": "aws_ecs_cluster",
+          "name": "main"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "ecs"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "ecs_task_execution"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "ecs_task_execution"
+        },
+        {
+          "type": "aws_iam_role_policy",
+          "name": "ecs_task_policy"
+        },
+        {
+          "type": "aws_ecs_task_definition",
+          "name": "backend_services"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "ecs"
+        },
+        {
+          "type": "aws_ecs_service",
+          "name": "backend_services"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_execution"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_basic"
+        },
+        {
+          "type": "aws_iam_role_policy",
+          "name": "lambda_s3_policy"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "content_processing"
+        },
+        {
+          "type": "aws_api_gateway_rest_api",
+          "name": "main"
+        },
+        {
+          "type": "aws_api_gateway_deployment",
+          "name": "main"
+        },
+        {
+          "type": "aws_cloudfront_distribution",
+          "name": "global_cdn"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 42,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 45,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 123,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

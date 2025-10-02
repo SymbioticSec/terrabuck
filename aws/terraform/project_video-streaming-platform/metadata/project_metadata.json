@@ -1,0 +1,362 @@
+{
+  "project_info": {
+    "project_id": "video-streaming-platform",
+    "project_name": "Corporate Training Video Streaming Platform",
+    "description": "A secure video streaming platform for corporate training content with user authentication, video transcoding, CDN delivery, and analytics. Supports multiple departments with role-based access control and detailed viewing analytics for compliance reporting.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "serverless_with_cdn",
+    "business_context": "Mid-size corporation needs to deliver mandatory training videos to 5,000+ employees across multiple locations. Requires secure access, progress tracking for compliance, and cost-effective global delivery with adaptive bitrate streaming.",
+    "components": [
+      {
+        "name": "video_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Store original video files and transcoded outputs with lifecycle policies",
+        "dependencies": [],
+        "security_considerations": [
+          "bucket_encryption",
+          "access_logging",
+          "versioning"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "video_transcoding",
+        "service_type": "aws_mediaconvert",
+        "purpose": "Transcode uploaded videos to multiple formats and bitrates for adaptive streaming",
+        "dependencies": [
+          "video_storage"
+        ],
+        "security_considerations": [
+          "iam_roles",
+          "encryption_in_transit"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "content_delivery",
+        "service_type": "aws_cloudfront",
+        "purpose": "Global CDN for fast video delivery with signed URLs for access control",
+        "dependencies": [
+          "video_storage"
+        ],
+        "security_considerations": [
+          "signed_urls",
+          "origin_access_identity",
+          "geo_restrictions"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "user_management",
+        "service_type": "aws_cognito",
+        "purpose": "User authentication and authorization with corporate AD integration",
+        "dependencies": [],
+        "security_considerations": [
+          "mfa_enforcement",
+          "password_policies",
+          "session_management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API for video metadata, user progress, and analytics with rate limiting",
+        "dependencies": [
+          "user_management",
+          "video_database"
+        ],
+        "security_considerations": [
+          "api_throttling",
+          "cors_configuration",
+          "request_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "video_database",
+        "service_type": "aws_dynamodb",
+        "purpose": "Store video metadata, user progress, viewing analytics, and completion records",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "fine_grained_access",
+          "backup_encryption"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "processing_functions",
+        "service_type": "aws_lambda",
+        "purpose": "Handle video upload processing, progress tracking, and analytics aggregation",
+        "dependencies": [
+          "video_storage",
+          "video_database",
+          "video_transcoding"
+        ],
+        "security_considerations": [
+          "execution_role_permissions",
+          "environment_variables",
+          "vpc_configuration"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Serverless architecture with VPC endpoints for secure service communication",
+      "security_zones": [
+        "public_cdn",
+        "private_api",
+        "data_layer"
+      ],
+      "connectivity_patterns": [
+        "CloudFront serves content globally",
+        "API Gateway handles authenticated requests",
+        "Lambda functions process in private subnets",
+        "DynamoDB accessed via VPC endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 0,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 6,
+      "serverless_functions": 4,
+      "cdn_distributions": 1,
+      "api_gateways": 1,
+      "cognito_pools": 2,
+      "mediaconvert_templates": 3,
+      "iam_roles": 5,
+      "cloudwatch_resources": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:29:30.528271"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-APIGATEWAY-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "API Gateway domain is configured with an insecure TLS policy (TLS 1.0) instead of a secure version (TLS 1.2+). This exposes the video streaming API to protocol downgrade attacks and weak encryption vulnerabilities.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Configure API Gateway domain with TLS 1.0 security policy in Terraform",
+        "business_impact": "Corporate training video API vulnerable to man-in-the-middle attacks, potentially exposing employee authentication tokens and sensitive training content metadata",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_domain_name#security_policy\n  good:\n    - |-\n      resource \"aws_api_gateway_domain_name\" \"good_example\" {\n        security_policy = \"TLS_1_2\"\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_domain_name\" \"bad_example\" {\n        security_policy = \"TLS_1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set security_policy = \"TLS_1_0\" in aws_api_gateway_domain_name resource",
+          "explanation": "Using TLS 1.0 makes the API vulnerable to known protocol weaknesses and doesn't meet modern security standards for corporate data protection"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "CloudFront distribution is configured with an insecure minimum TLS protocol version (TLS 1.0), allowing clients to connect using deprecated encryption protocols when accessing training videos globally.",
+        "severity": "medium",
+        "affected_component": "content_delivery",
+        "injection_strategy": "Set minimum_protocol_version to TLS 1.0 in CloudFront viewer certificate configuration",
+        "business_impact": "Global video delivery vulnerable to protocol downgrade attacks, potentially allowing interception of corporate training content and employee viewing patterns",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#minimum_protocol_version\n  good:\n    - |-\n      resource \"aws_cloudfront_distribution\" \"good_example\" {\n        viewer_certificate {\n          cloudfront_default_certificate = false\n          minimum_protocol_version       = \"TLSv1.2_2021\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_cloudfront_distribution\" \"bad_example\" {\n        viewer_certificate {\n          cloudfront_default_certificate = false\n          minimum_protocol_version       = \"TLSv1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "cloudfront",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure viewer_certificate with minimum_protocol_version = \"TLSv1.0\"",
+          "explanation": "Allows legacy clients to use weak TLS versions, exposing video content delivery to interception and tampering"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_CACHE_ENCRYPTION",
+        "title": "Enable Cache Encryption",
+        "description": "API Gateway method settings have caching enabled but cache data encryption is disabled, storing sensitive video metadata and user progress data in plaintext cache.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Enable caching but disable cache_data_encrypted in API Gateway method settings",
+        "business_impact": "Cached employee training progress, video metadata, and analytics data stored unencrypted, violating corporate data protection policies and compliance requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method_settings#cache_data_encrypted\n  good:\n    - |-\n      resource \"aws_api_gateway_method_settings\" \"good_example\" {\n        settings {\n          caching_enabled      = true\n          cache_data_encrypted = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_method_settings\" \"bad_example\" {\n        settings {\n          caching_enabled      = true\n          cache_data_encrypted = false\n        }\n      }",
+        "file_name": "enable_cache_encryption.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set caching_enabled = true but cache_data_encrypted = false in method settings",
+          "explanation": "API responses containing sensitive training data are cached in plaintext, accessible to unauthorized users with cache access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-SSM-SECRET_USE_CUSTOMER_KEY",
+        "title": "Secret Use Customer Key",
+        "description": "Secrets Manager secrets (likely containing database credentials, API keys, or service tokens) are encrypted using AWS managed keys instead of customer-managed KMS keys, reducing encryption control and auditability.",
+        "severity": "medium",
+        "affected_component": "processing_functions",
+        "injection_strategy": "Create Secrets Manager secrets without specifying kms_key_id or using AWS managed keys",
+        "business_impact": "Reduced control over encryption keys for sensitive credentials used in video processing and database access, limiting compliance audit capabilities",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret#kms_key_id\n  good:\n    - |-\n      resource \"aws_kms_key\" \"secrets\" {\n        enable_key_rotation = true\n      }\n      resource \"aws_secretsmanager_secret\" \"good_example\" {\n        name       = \"lambda_password\"\n        kms_key_id = aws_kms_key.secrets.arn\n      }\n  bad:\n    - |-\n      resource \"aws_secretsmanager_secret\" \"bad_example\" {\n        name = \"lambda_password\"\n      }",
+        "file_name": "secret_use_customer_key.yaml",
+        "service": "ssm",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create aws_secretsmanager_secret without kms_key_id parameter",
+          "explanation": "Uses AWS managed encryption keys instead of customer-controlled keys, reducing security governance and key rotation control"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "title": "Log Group Customer Key",
+        "description": "CloudWatch Log Groups storing Lambda function logs, API Gateway access logs, and video processing logs are not encrypted with customer-managed KMS keys, using default AWS encryption instead.",
+        "severity": "medium",
+        "affected_component": "processing_functions",
+        "injection_strategy": "Create CloudWatch Log Groups without specifying kms_key_id parameter",
+        "business_impact": "Video processing logs, user activity logs, and system metrics stored with AWS-managed encryption, reducing audit control and potentially exposing sensitive operational data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group#kms_key_id\n  good:\n    - |-\n      resource \"aws_kms_key\" \"cloudwatch\" {\n        enable_key_rotation = true\n      }\n      resource \"aws_cloudwatch_log_group\" \"good_example\" {\n        name = \"good_example\"\n        kms_key_id = aws_kms_alias.cloudwatch.arn\n      }\n  bad:\n    - |-\n      resource \"aws_cloudwatch_log_group\" \"bad_example\" {\n        name = \"bad_example\"\n      }",
+        "file_name": "log_group_customer_key.yaml",
+        "service": "cloudwatch",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create aws_cloudwatch_log_group resources without kms_key_id parameter",
+          "explanation": "Log data encrypted with AWS managed keys instead of customer-controlled keys, limiting encryption governance and compliance control"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "title": "Require Symbols In Passwords",
+        "description": "IAM account password policy does not require symbols in passwords, weakening password complexity requirements for users accessing the corporate training platform through federated authentication.",
+        "severity": "medium",
+        "affected_component": "user_management",
+        "injection_strategy": "Configure IAM password policy without require_symbols parameter or set to false",
+        "business_impact": "Weaker password requirements for corporate users accessing training content, increasing risk of credential compromise and unauthorized access to mandatory training systems",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        require_symbols = true\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # require_symbols not set\n      }",
+        "file_name": "require_symbols_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create aws_iam_account_password_policy without require_symbols parameter",
+          "explanation": "Password policy allows weak passwords without special characters, making corporate accounts more susceptible to brute force attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENABLE_ALL_REGIONS",
+        "title": "Enable All Regions",
+        "description": "CloudTrail is configured as a single-region trail instead of multi-region, missing API calls and security events from other AWS regions where video processing or CDN activities might occur.",
+        "severity": "medium",
+        "affected_component": "video_storage",
+        "injection_strategy": "Create CloudTrail without is_multi_region_trail parameter or set to false",
+        "business_impact": "Incomplete audit logging for global video delivery and processing activities, creating blind spots in security monitoring and compliance reporting for corporate training access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudtrail#is_multi_region_trail\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"good_example\" {\n        is_multi_region_trail = true\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n      }",
+        "file_name": "enable_all_regions.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create aws_cloudtrail resource without is_multi_region_trail parameter",
+          "explanation": "Only captures API calls in the primary region, missing security events from global CloudFront and cross-region video processing activities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-APIGATEWAY-USE_SECURE_TLS_POLICY",
+        "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "AWS-APIGATEWAY-ENABLE_CACHE_ENCRYPTION",
+        "AWS-SSM-SECRET_USE_CUSTOMER_KEY",
+        "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "AWS-CLOUDTRAIL-ENABLE_ALL_REGIONS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "ssm",
+        "cloudwatch",
+        "cloudtrail",
+        "iam",
+        "cloudfront"
+      ],
+      "services_covered": [
+        "apigateway",
+        "ssm",
+        "cloudwatch",
+        "cloudtrail",
+        "iam",
+        "cloudfront"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "Corporate Training Video Streaming Platform",
+    "architecture_type": "serverless_with_cdn",
+    "total_resources": 25,
+    "resource_breakdown": {
+      "aws_s3_bucket": 2,
+      "aws_cloudfront_distribution": 1,
+      "aws_dynamodb_table": 1,
+      "aws_cognito_user_pool": 1,
+      "aws_cognito_user_pool_client": 1,
+      "aws_lambda_function": 1,
+      "aws_api_gateway_rest_api": 1,
+      "aws_api_gateway_domain_name": 1,
+      "aws_api_gateway_method_settings": 1,
+      "aws_iam_role": 1,
+      "aws_iam_role_policy": 1,
+      "aws_cloudwatch_log_group": 1,
+      "aws_secretsmanager_secret": 1,
+      "aws_cloudtrail": 1,
+      "aws_iam_account_password_policy": 1,
+      "other_resources": 9
+    },
+    "components_implemented": [
+      "video_storage",
+      "video_transcoding",
+      "content_delivery",
+      "user_management",
+      "api_gateway",
+      "video_database",
+      "processing_functions"
+    ],
+    "vulnerabilities_injected": 7,
+    "estimated_monthly_cost": "$500-2000",
+    "deployment_time": "15-20 minutes"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 27,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

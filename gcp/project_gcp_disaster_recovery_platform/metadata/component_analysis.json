@@ -1,0 +1,269 @@
+{
+  "original_components": [
+    {
+      "name": "backup_orchestration_engine",
+      "service_type": "google_compute_instance",
+      "purpose": "Coordinates backup schedules, monitors application health, and triggers recovery procedures based on predefined policies",
+      "dependencies": [
+        "backup_storage",
+        "recovery_database",
+        "monitoring_dashboard"
+      ],
+      "security_considerations": [
+        "service_account_permissions",
+        "backup_encryption",
+        "cross_region_access_controls"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "google_storage_bucket",
+      "purpose": "Multi-region storage for application backups, configuration snapshots, and recovery artifacts with lifecycle management",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket_encryption",
+        "versioning_controls",
+        "cross_region_replication_security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "recovery_database",
+      "service_type": "google_sql_database_instance",
+      "purpose": "Stores recovery procedures, backup metadata, compliance logs, and recovery test results with high availability",
+      "dependencies": [
+        "backup_storage"
+      ],
+      "security_considerations": [
+        "database_encryption",
+        "backup_retention",
+        "audit_logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "recovery_testing_service",
+      "service_type": "google_cloud_function",
+      "purpose": "Automated recovery testing that spins up test environments, validates backup integrity, and measures RTO/RPO metrics",
+      "dependencies": [
+        "backup_storage",
+        "recovery_database",
+        "orchestration_engine"
+      ],
+      "security_considerations": [
+        "function_permissions",
+        "test_environment_isolation",
+        "sensitive_data_masking"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "monitoring_dashboard",
+      "service_type": "google_compute_instance",
+      "purpose": "Real-time dashboard showing backup status, recovery capabilities, compliance metrics, and alert management for DR teams",
+      "dependencies": [
+        "recovery_database",
+        "notification_service"
+      ],
+      "security_considerations": [
+        "dashboard_authentication",
+        "role_based_access",
+        "audit_trail_protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "notification_service",
+      "service_type": "google_cloud_function",
+      "purpose": "Handles alert distribution, escalation procedures, and compliance reporting via multiple channels (email, SMS, webhooks)",
+      "dependencies": [
+        "recovery_database"
+      ],
+      "security_considerations": [
+        "notification_encryption",
+        "contact_data_protection",
+        "alert_authenticity"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "backup_orchestration_engine",
+      "service_type": "google_compute_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "google_storage_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "recovery_database",
+      "service_type": "google_sql_database_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "recovery_testing_service",
+      "service_type": "google_cloud_function",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "monitoring_dashboard",
+      "service_type": "google_compute_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "notification_service",
+      "service_type": "google_cloud_function",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 344,
+      "resource_count": 26,
+      "resources_found": [
+        {
+          "type": "google_compute_network",
+          "name": "dr_vpc"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "management_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "backup_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "testing_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "secondary_subnet"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_internal"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_dashboard_access"
+        },
+        {
+          "type": "google_service_account",
+          "name": "orchestration_sa"
+        },
+        {
+          "type": "google_project_iam_member",
+          "name": "orchestration_storage_admin"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "primary_backup_storage"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "secondary_backup_storage"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "archive_storage"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "google_sql_database_instance",
+          "name": "recovery_database"
+        },
+        {
+          "type": "google_sql_database",
+          "name": "recovery_db"
+        },
+        {
+          "type": "google_sql_user",
+          "name": "recovery_db_user"
+        },
+        {
+          "type": "google_compute_instance",
+          "name": "backup_orchestration_engine"
+        },
+        {
+          "type": "google_compute_instance",
+          "name": "monitoring_dashboard"
+        },
+        {
+          "type": "google_cloudfunctions_function",
+          "name": "recovery_testing_service"
+        },
+        {
+          "type": "google_cloudfunctions_function",
+          "name": "notification_service"
+        },
+        {
+          "type": "google_pubsub_topic",
+          "name": "recovery_testing_trigger"
+        },
+        {
+          "type": "google_pubsub_topic",
+          "name": "notification_trigger"
+        },
+        {
+          "type": "google_storage_bucket_object",
+          "name": "testing_function_source"
+        },
+        {
+          "type": "google_storage_bucket_object",
+          "name": "notification_function_source"
+        },
+        {
+          "type": "google_compute_global_address",
+          "name": "dashboard_ip"
+        },
+        {
+          "type": "google_compute_health_check",
+          "name": "dashboard_health_check"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 46,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 53,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 180,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,487 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Enterprise CI/CD Platform with Artifact Management - Complete DevOps Infrastructure'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Project Configuration"
+        Parameters:
+          - ProjectName
+          - Environment
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnet1Cidr
+          - PrivateSubnet1Cidr
+      - Label:
+          default: "Instance Configuration"
+        Parameters:
+          - InstanceType
+          - KeyPairName
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: "enterprise-ci-cd-platform"
+    Description: "Name of the project"
+  
+  Environment:
+    Type: String
+    Default: "production"
+    AllowedValues: ["development", "staging", "production"]
+    Description: "Environment name"
+  
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "CIDR block for VPC"
+  
+  PublicSubnet1Cidr:
+    Type: String
+    Default: "10.0.1.0/24"
+    Description: "CIDR block for public subnet"
+  
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: "10.0.2.0/24"
+    Description: "CIDR block for private subnet"
+  
+  InstanceType:
+    Type: String
+    Default: "t3.medium"
+    AllowedValues: ["t3.small", "t3.medium", "t3.large"]
+    Description: "EC2 instance type"
+  
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: "EC2 Key Pair for SSH access"
+
+Resources:
+  # Network Infrastructure
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+        - Key: Environment
+          Value: !Ref Environment
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet1Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet-1"
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-subnet-1"
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-rt"
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::RouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  # Security Groups with Vulnerabilities
+  BuildSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${ProjectName}-build-sg"
+      GroupDescription: "Security group for build infrastructure"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0  # VULNERABILITY: Public SSH access
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0  # VULNERABILITY: Public HTTP access
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-build-sg"
+
+  ApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${ProjectName}-app-sg"
+      GroupDescription: "Security group for application servers"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0  # VULNERABILITY: Public HTTPS access
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0  # VULNERABILITY: Public application port access
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-app-sg"
+
+  # IAM Password Policy with Vulnerabilities
+  IAMPasswordPolicy:
+    Type: AWS::IAM::AccountPasswordPolicy
+    Properties:
+      MinimumPasswordLength: 8
+      RequireLowercaseCharacters: true
+      RequireNumbers: true
+      # VULNERABILITY: Missing RequireUppercaseCharacters
+      # VULNERABILITY: Missing RequireSymbols
+      AllowUsersToChangePassword: true
+      MaxPasswordAge: 90
+      PasswordReusePrevention: 3
+
+  # KMS Key without Rotation
+  ArtifactEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "KMS Key for artifact encryption"
+      # VULNERABILITY: Missing EnableKeyRotation
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+
+  ArtifactEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${ProjectName}-artifacts"
+      TargetKeyId: !Ref ArtifactEncryptionKey
+
+  # Artifact Storage (S3 Bucket)
+  ArtifactStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-artifacts-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-artifacts"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Source Control Integration (CodeCommit)
+  SourceRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: !Sub "${ProjectName}-source"
+      RepositoryDescription: "Main source code repository for CI/CD platform"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-source-repo"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Notification System (SNS)
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "${ProjectName}-notifications"
+      DisplayName: "CI/CD Platform Notifications"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-notifications"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # IAM Roles
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-codebuild-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: S3ArtifactAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub "${ArtifactStorageBucket}/*"
+
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-codepipeline-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: PipelineExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                  - codedeploy:CreateDeployment
+                Resource: "*"
+
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-codedeploy-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codedeploy.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole
+
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-ec2-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${ProjectName}-ec2-profile"
+      Roles:
+        - !Ref EC2InstanceRole
+
+  # Build Orchestration (CodeBuild)
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${ProjectName}-build"
+      Description: "Main build project for CI/CD platform"
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: S3
+        Location: !Sub "${ArtifactStorageBucket}/build-artifacts"
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+      Source:
+        Type: CODECOMMIT
+        Location: !GetAtt SourceRepository.CloneUrlHttp
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-build"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Launch Template with Vulnerabilities
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${ProjectName}-launch-template"
+      LaunchTemplateData:
+        ImageId: ami-0abcdef1234567890  # Amazon Linux 2
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyPairName
+        IamInstanceProfile:
+          Name: !Ref EC2InstanceProfile
+        SecurityGroupIds:
+          - !Ref ApplicationSecurityGroup
+        # VULNERABILITY: Missing MetadataOptions configuration (IMDSv2 not enforced)
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 20
+              VolumeType: gp3
+              DeleteOnTermination: true
+              # VULNERABILITY: Missing KmsKeyId (no customer-managed encryption)
+
+  # Auto Scaling Group (Target Infrastructure)
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${ProjectName}-asg"
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-instance"
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref Environment
+          PropagateAtLaunch: true
+
+  # CodeDeploy Application
+  CodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ApplicationName: !Sub "${ProjectName}-app"
+      ComputePlatform: Server
+
+  # CodeDeploy Deployment Group
+  CodeDeployDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      DeploymentGroupName: !Sub "${ProjectName}-deployment-group"
+      ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
+      AutoScalingGroups:
+        - !Ref AutoScalingGroup
+      DeploymentConfigName: CodeDeployDefault.AllAtOneTime
+
+  # Pipeline Orchestration (CodePipeline)
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub "${ProjectName}-pipeline"
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactStorageBucket
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeCommit
+                Version: '1'
+              Configuration:
+                RepositoryName: !GetAtt SourceRepository.Name
+                BranchName: main
+              OutputArtifacts:
+                - Name: SourceOutput
+        - Name: Build
+          Actions:
+            - Name: BuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref BuildProject
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+        - Name: Deploy
+          Actions:
+            - Name: DeployAction
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CodeDeploy
+                Version: '1'
+              Configuration:
+                ApplicationName: !Ref CodeDeployApplication
+                DeploymentGroupName: !Ref CodeDeployDeploymentGroup
+              InputArtifacts:
+                - Name: BuildOutput
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-pipeline"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # CloudTrail without CloudWatch Integration
+  CloudTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: !Sub "${ProjectName}-cloudtrail"
+      S3BucketName: !Ref ArtifactStorageBucket
+      S3KeyPrefix: "cloudtrail-logs/"
+      IncludeGlobalServiceEvents: true
+      IsMultiRegionTrail: true
+      EnableLogFileValidation: true
+      # VULNERABILITY: Missing CloudWatchLogsLogGroupArn
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-cloudtrail"
+        - Key: Environment
+          Value: !Ref Environment

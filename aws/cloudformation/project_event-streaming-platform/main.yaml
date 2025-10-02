@@ -1,0 +1,513 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Real-Time Event Streaming Analytics Platform - Production Infrastructure'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - ProjectName
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnetCidr
+          - PrivateComputeSubnetCidr
+          - PrivateDataSubnetCidr
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DatabaseUsername
+          - DatabasePassword
+          - DatabaseInstanceClass
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Environment name for resource tagging
+  
+  ProjectName:
+    Type: String
+    Default: real-time-event-streaming-analytics-platform
+    Description: Project name for resource naming
+  
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC
+  
+  PublicSubnetCidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for public subnet
+  
+  PrivateComputeSubnetCidr:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for private compute subnet
+  
+  PrivateDataSubnetCidr:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for private data subnet
+  
+  DatabaseUsername:
+    Type: String
+    Default: analytics_admin
+    Description: Master username for RDS instance
+  
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Master password for RDS instance
+  
+  DatabaseInstanceClass:
+    Type: String
+    Default: db.t3.medium
+    AllowedValues: [db.t3.micro, db.t3.small, db.t3.medium, db.t3.large]
+    Description: RDS instance class
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+
+Resources:
+  # VPC and Networking
+  EventStreamingVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+        - Key: Environment
+          Value: !Ref Environment
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref EventStreamingVPC
+      CidrBlock: !Ref PublicSubnetCidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet"
+        - Key: Environment
+          Value: !Ref Environment
+
+  PrivateComputeSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref EventStreamingVPC
+      CidrBlock: !Ref PrivateComputeSubnetCidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true  # VULNERABILITY: Private subnet auto-assigns public IPs
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-compute-subnet"
+        - Key: Environment
+          Value: !Ref Environment
+
+  PrivateDataSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref EventStreamingVPC
+      CidrBlock: !Ref PrivateDataSubnetCidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-data-subnet"
+        - Key: Environment
+          Value: !Ref Environment
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref EventStreamingVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref EventStreamingVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-rt"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # S3 Bucket for Raw Event Archive
+  RawEventArchiveBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-raw-events-${AWS::AccountId}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256  # VULNERABILITY: Using AES256 instead of KMS customer-managed key
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ArchiveOldEvents
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-raw-events"
+        - Key: Environment
+          Value: !Ref Environment
+      # VULNERABILITY: Missing PublicAccessBlockConfiguration with IgnorePublicAcls and RestrictPublicBuckets
+
+  # Kinesis Data Stream for Event Processing
+  EventDataStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: !Sub "${ProjectName}-event-stream"
+      ShardCount: 2
+      RetentionPeriodHours: 24
+      StreamEncryption:
+        EncryptionType: KMS
+        KeyId: alias/aws/kinesis
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-event-stream"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # API Gateway for Event Ingestion
+  EventIngestionAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ProjectName}-event-ingestion-api"
+      Description: Event ingestion gateway for real-time analytics
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-api"
+        - Key: Environment
+          Value: !Ref Environment
+
+  EventsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref EventIngestionAPI
+      ParentId: !GetAtt EventIngestionAPI.RootResourceId
+      PathPart: events
+
+  EventsPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref EventIngestionAPI
+      ResourceId: !Ref EventsResource
+      HttpMethod: POST
+      AuthorizationType: AWS_IAM
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:kinesis:action/PutRecord"
+        Credentials: !GetAtt APIGatewayKinesisRole.Arn
+        RequestTemplates:
+          application/json: |
+            {
+              "StreamName": "${EventDataStream}",
+              "Data": "$util.base64Encode($input.body)",
+              "PartitionKey": "$input.params('userId')"
+            }
+        IntegrationResponses:
+          - StatusCode: 200
+
+  APIGatewayKinesisRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-api-kinesis-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: KinesisAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:PutRecord
+                  - kinesis:PutRecords
+                Resource: !GetAtt EventDataStream.Arn
+
+  # Lambda Function for Real-time Analytics
+  AnalyticsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-analytics-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: AnalyticsPermissions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:DescribeStream
+                  - kinesis:GetShardIterator
+                  - kinesis:GetRecords
+                  - kinesis:ListStreams
+                Resource: !GetAtt EventDataStream.Arn
+              - Effect: Allow
+                Action: s3:*  # VULNERABILITY: Overly broad S3 permissions
+                Resource: '*'  # VULNERABILITY: Wildcard resource
+              - Effect: Allow
+                Action:
+                  - elasticache:*
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - rds:DescribeDBInstances
+                  - rds:Connect
+                Resource: '*'
+
+  RealTimeAnalyticsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-analytics-processor"
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt AnalyticsLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import base64
+          
+          def handler(event, context):
+              print(f"Processing {len(event['Records'])} records")
+              
+              for record in event['Records']:
+                  # Decode Kinesis data
+                  payload = base64.b64decode(record['kinesis']['data'])
+                  data = json.loads(payload)
+                  
+                  # Process event data
+                  print(f"Processing event: {data}")
+                  
+              return {'statusCode': 200, 'body': 'Events processed successfully'}
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PrivateComputeSubnet
+      Environment:
+        Variables:
+          REDIS_ENDPOINT: !GetAtt RedisCluster.RedisEndpoint.Address
+          DB_ENDPOINT: !GetAtt PostgreSQLDatabase.Endpoint.Address
+          S3_BUCKET: !Ref RawEventArchiveBucket
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-analytics-function"
+        - Key: Environment
+          Value: !Ref Environment
+
+  KinesisEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt EventDataStream.Arn
+      FunctionName: !Ref RealTimeAnalyticsFunction
+      StartingPosition: LATEST
+      BatchSize: 100
+
+  # Security Groups
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${ProjectName}-lambda-sg"
+      GroupDescription: Security group for Lambda functions
+      VpcId: !Ref EventStreamingVPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-lambda-sg"
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${ProjectName}-redis-sg"
+      GroupDescription: Security group for Redis cluster
+      VpcId: !Ref EventStreamingVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-redis-sg"
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${ProjectName}-db-sg"
+      GroupDescription: Security group for PostgreSQL database
+      VpcId: !Ref EventStreamingVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-sg"
+
+  # ElastiCache Redis Cluster
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnet group for Redis cluster
+      SubnetIds:
+        - !Ref PrivateDataSubnet
+        - !Ref PrivateComputeSubnet
+
+  RedisCluster:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupId: !Sub "${ProjectName}-redis"
+      Description: Redis cluster for metrics caching
+      NodeType: cache.t3.micro
+      Engine: redis
+      NumCacheClusters: 2
+      AtRestEncryptionEnabled: false  # VULNERABILITY: At-rest encryption disabled
+      TransitEncryptionEnabled: true
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroup
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      # VULNERABILITY: Missing SnapshotRetentionLimit for backup retention
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-redis"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # RDS PostgreSQL Database
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub "${ProjectName}-db-subnet-group"
+      DBSubnetGroupDescription: Subnet group for PostgreSQL database
+      SubnetIds:
+        - !Ref PrivateDataSubnet
+        - !Ref PrivateComputeSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-subnet-group"
+
+  PostgreSQLDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${ProjectName}-postgres"
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      Engine: postgres
+      EngineVersion: '13.7'
+      AllocatedStorage: 100
+      StorageType: gp2
+      StorageEncrypted: true
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      BackupRetentionPeriod: !If [IsProduction, 7, 1]
+      MultiAZ: !If [IsProduction, true, false]
+      DeletionProtection: !If [IsProduction, true, false]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-postgres"
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  VPCId:
+    Description: VPC ID for the event streaming platform
+    Value: !Ref EventStreamingVPC
+    Export:
+      Name: !Sub "${ProjectName}-vpc-id"
+
+  APIGatewayURL:
+    Description: API Gateway endpoint URL for event ingestion
+    Value: !Sub "https://${EventIngestionAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Export:
+      Name: !Sub "${ProjectName}-api-url"
+
+  KinesisStreamName:
+    Description: Kinesis stream name for event processing
+    Value: !Ref EventDataStream
+    Export:
+      Name: !Sub "${ProjectName}-kinesis-stream"
+
+  S3BucketName:
+    Description: S3 bucket name for raw event archive
+    Value: !Ref RawEventArchiveBucket
+    Export:
+      Name: !Sub "${ProjectName}-s3-bucket"
+
+  RedisEndpoint:
+    Description: Redis cluster endpoint for metrics caching
+    Value: !GetAtt RedisCluster.RedisEndpoint.Address
+    Export:
+      Name: !Sub "${ProjectName}-redis-endpoint"
+
+  DatabaseEndpoint:
+    Description: PostgreSQL database endpoint
+    Value: !GetAtt PostgreSQLDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${ProjectName}-db-endpoint"
+
+  LambdaFunctionName:
+    Description: Lambda function name for real-time analytics
+    Value: !Ref RealTimeAnalyticsFunction
+    Export:
+      Name: !Sub "${ProjectName}-lambda-function"

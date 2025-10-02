@@ -1,0 +1,156 @@
+{
+  "original_components": [
+    {
+      "name": "identity_service_cluster",
+      "service_type": "aws_ecs_fargate",
+      "purpose": "Hosts the core identity management microservices including authentication, authorization, user management, and SAML/OAuth providers",
+      "dependencies": [
+        "user_directory_database",
+        "session_cache",
+        "audit_storage"
+      ],
+      "security_considerations": [
+        "JWT token security",
+        "API rate limiting",
+        "service-to-service authentication",
+        "secrets management"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "user_directory_database",
+      "service_type": "aws_rds_postgresql",
+      "purpose": "Stores user profiles, roles, permissions, group memberships, and application access mappings with encryption at rest",
+      "dependencies": [],
+      "security_considerations": [
+        "database encryption",
+        "connection security",
+        "backup encryption",
+        "access logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "session_cache",
+      "service_type": "aws_elasticache_redis",
+      "purpose": "Manages active user sessions, SSO tokens, and temporary authentication states for high-performance lookups",
+      "dependencies": [],
+      "security_considerations": [
+        "in-transit encryption",
+        "auth token storage",
+        "session timeout policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "audit_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Stores comprehensive audit logs of all authentication events, access attempts, and administrative actions for compliance reporting",
+      "dependencies": [],
+      "security_considerations": [
+        "log integrity",
+        "retention policies",
+        "access controls",
+        "encryption"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "application_load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Distributes incoming authentication requests across identity service instances with SSL termination and health checks",
+      "dependencies": [
+        "identity_service_cluster"
+      ],
+      "security_considerations": [
+        "SSL/TLS configuration",
+        "DDoS protection",
+        "request filtering"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "mfa_notification_service",
+      "service_type": "aws_lambda",
+      "purpose": "Handles multi-factor authentication workflows including SMS, email, and push notifications for authentication challenges",
+      "dependencies": [
+        "user_directory_database",
+        "session_cache"
+      ],
+      "security_considerations": [
+        "secure communication channels",
+        "rate limiting",
+        "credential protection"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "identity_service_cluster",
+      "service_type": "aws_ecs_fargate",
+      "implementation_confidence": 0.6
+    },
+    {
+      "name": "user_directory_database",
+      "service_type": "aws_rds_postgresql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "audit_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 0.8999999999999999
+    }
+  ],
+  "missing_components": [
+    {
+      "name": "session_cache",
+      "service_type": "aws_elasticache_redis",
+      "reason": "No matching resources found"
+    },
+    {
+      "name": "mfa_notification_service",
+      "service_type": "aws_lambda",
+      "reason": "No matching resources found"
+    }
+  ],
+  "implementation_coverage": 0.6666666666666666,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 628,
+      "resource_count": 182,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 141,
+      "resource_count": 21,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 47,
+      "resource_count": 15,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": [
+    "WARNING: Some components may be missing from the implementation. Verify that all architecture components have corresponding resources.",
+    "Missing components: session_cache, mfa_notification_service. Add corresponding resources to the templates."
+  ]
+}

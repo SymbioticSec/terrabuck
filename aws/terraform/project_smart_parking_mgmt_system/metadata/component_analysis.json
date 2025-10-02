@@ -1,0 +1,297 @@
+{
+  "original_components": [
+    {
+      "name": "iot_data_ingestion",
+      "service_type": "aws_iot_core",
+      "purpose": "Receives real-time data from parking sensors including occupancy status, payment confirmations, and violation alerts",
+      "dependencies": [],
+      "security_considerations": [
+        "device_authentication",
+        "encrypted_mqtt_communication",
+        "certificate_management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "sensor_data_processing",
+      "service_type": "aws_lambda",
+      "purpose": "Processes incoming sensor data, validates readings, triggers alerts for violations, and updates parking space status",
+      "dependencies": [
+        "iot_data_ingestion",
+        "parking_database"
+      ],
+      "security_considerations": [
+        "function_permissions",
+        "vpc_isolation",
+        "input_validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "parking_database",
+      "service_type": "aws_rds_postgresql",
+      "purpose": "Stores parking space inventory, real-time occupancy data, payment transactions, and historical analytics",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "network_isolation",
+        "backup_encryption",
+        "access_controls"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "citizen_mobile_api",
+      "service_type": "aws_api_gateway",
+      "purpose": "RESTful API serving mobile applications for citizens to find parking, make payments, and extend parking time",
+      "dependencies": [
+        "parking_database",
+        "payment_processing"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "rate_limiting",
+        "input_sanitization"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "payment_processing",
+      "service_type": "aws_lambda",
+      "purpose": "Handles payment transactions, integrates with payment gateways, manages parking session billing and receipts",
+      "dependencies": [
+        "parking_database"
+      ],
+      "security_considerations": [
+        "pci_compliance",
+        "encrypted_payment_data",
+        "secure_api_calls"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "admin_dashboard_hosting",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Hosts static web dashboard for city administrators to monitor parking utilization, revenue, and system health",
+      "dependencies": [
+        "citizen_mobile_api"
+      ],
+      "security_considerations": [
+        "access_logging",
+        "secure_content_delivery",
+        "admin_authentication"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "iot_data_ingestion",
+      "service_type": "aws_iot_core",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "sensor_data_processing",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "parking_database",
+      "service_type": "aws_rds_postgresql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "citizen_mobile_api",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "payment_processing",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "admin_dashboard_hosting",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 539,
+      "resource_count": 34,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "smart_parking_vpc"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "smart_parking_igw"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_subnet_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_subnet_2"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_subnet_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_subnet_2"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public_rt"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_rta_1"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_rta_2"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "lambda_sg"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "rds_sg"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "parking_db_subnet_group"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "parking_database"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_execution_role"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_vpc_execution"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "sensor_processing_logs"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "payment_processing_logs"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "sensor_data_processing"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "payment_processing"
+        },
+        {
+          "type": "aws_iot_thing_type",
+          "name": "parking_sensor"
+        },
+        {
+          "type": "aws_iot_policy",
+          "name": "parking_sensor_policy"
+        },
+        {
+          "type": "aws_api_gateway_rest_api",
+          "name": "citizen_mobile_api"
+        },
+        {
+          "type": "aws_api_gateway_deployment",
+          "name": "citizen_api_deployment"
+        },
+        {
+          "type": "aws_api_gateway_stage",
+          "name": "citizen_api_stage"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "admin_dashboard"
+        },
+        {
+          "type": "random_string",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "admin_dashboard_versioning"
+        },
+        {
+          "type": "aws_cloudfront_distribution",
+          "name": "admin_dashboard_cdn"
+        },
+        {
+          "type": "aws_cloudfront_origin_access_identity",
+          "name": "admin_dashboard_oai"
+        },
+        {
+          "type": "aws_acm_certificate",
+          "name": "admin_dashboard_cert"
+        },
+        {
+          "type": "aws_cloudtrail",
+          "name": "parking_system_audit"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "cloudtrail_logs"
+        },
+        {
+          "type": "random_string",
+          "name": "cloudtrail_suffix"
+        },
+        {
+          "type": "aws_iam_account_password_policy",
+          "name": "parking_system_password_policy"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 78,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 60,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 213,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

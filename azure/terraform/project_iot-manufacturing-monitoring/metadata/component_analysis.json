@@ -1,0 +1,243 @@
+{
+  "original_components": [
+    {
+      "name": "iot_hub",
+      "service_type": "azure_iothub",
+      "purpose": "Ingests telemetry data from manufacturing equipment sensors via MQTT/HTTPS protocols",
+      "dependencies": [],
+      "security_considerations": [
+        "device authentication",
+        "message encryption",
+        "connection throttling"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "stream_processor",
+      "service_type": "azure_stream_analytics",
+      "purpose": "Real-time processing of sensor data for anomaly detection and threshold monitoring",
+      "dependencies": [
+        "iot_hub"
+      ],
+      "security_considerations": [
+        "data validation",
+        "processing isolation"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "alert_function",
+      "service_type": "azure_function_app",
+      "purpose": "Serverless functions to send immediate alerts for equipment failures and maintenance needs",
+      "dependencies": [
+        "stream_processor"
+      ],
+      "security_considerations": [
+        "function authorization",
+        "secret management",
+        "output validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "time_series_database",
+      "service_type": "azure_data_explorer",
+      "purpose": "Stores historical sensor data optimized for time-series queries and analytics",
+      "dependencies": [
+        "stream_processor"
+      ],
+      "security_considerations": [
+        "data encryption at rest",
+        "access control",
+        "backup security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "dashboard_app",
+      "service_type": "azure_app_service",
+      "purpose": "Web application providing real-time dashboards and historical analytics for plant managers",
+      "dependencies": [
+        "time_series_database"
+      ],
+      "security_considerations": [
+        "authentication",
+        "authorization",
+        "HTTPS enforcement"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "blob_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Stores raw sensor data archives, maintenance reports, and equipment documentation",
+      "dependencies": [
+        "stream_processor"
+      ],
+      "security_considerations": [
+        "access policies",
+        "encryption",
+        "lifecycle management"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "iot_hub",
+      "service_type": "azure_iothub",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "stream_processor",
+      "service_type": "azure_stream_analytics",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "alert_function",
+      "service_type": "azure_function_app",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "time_series_database",
+      "service_type": "azure_data_explorer",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "dashboard_app",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "blob_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 389,
+      "resource_count": 21,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "smart_manufacturing"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "smart_manufacturing_vnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "public_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "private_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "public_nsg"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "private_nsg"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "blob_storage"
+        },
+        {
+          "type": "azurerm_storage_account_network_rules",
+          "name": "blob_storage_network_rules"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "manufacturing_data"
+        },
+        {
+          "type": "azurerm_iothub",
+          "name": "iot_hub"
+        },
+        {
+          "type": "azurerm_stream_analytics_job",
+          "name": "stream_processor"
+        },
+        {
+          "type": "azurerm_monitor_log_profile",
+          "name": "manufacturing_logs"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "dashboard_plan"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "dashboard_app"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "function_storage"
+        },
+        {
+          "type": "azurerm_linux_function_app",
+          "name": "alert_function"
+        },
+        {
+          "type": "azurerm_kusto_cluster",
+          "name": "time_series_database"
+        },
+        {
+          "type": "azurerm_kusto_database",
+          "name": "manufacturing_timeseries"
+        },
+        {
+          "type": "azurerm_public_ip",
+          "name": "app_gateway_ip"
+        },
+        {
+          "type": "azurerm_application_gateway",
+          "name": "app_gateway"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 41,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 70,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 159,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

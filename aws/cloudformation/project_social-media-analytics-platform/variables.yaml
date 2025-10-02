@@ -1,0 +1,59 @@
+# CloudFormation Parameters Configuration
+# These parameters can be customized during stack deployment
+
+# Environment Configuration
+Environment: production
+ProjectName: social-media-analytics-platform
+
+# Network Configuration
+VpcCidr: 10.0.0.0/16
+PublicSubnet1Cidr: 10.0.1.0/24
+PublicSubnet2Cidr: 10.0.2.0/24
+PrivateSubnet1Cidr: 10.0.10.0/24
+PrivateSubnet2Cidr: 10.0.20.0/24
+
+# Database Configuration
+DatabaseUsername: analytics_admin
+DatabasePassword: SecurePassword123!
+DatabaseInstanceClass: db.t3.medium
+
+# Compute Configuration
+InstanceType: t3.medium
+
+# Deployment Configuration
+AWS::Region: us-east-1
+AWS::AccountId: "123456789012"
+
+# Resource Naming
+StackName: social-media-analytics-platform-stack
+
+# Security Configuration
+AllowedCidr: 0.0.0.0/0
+
+# Storage Configuration
+S3BucketPrefix: social-media-analytics-platform
+DatabaseAllocatedStorage: 100
+DatabaseBackupRetentionPeriod: 7
+
+# API Gateway Configuration
+APIGatewayCacheClusterSize: "0.5"
+APIGatewayStage: prod
+
+# Lambda Configuration
+LambdaRuntime: python3.9
+LambdaHandler: index.handler
+
+# Kinesis Configuration
+KinesisShardCount: 2
+
+# Monitoring Configuration
+EnablePerformanceInsights: true
+EnableCloudWatchLogs: true
+
+# Tags
+DefaultTags:
+  Project: social-media-analytics-platform
+  Environment: production
+  Owner: analytics-team
+  CostCenter: marketing
+  Compliance: required

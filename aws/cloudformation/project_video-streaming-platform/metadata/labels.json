@@ -1,0 +1,406 @@
+{
+  "project_labels": {
+    "project_id": "video-streaming-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "logging": 2,
+        "credential_management": 1
+      },
+      "by_trivy_service": {
+        "s3": 2,
+        "rds": 1,
+        "iam": 1,
+        "ec2": 1,
+        "cloudtrail": 1,
+        "elasticache": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-S3-BLOCK_PUBLIC_ACLS",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-IAM-ENFORCE_GROUP_MFA",
+        "AWS-EC2-NO_SENSITIVE_INFO",
+        "AWS-CLOUDTRAIL-ENABLE_ALL_REGIONS",
+        "AWS-ELASTICACHE-ENABLE_IN_TRANSIT_ENCRYPTION",
+        "AWS-S3-ENABLE_OBJECT_READ_LOGGING"
+      ],
+      "services_covered": [
+        "s3",
+        "rds",
+        "iam",
+        "ec2",
+        "cloudtrail",
+        "elasticache"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-S3-BLOCK_PUBLIC_ACLS",
+      "trivy_rule_info": {
+        "original_file": "block_public_acls.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/s3/block_public_acls.yaml"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "bucket_permissions",
+        "public_internet_access"
+      ],
+      "mitigation_strategies": [
+        "enable_public_access_block",
+        "implement_bucket_policies",
+        "regular_access_audits"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::S3::Bucket without PublicAccessBlockConfiguration or BlockPublicAcls: false",
+        "secure_pattern": "AWS::S3::Bucket with PublicAccessBlockConfiguration.BlockPublicAcls: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "disable_public_access.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/rds/disable_public_access.yaml"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity",
+        "database_credentials"
+      ],
+      "mitigation_strategies": [
+        "disable_public_access",
+        "vpc_security_groups",
+        "network_acls"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::RDS::DBInstance with PubliclyAccessible: true",
+        "secure_pattern": "AWS::RDS::DBInstance with PubliclyAccessible: false"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-ENFORCE_GROUP_MFA",
+      "trivy_rule_info": {
+        "original_file": "enforce_group_mfa.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/iam/enforce_group_mfa.yaml"
+      },
+      "vulnerability_class": "authentication_weakness",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "compromised_credentials",
+        "network_access"
+      ],
+      "mitigation_strategies": [
+        "enforce_mfa_policies",
+        "conditional_access",
+        "regular_policy_reviews"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "IAM policies without aws:MultiFactorAuthPresent condition",
+        "secure_pattern": "IAM policies with aws:MultiFactorAuthPresent: true condition"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "authentication",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-NO_SENSITIVE_INFO",
+      "trivy_rule_info": {
+        "original_file": "no_sensitive_info.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/ec2/no_sensitive_info.yaml"
+      },
+      "vulnerability_class": "credential_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "ec2_describe_permissions",
+        "instance_metadata_access"
+      ],
+      "mitigation_strategies": [
+        "use_secrets_manager",
+        "parameter_store",
+        "iam_roles",
+        "environment_variables"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "UserData containing hardcoded passwords, API keys, or secrets",
+        "secure_pattern": "UserData retrieving secrets from AWS Secrets Manager or Parameter Store"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "credential_management",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-ENABLE_ALL_REGIONS",
+      "trivy_rule_info": {
+        "original_file": "enable_all_regions.yaml",
+        "service_category": "cloudtrail",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/cloudtrail/enable_all_regions.yaml"
+      },
+      "vulnerability_class": "logging_gap",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "GDPR",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "multi_region_access",
+        "audit_evasion_knowledge"
+      ],
+      "mitigation_strategies": [
+        "enable_multi_region_trail",
+        "centralized_logging",
+        "log_monitoring"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::CloudTrail::Trail with IsMultiRegionTrail: false or omitted",
+        "secure_pattern": "AWS::CloudTrail::Trail with IsMultiRegionTrail: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-ELASTICACHE-ENABLE_IN_TRANSIT_ENCRYPTION",
+      "trivy_rule_info": {
+        "original_file": "enable_in_transit_encryption.yaml",
+        "service_category": "elasticache",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/elasticache/enable_in_transit_encryption.yaml"
+      },
+      "vulnerability_class": "encryption_in_transit",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "HIPAA",
+        "SOC2"
+      ],
+      "attack_vector": "adjacent",
+      "prerequisites": [
+        "network_access",
+        "traffic_interception_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_transit_encryption",
+        "vpc_security",
+        "network_segmentation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::ElastiCache::ReplicationGroup without TransitEncryptionEnabled or set to false",
+        "secure_pattern": "AWS::ElastiCache::ReplicationGroup with TransitEncryptionEnabled: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-S3-ENABLE_OBJECT_READ_LOGGING",
+      "trivy_rule_info": {
+        "original_file": "enable_object_read_logging.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/s3/enable_object_read_logging.yaml"
+      },
+      "vulnerability_class": "audit_logging",
+      "detection_difficulty": "hard",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "GDPR",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "s3_access_permissions",
+        "stealth_requirements"
+      ],
+      "mitigation_strategies": [
+        "enable_data_events",
+        "cloudtrail_configuration",
+        "log_analysis"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "S3 bucket without corresponding CloudTrail data events for object operations",
+        "secure_pattern": "CloudTrail with data events configured for S3 object read/write operations"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_checking",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "7 medium severity findings across S3, RDS, IAM, EC2, CloudTrail, and ElastiCache services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand common AWS security misconfigurations in video streaming platforms",
+      "Learn how Trivy detects infrastructure security vulnerabilities",
+      "Master remediation techniques for access control and encryption issues",
+      "Recognize the importance of comprehensive logging and monitoring",
+      "Apply security best practices in microservices architectures"
+    ],
+    "prerequisite_knowledge": [
+      "Basic AWS services knowledge (S3, RDS, EC2, IAM)",
+      "Understanding of Infrastructure as Code concepts",
+      "Familiarity with CloudFormation syntax",
+      "Basic security principles (encryption, access control, logging)"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Public access controls are critical for data protection",
+      "Multi-factor authentication should be enforced at the IAM level",
+      "Secrets should never be hardcoded in infrastructure templates",
+      "Comprehensive logging requires both API and data-level events",
+      "Encryption in transit protects against network-based attacks",
+      "Multi-region logging prevents audit gaps"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "elasticache",
+      "iam",
+      "s3",
+      "cloudtrail",
+      "ec2",
+      "rds"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "video-streaming-platform",
+    "generation_timestamp": "2025-08-08T16:32:55.907774",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

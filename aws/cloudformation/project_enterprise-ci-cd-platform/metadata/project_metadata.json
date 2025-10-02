@@ -1,0 +1,324 @@
+{
+  "project_info": {
+    "project_id": "enterprise-ci-cd-platform",
+    "project_name": "Enterprise CI/CD Platform with Artifact Management",
+    "description": "A comprehensive DevOps platform for a mid-size software company that provides automated build pipelines, artifact storage, deployment automation, and code quality gates. The platform supports multiple development teams with isolated environments, automated testing, and secure artifact distribution across development, staging, and production environments.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "A growing software company with 50+ developers across 8 teams needs to standardize their deployment processes, reduce manual errors, and implement proper code quality gates. The platform must support multiple programming languages, provide audit trails for compliance, and scale to handle 200+ builds per day while maintaining security isolation between projects.",
+    "components": [
+      {
+        "name": "build_orchestration",
+        "service_type": "aws_codebuild",
+        "purpose": "Manages automated build processes, runs unit tests, and performs code quality analysis using configurable build specifications",
+        "dependencies": [
+          "artifact_storage",
+          "source_control_integration"
+        ],
+        "security_considerations": [
+          "build_environment_isolation",
+          "secrets_management",
+          "iam_role_permissions"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "artifact_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Stores build artifacts, Docker images, deployment packages, and maintains versioned releases with lifecycle policies",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_logging",
+          "versioning_controls",
+          "cross_account_access"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "deployment_automation",
+        "service_type": "aws_codedeploy",
+        "purpose": "Automates application deployments across multiple environments with blue-green and rolling deployment strategies",
+        "dependencies": [
+          "artifact_storage",
+          "target_infrastructure"
+        ],
+        "security_considerations": [
+          "deployment_permissions",
+          "rollback_capabilities",
+          "environment_isolation"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "pipeline_orchestration",
+        "service_type": "aws_codepipeline",
+        "purpose": "Coordinates the entire CI/CD workflow from source code changes through production deployment with approval gates",
+        "dependencies": [
+          "build_orchestration",
+          "deployment_automation",
+          "notification_system"
+        ],
+        "security_considerations": [
+          "pipeline_permissions",
+          "approval_workflows",
+          "audit_logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "target_infrastructure",
+        "service_type": "aws_ec2_autoscaling",
+        "purpose": "Provides scalable compute infrastructure for hosting applications across development, staging, and production environments",
+        "dependencies": [
+          "network_infrastructure"
+        ],
+        "security_considerations": [
+          "instance_hardening",
+          "security_groups",
+          "patch_management",
+          "ssh_key_management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "notification_system",
+        "service_type": "aws_sns",
+        "purpose": "Sends build status notifications, deployment alerts, and failure notifications to development teams via email and Slack",
+        "dependencies": [],
+        "security_considerations": [
+          "message_encryption",
+          "topic_access_controls"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "source_control_integration",
+        "service_type": "aws_codecommit",
+        "purpose": "Provides Git-based source code repositories with branch protection, merge request workflows, and integration hooks",
+        "dependencies": [],
+        "security_considerations": [
+          "repository_access_controls",
+          "branch_protection",
+          "commit_signing"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancers and NAT gateways, private subnets for application servers and build agents, and isolated subnets for sensitive operations",
+      "security_zones": [
+        "public",
+        "private",
+        "build_isolation"
+      ],
+      "connectivity_patterns": [
+        "build_agents_in_private_subnets",
+        "deployment_targets_across_multiple_azs",
+        "secure_artifact_access",
+        "controlled_internet_access_via_nat"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 3,
+      "databases": 0,
+      "networking_components": 8,
+      "iam_roles": 6,
+      "security_groups": 4,
+      "pipeline_components": 5
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:37:48.113854"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "title": "No Public Ingress Security Group Rule",
+        "description": "Security groups allow unrestricted inbound access from the internet (0.0.0.0/0) on sensitive ports, creating potential attack vectors for unauthorized access to CI/CD infrastructure components.",
+        "severity": "medium",
+        "affected_component": "target_infrastructure",
+        "injection_strategy": "Configure security groups with overly permissive CIDR blocks allowing public access to application and build infrastructure",
+        "business_impact": "Exposes CI/CD infrastructure to internet-based attacks, potentially allowing unauthorized access to build agents, deployment targets, and sensitive development environments",
+        "trivy_yaml_content": "cloudformation:\n  links:\n    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-securitygroup.html\n  good:\n    - |-\n      Resources:\n        GoodSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupIngress:\n              - CidrIp: 127.0.0.1/32\n                IpProtocol: \"6\"\n                FromPort: 22\n                ToPort: 22\n  bad:\n    - |-\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupIngress:\n              - CidrIp: 0.0.0.0/0\n                IpProtocol: \"6\"\n                FromPort: 22\n                ToPort: 22",
+        "file_name": "no_public_ingress_sgr.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create security groups for EC2 instances with ingress rules allowing 0.0.0.0/0 access on ports 22, 80, or 443",
+          "explanation": "This creates a pathway for attackers to directly access CI/CD infrastructure from the internet, bypassing intended network isolation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ENCRYPTION_CUSTOMER_KEY",
+        "title": "EBS Volume Missing Customer-Managed Encryption",
+        "description": "EBS volumes used by CI/CD infrastructure lack customer-managed KMS encryption keys, relying on default AWS-managed encryption or no encryption at all for sensitive build artifacts and deployment data.",
+        "severity": "medium",
+        "affected_component": "target_infrastructure",
+        "injection_strategy": "Deploy EC2 instances with EBS volumes that don't specify customer-managed KMS keys for encryption",
+        "business_impact": "Build artifacts, source code, and deployment packages stored on EBS volumes may be inadequately protected, failing compliance requirements and exposing intellectual property",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EC2::Volume\n          Properties:\n            KmsKeyId: alias/volumeEncrypt\n    - |-\n      Resources:\n        MyKey:\n          Type: AWS::KMS::Key\n          Properties:\n            KeyPolicy:\n              Version: \"2012-10-17\"\n              Id: key-default-1\n\n        GoodExample:\n          Type: AWS::EC2::Volume\n          Properties:\n            KmsKeyId: !Ref MyKey\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EC2::Volume",
+        "file_name": "encryption_customer_key.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create EBS volumes without specifying KmsKeyId property, leaving them with default encryption or unencrypted",
+          "explanation": "Without customer-managed keys, organizations lose control over encryption key rotation, access policies, and audit trails for sensitive CI/CD data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_UPPERCASE_IN_PASSWORDS",
+        "title": "IAM Password Policy Missing Uppercase Requirement",
+        "description": "IAM account password policy does not enforce uppercase character requirements, weakening authentication security for users accessing the CI/CD platform and associated AWS resources.",
+        "severity": "medium",
+        "affected_component": "build_orchestration",
+        "injection_strategy": "Configure IAM account password policy without requiring uppercase characters in user passwords",
+        "business_impact": "Weak password policies increase risk of credential compromise, potentially allowing unauthorized access to CI/CD pipelines, build systems, and deployment environments",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        # ...\n        require_uppercase_characters = true\n        # ...\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # require_uppercase_characters not set\n        # ...\n      }",
+        "file_name": "require_uppercase_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy IAM password policy resource without setting require_uppercase_characters to true",
+          "explanation": "This allows users to create passwords without uppercase letters, making them more susceptible to dictionary attacks and brute force attempts"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENSURE_CLOUDWATCH_INTEGRATION",
+        "title": "CloudTrail Missing CloudWatch Integration",
+        "description": "CloudTrail configuration lacks integration with CloudWatch Logs, preventing real-time monitoring and alerting on critical CI/CD security events and API calls across the platform.",
+        "severity": "medium",
+        "affected_component": "pipeline_orchestration",
+        "injection_strategy": "Deploy CloudTrail without CloudWatchLogsLogGroupArn configuration, missing centralized log aggregation",
+        "business_impact": "Limited visibility into security events, API calls, and potential unauthorized access attempts across CI/CD infrastructure, hindering incident response and compliance auditing",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExampleTrail:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            CloudWatchLogsLogGroupArn: arn:aws:logs:us-east-1:123456789012:log-group:CloudTrail/DefaultLogGroup:*\n            TrailName: Cloudtrail\n  bad:\n    - |-\n      Resources:\n        BadExampleTrail:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            TrailName: Cloudtrail",
+        "file_name": "ensure_cloudwatch_integration.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudTrail resource without CloudWatchLogsLogGroupArn property, missing real-time log streaming",
+          "explanation": "Without CloudWatch integration, security teams cannot set up real-time alerts for suspicious activities in the CI/CD pipeline or perform centralized log analysis"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-KMS-AUTO_ROTATE_KEYS",
+        "title": "KMS Key Rotation Disabled",
+        "description": "KMS keys used for encrypting CI/CD artifacts, build outputs, and sensitive configuration data do not have automatic key rotation enabled, violating security best practices for long-term key management.",
+        "severity": "medium",
+        "affected_component": "artifact_storage",
+        "injection_strategy": "Create KMS keys with enable_key_rotation set to false or omitted for encryption of S3 artifacts and other sensitive data",
+        "business_impact": "Long-term use of the same encryption keys increases cryptographic risk and may violate compliance requirements for key rotation in enterprise environments",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key#enable_key_rotation\n  good:\n    - |-\n      resource \"aws_kms_key\" \"good_example\" {\n        enable_key_rotation = true\n      }\n    - |-\n      resource \"aws_kms_key\" \"good_example\" {\n        enable_key_rotation = false\n        key_usage           = \"SIGN_VERIFY\"\n      }\n  bad:\n    - |-\n      resource \"aws_kms_key\" \"bad_example\" {\n        enable_key_rotation = false\n      }",
+        "file_name": "auto_rotate_keys.yaml",
+        "service": "kms",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy KMS keys with enable_key_rotation explicitly set to false for general encryption purposes",
+          "explanation": "This prevents automatic annual key rotation, requiring manual key management and potentially exposing encrypted data to increased cryptographic risk over time"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ENFORCE_HTTP_TOKEN_IMDS",
+        "title": "EC2 Instance Metadata Service Not Secured",
+        "description": "EC2 instances in the CI/CD infrastructure do not enforce IMDSv2 (Instance Metadata Service version 2) with required HTTP tokens, leaving them vulnerable to SSRF attacks and credential theft.",
+        "severity": "medium",
+        "affected_component": "target_infrastructure",
+        "injection_strategy": "Deploy EC2 instances without metadata_options configuration or with http_tokens set to optional",
+        "business_impact": "Attackers exploiting SSRF vulnerabilities in CI/CD applications could access instance metadata, including IAM credentials, potentially escalating privileges across the platform",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance#metadata-options\n  good:\n    - |-\n      resource \"aws_instance\" \"good_example\" {\n        ami           = \"ami-005e54dee72cc1d00\"\n        instance_type = \"t2.micro\"\n        metadata_options {\n          http_tokens = \"required\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_instance\" \"bad_example\" {\n        ami           = \"ami-005e54dee72cc1d00\"\n        instance_type = \"t2.micro\"\n      }",
+        "file_name": "enforce_http_token_imds.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create EC2 instances without specifying metadata_options block, defaulting to IMDSv1 behavior",
+          "explanation": "This allows applications to access instance metadata without authentication tokens, enabling SSRF attacks to retrieve IAM credentials and other sensitive information"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "title": "IAM Password Policy Missing Symbol Requirement",
+        "description": "IAM account password policy does not enforce symbol character requirements, further weakening authentication security alongside the missing uppercase requirement for CI/CD platform users.",
+        "severity": "medium",
+        "affected_component": "build_orchestration",
+        "injection_strategy": "Configure IAM account password policy without requiring symbol characters in user passwords",
+        "business_impact": "Combined with other weak password requirements, this significantly increases the risk of successful brute force attacks against developer and operator accounts accessing CI/CD systems",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        # ...\n        require_symbols = true\n        # ...\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # require_symbols not set\n        # ...\n      }",
+        "file_name": "require_symbols_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy IAM password policy resource without setting require_symbols to true",
+          "explanation": "This allows users to create passwords without special characters, reducing password entropy and making credential compromise more likely"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-EC2-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-IAM-REQUIRE_UPPERCASE_IN_PASSWORDS",
+        "AWS-CLOUDTRAIL-ENSURE_CLOUDWATCH_INTEGRATION",
+        "AWS-KMS-AUTO_ROTATE_KEYS",
+        "AWS-EC2-ENFORCE_HTTP_TOKEN_IMDS",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "cloudtrail",
+        "kms",
+        "iam",
+        "ec2"
+      ],
+      "services_covered": [
+        "cloudtrail",
+        "kms",
+        "iam",
+        "ec2"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 181,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

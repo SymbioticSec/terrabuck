@@ -1,0 +1,409 @@
+{
+  "project_labels": {
+    "project_id": "fintech_trading_platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "logging": 1,
+        "authentication": 1
+      },
+      "by_trivy_service": {
+        "ec2": 1,
+        "rds": 1,
+        "s3": 1,
+        "iam": 2,
+        "kms": 1,
+        "cloudtrail": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+        "AWS-S3-REQUIRE_MFA_DELETE",
+        "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+        "AWS-KMS-AUTO_ROTATE_KEYS",
+        "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "AWS-IAM-REQUIRE_LOWERCASE_IN_PASSWORDS"
+      ],
+      "services_covered": [
+        "ec2",
+        "rds",
+        "s3",
+        "iam",
+        "kms",
+        "cloudtrail"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+      "trivy_rule_info": {
+        "original_file": "no_public_ingress_sgr.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "SOX",
+        "PCI-DSS",
+        "FINRA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity",
+        "port_scanning_tools"
+      ],
+      "mitigation_strategies": [
+        "restrict_cidr_blocks_to_known_ranges",
+        "implement_bastion_hosts",
+        "use_vpc_endpoints",
+        "enable_security_group_flow_logs"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "cidr_blocks = [\"0.0.0.0/0\"]",
+        "secure_pattern": "cidr_blocks = [\"10.0.0.0/16\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+      "trivy_rule_info": {
+        "original_file": "specify_backup_retention.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/rds"
+      },
+      "vulnerability_class": "data_protection",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOX",
+        "FINRA",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "database_access",
+        "disaster_scenario"
+      ],
+      "mitigation_strategies": [
+        "set_backup_retention_period_minimum_7_days",
+        "enable_automated_backups",
+        "implement_cross_region_backup_replication",
+        "test_backup_restoration_procedures"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "backup_retention_period = 1",
+        "secure_pattern": "backup_retention_period = 7"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_protection",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-S3-REQUIRE_MFA_DELETE",
+      "trivy_rule_info": {
+        "original_file": "require_mfa_delete.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/s3"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOX",
+        "FINRA",
+        "SEC"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "aws_credentials",
+        "s3_delete_permissions"
+      ],
+      "mitigation_strategies": [
+        "enable_mfa_delete_on_versioned_buckets",
+        "implement_object_lock_policies",
+        "use_cross_region_replication",
+        "enable_cloudtrail_for_s3_api_calls"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "mfa_delete = \"Disabled\"",
+        "secure_pattern": "mfa_delete = \"Enabled\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "limit_s3_full_access.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "privilege_escalation",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "SOX",
+        "PCI-DSS",
+        "FINRA"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "compromised_lambda_function",
+        "iam_role_assumption"
+      ],
+      "mitigation_strategies": [
+        "apply_principle_of_least_privilege",
+        "use_specific_s3_bucket_arns",
+        "limit_actions_to_required_operations",
+        "implement_resource_based_policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "Action = \"s3:*\", Resource = \"*\"",
+        "secure_pattern": "Action = [\"s3:GetObject\"], Resource = \"arn:aws:s3:::specific-bucket/*\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "privilege_escalation",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-KMS-AUTO_ROTATE_KEYS",
+      "trivy_rule_info": {
+        "original_file": "auto_rotate_keys.yaml",
+        "service_category": "kms",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/kms"
+      },
+      "vulnerability_class": "cryptographic_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "FINRA",
+        "NIST"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "long_term_key_exposure",
+        "cryptographic_analysis"
+      ],
+      "mitigation_strategies": [
+        "enable_automatic_key_rotation",
+        "implement_manual_key_rotation_schedule",
+        "use_separate_keys_for_different_data_types",
+        "monitor_key_usage_patterns"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "enable_key_rotation = false",
+        "secure_pattern": "enable_key_rotation = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "cryptographic_weakness",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+      "trivy_rule_info": {
+        "original_file": "enable_log_validation.yaml",
+        "service_category": "cloudtrail",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudtrail"
+      },
+      "vulnerability_class": "audit_integrity",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOX",
+        "FINRA",
+        "SEC"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "cloudtrail_access",
+        "log_tampering_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_log_file_validation",
+        "use_separate_s3_bucket_for_cloudtrail",
+        "implement_log_file_integrity_monitoring",
+        "enable_cloudtrail_insights"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "# enable_log_file_validation not set",
+        "secure_pattern": "enable_log_file_validation = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "audit_integrity",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-REQUIRE_LOWERCASE_IN_PASSWORDS",
+      "trivy_rule_info": {
+        "original_file": "require_lowercase_in_passwords.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "authentication_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "NIST",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "password_brute_force_tools",
+        "user_enumeration"
+      ],
+      "mitigation_strategies": [
+        "enable_all_password_complexity_requirements",
+        "implement_multi_factor_authentication",
+        "set_minimum_password_length",
+        "enable_password_expiration_policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "# require_lowercase_characters not set",
+        "secure_pattern": "require_lowercase_characters = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "authentication_weakness",
+        "severity_numeric": 4.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_mapping",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,MEDIUM .",
+      "expected_trivy_output": "7_vulnerabilities_detected_across_6_aws_services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_common_aws_security_misconfigurations",
+      "learn_trivy_security_scanning_capabilities",
+      "recognize_financial_sector_compliance_requirements",
+      "practice_infrastructure_as_code_security_review",
+      "understand_principle_of_least_privilege_implementation"
+    ],
+    "prerequisite_knowledge": [
+      "basic_aws_services_understanding",
+      "terraform_syntax_familiarity",
+      "security_fundamentals",
+      "financial_compliance_awareness"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "network_security_groups_require_restrictive_rules",
+      "backup_retention_policies_critical_for_data_protection",
+      "iam_policies_should_follow_least_privilege_principle",
+      "encryption_key_rotation_improves_cryptographic_security",
+      "audit_log_integrity_essential_for_compliance",
+      "trivy_provides_comprehensive_iac_security_scanning"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "cloudtrail",
+      "s3",
+      "ec2",
+      "iam",
+      "rds",
+      "kms"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "fintech_trading_platform",
+    "generation_timestamp": "2025-08-06T22:46:34.619733",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

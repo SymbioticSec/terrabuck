@@ -1,0 +1,26 @@
+{
+  "storageAccountName": {
+    "description": "Name of the storage account for BIM files",
+    "sensitive": false
+  },
+  "sqlServerFqdn": {
+    "description": "Fully qualified domain name of the SQL Server",
+    "sensitive": false
+  },
+  "webAppUrl": {
+    "description": "URL of the web frontend application",
+    "sensitive": false
+  },
+  "apiAppUrl": {
+    "description": "URL of the API backend application",
+    "sensitive": false
+  },
+  "applicationGatewayPublicIp": {
+    "description": "Public IP address of the Application Gateway",
+    "sensitive": false
+  },
+  "redisCacheHostName": {
+    "description": "Hostname of the Redis Cache instance",
+    "sensitive": false
+  }
+}

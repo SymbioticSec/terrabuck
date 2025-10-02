@@ -1,0 +1,82 @@
+# CloudFormation Parameters Configuration
+# This file documents all configurable parameters for the Enterprise API Gateway Platform
+
+## Environment Configuration
+Environment:
+  Description: "Environment name for resource tagging and configuration"
+  Type: String
+  Default: production
+  AllowedValues: 
+    - development
+    - staging  
+    - production
+  Usage: "Used for resource tagging and environment-specific configurations"
+
+ProjectName:
+  Description: "Project name used for resource naming convention"
+  Type: String
+  Default: enterprise-api-gateway-platform
+  Usage: "Prefix for all resource names to ensure consistency"
+
+## Network Configuration
+VpcCidr:
+  Description: "CIDR block for the main VPC"
+  Type: String
+  Default: 10.0.0.0/16
+  Usage: "Defines the IP address range for the entire VPC"
+
+PublicSubnet1Cidr:
+  Description: "CIDR block for public subnet in first AZ"
+  Type: String
+  Default: 10.0.1.0/24
+  Usage: "Subnet for internet-facing resources like ALB"
+
+PublicSubnet2Cidr:
+  Description: "CIDR block for public subnet in second AZ"
+  Type: String
+  Default: 10.0.2.0/24
+  Usage: "Second AZ subnet for high availability"
+
+PrivateSubnet1Cidr:
+  Description: "CIDR block for private subnet in first AZ"
+  Type: String
+  Default: 10.0.10.0/24
+  Usage: "Subnet for ECS services and application components"
+
+PrivateSubnet2Cidr:
+  Description: "CIDR block for private subnet in second AZ"
+  Type: String
+  Default: 10.0.20.0/24
+  Usage: "Second AZ private subnet for high availability"
+
+## Database Configuration
+DatabaseUsername:
+  Description: "Master username for RDS PostgreSQL instance"
+  Type: String
+  Default: apigateway_admin
+  Usage: "Administrative user for the application database"
+
+DatabasePassword:
+  Description: "Master password for RDS PostgreSQL instance"
+  Type: String
+  NoEcho: true
+  MinLength: 8
+  Usage: "Secure password for database access (not echoed in console)"
+
+DatabaseInstanceClass:
+  Description: "RDS instance class for performance sizing"
+  Type: String
+  Default: db.t3.medium
+  AllowedValues:
+    - db.t3.micro
+    - db.t3.small
+    - db.t3.medium
+    - db.t3.large
+  Usage: "Determines compute and memory capacity for the database"
+
+## Additional Configuration Notes
+# - All parameters support CloudFormation parameter validation
+# - Sensitive parameters like DatabasePassword use NoEcho for security
+# - CIDR blocks are designed to avoid conflicts with common enterprise networks
+# - Instance classes can be adjusted based on performance requirements
+# - Environment parameter enables different configurations per deployment stage

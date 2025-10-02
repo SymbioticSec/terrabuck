@@ -1,0 +1,220 @@
+{
+  "original_components": [
+    {
+      "name": "web_frontend",
+      "service_type": "azure_app_service",
+      "purpose": "React-based web application for BIM file viewing, project management, and collaboration tools",
+      "dependencies": [
+        "api_backend",
+        "file_storage"
+      ],
+      "security_considerations": [
+        "authentication",
+        "session_management",
+        "input_validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_backend",
+      "service_type": "azure_app_service",
+      "purpose": "REST API handling user management, project operations, file metadata, and collaboration features",
+      "dependencies": [
+        "project_database",
+        "file_storage",
+        "cache_layer"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "authorization",
+        "data_validation",
+        "rate_limiting"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Blob storage for large BIM files, CAD drawings, and project documents with versioning",
+      "dependencies": [],
+      "security_considerations": [
+        "access_control",
+        "encryption_at_rest",
+        "secure_file_upload"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "project_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores project metadata, user roles, file versions, comments, and collaboration history",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "connection_security",
+        "backup_security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "cache_layer",
+      "service_type": "azure_redis_cache",
+      "purpose": "Caches frequently accessed file metadata, user sessions, and project data for performance",
+      "dependencies": [],
+      "security_considerations": [
+        "cache_encryption",
+        "network_isolation"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "azure_application_gateway",
+      "purpose": "Distributes traffic, provides SSL termination, and includes WAF protection",
+      "dependencies": [
+        "web_frontend",
+        "api_backend"
+      ],
+      "security_considerations": [
+        "ssl_configuration",
+        "waf_rules",
+        "ddos_protection"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_frontend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_backend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "project_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "cache_layer",
+      "service_type": "azure_redis_cache",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [
+    {
+      "name": "load_balancer",
+      "service_type": "azure_application_gateway",
+      "reason": "No matching resources found"
+    }
+  ],
+  "implementation_coverage": 0.8333333333333334,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 585,
+      "resource_count": 19,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/firewallRules"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Cache/Redis"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Network/publicIPAddresses"
+        },
+        {
+          "type": "Microsoft.Network/applicationGateways"
+        },
+        {
+          "type": "Microsoft.OperationalInsights/workspaces"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 30,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 26,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 187,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": [
+    "Missing components: load_balancer. Add corresponding resources to the templates."
+  ]
+}

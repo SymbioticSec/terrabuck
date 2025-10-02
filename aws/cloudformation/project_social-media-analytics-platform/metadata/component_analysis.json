@@ -1,0 +1,164 @@
+{
+  "original_components": [
+    {
+      "name": "data_ingestion_api",
+      "service_type": "aws_api_gateway",
+      "purpose": "RESTful API gateway that receives social media data from various sources and webhook integrations, handles rate limiting and authentication",
+      "dependencies": [],
+      "security_considerations": [
+        "API key management",
+        "rate limiting",
+        "input validation",
+        "CORS configuration"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "stream_processing_engine",
+      "service_type": "aws_kinesis",
+      "purpose": "Real-time data streaming service that processes incoming social media posts, handles data transformation, and routes data to appropriate processing pipelines",
+      "dependencies": [
+        "data_ingestion_api"
+      ],
+      "security_considerations": [
+        "stream encryption",
+        "access control",
+        "data retention policies"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "analytics_processor",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless functions that perform sentiment analysis, keyword extraction, trend detection, and data enrichment on social media content",
+      "dependencies": [
+        "stream_processing_engine"
+      ],
+      "security_considerations": [
+        "function permissions",
+        "environment variables",
+        "VPC configuration"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "metrics_database",
+      "service_type": "aws_rds",
+      "purpose": "PostgreSQL database storing processed analytics data, user metrics, campaign performance data, and aggregated insights",
+      "dependencies": [
+        "analytics_processor"
+      ],
+      "security_considerations": [
+        "database encryption",
+        "backup security",
+        "connection encryption",
+        "access controls"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "raw_data_storage",
+      "service_type": "aws_s3",
+      "purpose": "Data lake for storing raw social media content, processed datasets, and historical archives with lifecycle management",
+      "dependencies": [
+        "stream_processing_engine"
+      ],
+      "security_considerations": [
+        "bucket encryption",
+        "access policies",
+        "versioning",
+        "lifecycle rules"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "dashboard_application",
+      "service_type": "aws_ec2",
+      "purpose": "Web application server hosting the analytics dashboard, user interface, and reporting tools for visualizing social media insights",
+      "dependencies": [
+        "metrics_database",
+        "raw_data_storage"
+      ],
+      "security_considerations": [
+        "instance security",
+        "application security",
+        "session management",
+        "HTTPS configuration"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "data_ingestion_api",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "stream_processing_engine",
+      "service_type": "aws_kinesis",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "analytics_processor",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "metrics_database",
+      "service_type": "aws_rds",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "raw_data_storage",
+      "service_type": "aws_s3",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "dashboard_application",
+      "service_type": "aws_ec2",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 515,
+      "resource_count": 145,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 59,
+      "resource_count": 1,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 132,
+      "resource_count": 24,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 229,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

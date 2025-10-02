@@ -1,0 +1,396 @@
+{
+  "project_labels": {
+    "project_id": "corporate-knowledge-hub-v1",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7
+      },
+      "by_type": {
+        "access_control": 2,
+        "encryption": 2,
+        "network": 2,
+        "observability": 1
+      },
+      "by_trivy_service": {
+        "s3": 2,
+        "rds": 1,
+        "ec2": 1,
+        "lambda": 1,
+        "elb": 1,
+        "iam": 1
+      }
+    },
+    "complexity_score": 7,
+    "realism_score": 9,
+    "educational_value": 8,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-S3-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-S3-BLOCK_PUBLIC_POLICY",
+        "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "AWS-EC2-NO_PUBLIC_EGRESS_SGR",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-ELB-DROP_INVALID_HEADERS",
+        "AWS-IAM-ENFORCE_GROUP_MFA"
+      ],
+      "services_covered": [
+        "s3",
+        "rds",
+        "ec2",
+        "lambda",
+        "elb",
+        "iam"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-S3-ENCRYPTION_CUSTOMER_KEY",
+      "trivy_rule_info": {
+        "original_file": "encryption_customer_key.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/s3/encryption_customer_key.yaml"
+      },
+      "vulnerability_class": "encryption_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "ISO27001",
+        "SOC2",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "aws_account_access",
+        "s3_read_permissions"
+      ],
+      "mitigation_strategies": [
+        "implement_customer_managed_kms_keys",
+        "enable_bucket_key_optimization",
+        "configure_key_rotation_policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "SSEAlgorithm: AES256",
+        "secure_pattern": "SSEAlgorithm: aws:kms with KMSMasterKeyID"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-S3-BLOCK_PUBLIC_POLICY",
+      "trivy_rule_info": {
+        "original_file": "block_public_policy.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/s3/block_public_policy.yaml"
+      },
+      "vulnerability_class": "access_control_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access"
+      ],
+      "mitigation_strategies": [
+        "enable_public_access_block_configuration",
+        "set_block_public_policy_true",
+        "implement_bucket_policy_restrictions"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "missing PublicAccessBlockConfiguration",
+        "secure_pattern": "PublicAccessBlockConfiguration with BlockPublicPolicy: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+      "trivy_rule_info": {
+        "original_file": "encrypt_cluster_storage_data.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/rds/encrypt_cluster_storage_data.yaml"
+      },
+      "vulnerability_class": "encryption_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "high",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "ISO27001",
+        "SOC2",
+        "GDPR",
+        "HIPAA"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "database_access",
+        "storage_level_access"
+      ],
+      "mitigation_strategies": [
+        "enable_storage_encryption",
+        "configure_customer_managed_kms_key",
+        "implement_backup_encryption"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "StorageEncrypted: false or missing KmsKeyId",
+        "secure_pattern": "StorageEncrypted: true with KmsKeyId specified"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-NO_PUBLIC_EGRESS_SGR",
+      "trivy_rule_info": {
+        "original_file": "no_public_egress_sgr.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/ec2/no_public_egress_sgr.yaml"
+      },
+      "vulnerability_class": "network_security_weakness",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "compromised_instance",
+        "network_access"
+      ],
+      "mitigation_strategies": [
+        "restrict_egress_to_specific_cidrs",
+        "implement_least_privilege_networking",
+        "use_vpc_endpoints_for_aws_services"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "CidrIp: 0.0.0.0/0 in egress rules",
+        "secure_pattern": "specific CIDR blocks or security group references"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+      "trivy_rule_info": {
+        "original_file": "enable_tracing.yaml",
+        "service_category": "lambda",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/lambda/enable_tracing.yaml"
+      },
+      "vulnerability_class": "observability_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "SOC2"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "security_incident_investigation"
+      ],
+      "mitigation_strategies": [
+        "enable_xray_tracing",
+        "configure_active_tracing_mode",
+        "implement_distributed_tracing"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "missing TracingConfig or Mode: Passthrough",
+        "secure_pattern": "TracingConfig with Mode: Active"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "observability",
+        "severity_numeric": 4.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-ELB-DROP_INVALID_HEADERS",
+      "trivy_rule_info": {
+        "original_file": "drop_invalid_headers.yaml",
+        "service_category": "elb",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/elb/drop_invalid_headers.yaml"
+      },
+      "vulnerability_class": "input_validation_weakness",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "http_request_capability",
+        "malformed_headers"
+      ],
+      "mitigation_strategies": [
+        "enable_drop_invalid_header_fields",
+        "implement_waf_rules",
+        "configure_request_validation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "routing.http.drop_invalid_header_fields.enabled: false",
+        "secure_pattern": "routing.http.drop_invalid_header_fields.enabled: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-ENFORCE_GROUP_MFA",
+      "trivy_rule_info": {
+        "original_file": "enforce_group_mfa.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/iam/enforce_group_mfa.yaml"
+      },
+      "vulnerability_class": "authentication_weakness",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "compromised_credentials",
+        "no_mfa_device"
+      ],
+      "mitigation_strategies": [
+        "add_mfa_condition_to_policies",
+        "implement_conditional_access",
+        "enforce_mfa_for_sensitive_operations"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "missing aws:MultiFactorAuthPresent condition",
+        "secure_pattern": "Bool: aws:MultiFactorAuthPresent: true in policy conditions"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "7 medium severity findings across s3, rds, ec2, lambda, elb, and iam services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_aws_security_best_practices",
+      "learn_trivy_security_scanning_capabilities",
+      "identify_common_infrastructure_misconfigurations",
+      "apply_defense_in_depth_principles",
+      "implement_compliance_requirements"
+    ],
+    "prerequisite_knowledge": [
+      "basic_aws_services_knowledge",
+      "infrastructure_as_code_concepts",
+      "security_fundamentals",
+      "compliance_frameworks_overview"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "encryption_at_rest_importance",
+      "principle_of_least_privilege",
+      "network_security_controls",
+      "observability_for_security",
+      "multi_factor_authentication_enforcement"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "component_count": 6,
+    "file_count": 3,
+    "service_categories": [
+      "elb",
+      "s3",
+      "iam",
+      "ec2",
+      "rds",
+      "lambda"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "corporate-knowledge-hub-v1",
+    "generation_timestamp": "2025-08-08T16:01:47.431474",
+    "version": "1.0",
+    "data_quality": "medium"
+  }
+}

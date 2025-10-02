@@ -1,0 +1,353 @@
+{
+  "project_info": {
+    "project_id": "gcp-fleet-management-platform",
+    "project_name": "Fleet Management and GPS Tracking Platform",
+    "description": "A comprehensive fleet management platform for logistics companies to track vehicles in real-time, monitor driver behavior, optimize routes, and manage maintenance schedules. The system processes GPS telemetry data from vehicles, provides real-time dashboards for dispatchers, and generates analytics reports for fleet optimization. Designed for a mid-size logistics company managing 500+ vehicles with regulatory compliance requirements.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "event_driven_microservices",
+    "business_context": "A regional logistics company needs to modernize their fleet operations with real-time vehicle tracking, driver performance monitoring, and predictive maintenance capabilities. The platform must handle high-frequency GPS data ingestion, provide sub-second location updates to dispatchers, and maintain historical data for compliance reporting and route optimization analytics.",
+    "components": [
+      {
+        "name": "vehicle_telemetry_ingestion",
+        "service_type": "google_cloud_functions",
+        "purpose": "Ingests high-frequency GPS and sensor data from vehicle tracking devices via HTTP endpoints",
+        "dependencies": [],
+        "security_considerations": [
+          "API authentication for vehicle devices",
+          "rate limiting",
+          "data validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "real_time_processing",
+        "service_type": "google_cloud_dataflow",
+        "purpose": "Processes streaming telemetry data for geofencing alerts, speed violations, and real-time location updates",
+        "dependencies": [
+          "vehicle_telemetry_ingestion"
+        ],
+        "security_considerations": [
+          "data encryption in transit",
+          "service account permissions"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "fleet_database",
+        "service_type": "google_cloud_sql",
+        "purpose": "Stores vehicle information, driver profiles, maintenance records, and processed location data",
+        "dependencies": [
+          "real_time_processing"
+        ],
+        "security_considerations": [
+          "database encryption",
+          "backup security",
+          "connection SSL"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "telemetry_data_lake",
+        "service_type": "google_storage_bucket",
+        "purpose": "Long-term storage of raw telemetry data for analytics, compliance reporting, and machine learning",
+        "dependencies": [
+          "vehicle_telemetry_ingestion"
+        ],
+        "security_considerations": [
+          "bucket access controls",
+          "data lifecycle policies",
+          "encryption at rest"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "fleet_management_api",
+        "service_type": "google_compute_engine",
+        "purpose": "REST API service providing fleet data access, route optimization, and maintenance scheduling functionality",
+        "dependencies": [
+          "fleet_database",
+          "telemetry_data_lake"
+        ],
+        "security_considerations": [
+          "API authentication",
+          "HTTPS enforcement",
+          "input validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "dispatcher_dashboard",
+        "service_type": "google_compute_engine",
+        "purpose": "Web application providing real-time fleet monitoring, dispatch management, and driver communication tools",
+        "dependencies": [
+          "fleet_management_api"
+        ],
+        "security_considerations": [
+          "user authentication",
+          "role-based access",
+          "session management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "analytics_processing",
+        "service_type": "google_cloud_functions",
+        "purpose": "Scheduled batch processing for route optimization, fuel efficiency reports, and predictive maintenance analytics",
+        "dependencies": [
+          "telemetry_data_lake",
+          "fleet_database"
+        ],
+        "security_considerations": [
+          "service account permissions",
+          "data access controls"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with regional subnets for compute resources, private Google Access enabled for serverless components",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Vehicle devices connect to Cloud Functions via public HTTPS endpoints",
+        "Dataflow processes data between Cloud Functions and Cloud SQL/Storage",
+        "Compute Engine instances in private subnets with Cloud NAT for outbound access",
+        "Load balancer provides public access to dispatcher dashboard",
+        "Private connectivity between API service and database"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "serverless_functions": 6,
+      "iam_policies": 5,
+      "monitoring_resources": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:13:41.644405"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-IAM-NO_PROJECT_LEVEL_DEFAULT_SERVICE_ACCOUNT_ASSIGNMENT",
+        "title": "No Project Level Default Service Account Assignment",
+        "description": "The fleet management platform uses default service accounts for project-level IAM bindings instead of creating dedicated service accounts. This violates the principle of least privilege and creates unnecessary security risks by granting broad permissions to default accounts that are shared across multiple services.",
+        "severity": "medium",
+        "affected_component": "real_time_processing",
+        "injection_strategy": "Configure Google Cloud Dataflow to use default compute service account with project-level permissions instead of creating a dedicated service account",
+        "business_impact": "Compromised telemetry processing could lead to unauthorized access to vehicle location data and potential privacy violations for fleet customers",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/google_project_iam\n  good:\n    - |-\n      resource \"google_service_account\" \"test\" {\n        account_id   = \"account123\"\n        display_name = \"account123\"\n      }\n\n      resource \"google_project_iam_member\" \"project-123\" {\n        project = \"project-123\"\n        role    = \"roles/whatever\"\n        member  = \"serviceAccount:${google_service_account.test.email}\"\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_member\" \"project-123\" {\n        project = \"project-123\"\n        role    = \"roles/whatever\"\n        member  = \"123-compute@developer.gserviceaccount.com\"\n      }",
+        "file_name": "no_project_level_default_service_account_assignment.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Assign project-level roles to default compute service account for Dataflow processing",
+          "explanation": "Using default service accounts creates overprivileged access patterns and makes it difficult to audit and control permissions for specific workloads"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_LOCK_WAITS",
+        "title": "PostgreSQL Log Lock Waits Disabled",
+        "description": "The fleet database does not have lock wait logging enabled, making it difficult to detect potential database performance issues or suspicious query patterns that could indicate unauthorized access attempts or data exfiltration.",
+        "severity": "medium",
+        "affected_component": "fleet_database",
+        "injection_strategy": "Configure Cloud SQL PostgreSQL instance without enabling log_lock_waits database flag",
+        "business_impact": "Inability to detect database performance anomalies or potential data access attacks, leading to unnoticed data breaches or service degradation",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_lock_waits\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_lock_waits\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_lock_waits.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy Cloud SQL instance without proper database logging configuration",
+          "explanation": "Missing lock wait logging reduces visibility into database operations and potential security incidents"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-VM_DISK_ENCRYPTION_CUSTOMER_KEY",
+        "title": "VM Disk Encryption Customer Key Missing",
+        "description": "Compute Engine instances hosting the fleet management API and dispatcher dashboard do not use customer-managed encryption keys (CMEK) for disk encryption, relying instead on Google-managed keys which provide less control over encryption key lifecycle.",
+        "severity": "medium",
+        "affected_component": "fleet_management_api",
+        "injection_strategy": "Deploy Compute Engine instances without specifying customer-managed encryption keys for boot disks",
+        "business_impact": "Reduced control over encryption keys for sensitive fleet data, potentially impacting compliance with data protection regulations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#kms_key_self_link\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n          kms_key_self_link = \"something\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n      }",
+        "file_name": "vm_disk_encryption_customer_key.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Compute Engine instances without customer-managed encryption keys",
+          "explanation": "Using default Google-managed keys reduces organizational control over encryption key management and rotation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_VPC_FLOW_LOGS",
+        "title": "VPC Flow Logs Not Enabled",
+        "description": "The VPC subnets hosting fleet management infrastructure do not have flow logs enabled, reducing visibility into network traffic patterns and making it difficult to detect potential security incidents or unauthorized access attempts.",
+        "severity": "medium",
+        "affected_component": "network_topology",
+        "injection_strategy": "Create VPC subnets without enabling flow logs configuration",
+        "business_impact": "Limited network visibility could delay detection of data exfiltration attempts or unauthorized access to vehicle telemetry data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork#enable_flow_logs\n  good:\n    - |-\n      resource \"google_compute_subnetwork\" \"good_example\" {\n        name          = \"test-subnetwork\"\n        ip_cidr_range = \"10.2.0.0/16\"\n        region        = \"us-central1\"\n        network       = google_compute_network.custom-test.id\n        log_config {\n          aggregation_interval = \"INTERVAL_10_MIN\"\n          flow_sampling        = 0.5\n          metadata             = \"INCLUDE_ALL_METADATA\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_subnetwork\" \"bad_example\" {\n        name          = \"test-subnetwork\"\n        ip_cidr_range = \"10.2.0.0/16\"\n        region        = \"us-central1\"\n        network       = google_compute_network.custom-test.id\n      }",
+        "file_name": "enable_vpc_flow_logs.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy VPC subnets without flow logging configuration",
+          "explanation": "Missing flow logs eliminate crucial network monitoring capabilities needed for security incident detection"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-USE_SECURE_TLS_POLICY",
+        "title": "Insecure TLS Policy Configuration",
+        "description": "Load balancers and SSL policies for the dispatcher dashboard and fleet management API allow weak TLS versions (TLS 1.0/1.1), potentially exposing vehicle tracking data to man-in-the-middle attacks and eavesdropping.",
+        "severity": "medium",
+        "affected_component": "dispatcher_dashboard",
+        "injection_strategy": "Configure SSL policies with minimum TLS version set to TLS 1.1 or lower",
+        "business_impact": "Weak encryption could expose sensitive fleet operations data and real-time vehicle locations to interception",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_ssl_policy#min_tls_version\n  good:\n    - |-\n      resource \"google_compute_ssl_policy\" \"good_example\" {\n        name            = \"production-ssl-policy\"\n        profile         = \"MODERN\"\n        min_tls_version = \"TLS_1_2\"\n      }\n  bad:\n    - |-\n      resource \"google_compute_ssl_policy\" \"bad_example\" {\n        name            = \"production-ssl-policy\"\n        profile         = \"MODERN\"\n        min_tls_version = \"TLS_1_1\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create SSL policies with weak minimum TLS version requirements",
+          "explanation": "Allowing older TLS versions creates vulnerability to protocol downgrade attacks and weak encryption"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-KMS-ROTATE_KMS_KEYS",
+        "title": "KMS Key Rotation Period Too Long",
+        "description": "Customer-managed encryption keys used for protecting telemetry data in Cloud Storage have rotation periods longer than 90 days, increasing the risk of key compromise and reducing compliance with security best practices.",
+        "severity": "medium",
+        "affected_component": "telemetry_data_lake",
+        "injection_strategy": "Configure KMS crypto keys with rotation periods exceeding 90 days (7776000 seconds)",
+        "business_impact": "Extended key rotation periods increase the window of exposure if encryption keys are compromised, potentially affecting years of historical vehicle data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/kms_crypto_key#rotation_period\n  good:\n    - |-\n      resource \"google_kms_crypto_key\" \"example-key\" {\n        name            = \"crypto-key-example\"\n        key_ring        = google_kms_key_ring.keyring.id\n        rotation_period = \"7776000s\"\n      }\n  bad:\n    - |-\n      resource \"google_kms_crypto_key\" \"example-key\" {\n        name            = \"crypto-key-example\"\n        key_ring        = google_kms_key_ring.keyring.id\n        rotation_period = \"15552000s\"\n      }",
+        "file_name": "rotate_kms_keys.yaml",
+        "service": "kms",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set KMS key rotation periods to 180 days instead of the recommended 90 days",
+          "explanation": "Longer rotation periods increase the risk window if encryption keys are compromised"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_ERRORS",
+        "title": "PostgreSQL Error Logging Insufficient",
+        "description": "The fleet database has insufficient error logging configuration with log_min_messages set to PANIC instead of WARNING, reducing visibility into database errors and potential security incidents.",
+        "severity": "medium",
+        "affected_component": "fleet_database",
+        "injection_strategy": "Configure PostgreSQL database flags with log_min_messages set to PANIC level",
+        "business_impact": "Insufficient error logging could mask database security incidents or unauthorized access attempts to vehicle and driver data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"WARNING\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"PANIC\"\n          }\n        }\n      }",
+        "file_name": "pg_log_errors.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure database with minimal error logging that only captures critical failures",
+          "explanation": "Insufficient logging levels reduce visibility into database operations and potential security events"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "GOOGLE-IAM-NO_PROJECT_LEVEL_DEFAULT_SERVICE_ACCOUNT_ASSIGNMENT",
+        "GOOGLE-SQL-PG_LOG_LOCK_WAITS",
+        "GOOGLE-COMPUTE-VM_DISK_ENCRYPTION_CUSTOMER_KEY",
+        "GOOGLE-COMPUTE-ENABLE_VPC_FLOW_LOGS",
+        "GOOGLE-COMPUTE-USE_SECURE_TLS_POLICY",
+        "GOOGLE-KMS-ROTATE_KMS_KEYS",
+        "GOOGLE-SQL-PG_LOG_ERRORS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "kms",
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "kms",
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_name": "fleet-management-and-gps-tracking-platform",
+    "architecture_type": "event_driven_microservices",
+    "total_resources": 30,
+    "resource_breakdown": {
+      "networking": 7,
+      "compute": 4,
+      "storage": 6,
+      "database": 3,
+      "security": 4,
+      "functions": 6
+    },
+    "estimated_monthly_cost": "$800-1200",
+    "deployment_time": "15-20 minutes",
+    "components_implemented": [
+      "vehicle_telemetry_ingestion",
+      "real_time_processing",
+      "fleet_database",
+      "telemetry_data_lake",
+      "fleet_management_api",
+      "dispatcher_dashboard",
+      "analytics_processing"
+    ],
+    "vulnerabilities_injected": 7,
+    "security_compliance": "Intentionally non-compliant for testing purposes",
+    "terraform_version": ">=1.0",
+    "provider_versions": {
+      "google": "~>4.0",
+      "archive": "~>2.0"
+    }
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 31,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

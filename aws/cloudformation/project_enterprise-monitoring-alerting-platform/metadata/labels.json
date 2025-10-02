@@ -1,0 +1,399 @@
+{
+  "project_labels": {
+    "project_id": "enterprise-monitoring-alerting-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 3,
+        "documentation": 1
+      },
+      "by_trivy_service": {
+        "rds": 1,
+        "ec2": 2,
+        "sqs": 1,
+        "iam": 1,
+        "cloudtrail": 2
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+        "AWS-SQS-NO_WILDCARDS_IN_POLICY_DOCUMENTS",
+        "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP",
+        "AWS-CLOUDTRAIL-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-CLOUDTRAIL-NO_PUBLIC_LOG_ACCESS"
+      ],
+      "services_covered": [
+        "rds",
+        "ec2",
+        "sqs",
+        "iam",
+        "cloudtrail",
+        "s3"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+      "trivy_rule_info": {
+        "original_file": "encrypt_instance_storage_data.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/rds"
+      },
+      "vulnerability_class": "encryption",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "physical",
+      "prerequisites": [
+        "physical_access_to_storage",
+        "storage_media_compromise"
+      ],
+      "mitigation_strategies": [
+        "Enable StorageEncrypted: true",
+        "Specify KmsKeyId for customer-managed encryption",
+        "Implement encryption key rotation policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::RDS::DBInstance without StorageEncrypted or StorageEncrypted: false",
+        "secure_pattern": "AWS::RDS::DBInstance with StorageEncrypted: true and KmsKeyId specified"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+      "trivy_rule_info": {
+        "original_file": "as_enforce_http_token_imds.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "application_compromise",
+        "ssrf_vulnerability",
+        "network_access_to_instance"
+      ],
+      "mitigation_strategies": [
+        "Set HttpTokens: required in MetadataOptions",
+        "Configure HttpEndpoint: enabled with token enforcement",
+        "Implement application-level SSRF protections"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::AutoScaling::LaunchConfiguration with HttpTokens: optional or missing MetadataOptions",
+        "secure_pattern": "AWS::AutoScaling::LaunchConfiguration with HttpTokens: required"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-SQS-NO_WILDCARDS_IN_POLICY_DOCUMENTS",
+      "trivy_rule_info": {
+        "original_file": "no_wildcards_in_policy_documents.yaml",
+        "service_category": "messaging",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/sqs"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "valid_aws_credentials",
+        "policy_exploitation_knowledge"
+      ],
+      "mitigation_strategies": [
+        "Replace wildcard actions with specific SQS permissions",
+        "Implement principle of least privilege",
+        "Regular policy auditing and review"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::SQS::QueuePolicy with Action: '*' or overly broad permissions",
+        "secure_pattern": "AWS::SQS::QueuePolicy with specific actions like SQS:SendMessage, SQS:ReceiveMessage"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "limit_s3_full_access.yaml",
+        "service_category": "identity",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "GDPR",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "compromised_credentials",
+        "privilege_escalation"
+      ],
+      "mitigation_strategies": [
+        "Replace s3:* with specific required actions",
+        "Limit Resource to specific bucket ARNs",
+        "Implement resource-based policies",
+        "Regular IAM policy reviews"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::IAM::Policy with Action: s3:* and Resource: '*'",
+        "secure_pattern": "AWS::IAM::Policy with specific actions and bucket-scoped resources"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "privilege_escalation",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP",
+      "trivy_rule_info": {
+        "original_file": "add_description_to_security_group.yaml",
+        "service_category": "network",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "documentation",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 4,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "administrative_access",
+        "configuration_management_access"
+      ],
+      "mitigation_strategies": [
+        "Add meaningful GroupDescription to all security groups",
+        "Implement security group naming conventions",
+        "Document security group purposes in infrastructure as code"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::EC2::SecurityGroup without GroupDescription property",
+        "secure_pattern": "AWS::EC2::SecurityGroup with descriptive GroupDescription"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "documentation",
+        "severity_numeric": 3.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-ENCRYPTION_CUSTOMER_KEY",
+      "trivy_rule_info": {
+        "original_file": "encryption_customer_key.yaml",
+        "service_category": "logging",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudtrail"
+      },
+      "vulnerability_class": "encryption",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "s3_bucket_access",
+        "cloudtrail_log_access"
+      ],
+      "mitigation_strategies": [
+        "Configure KmsKeyId with customer-managed KMS key",
+        "Implement key rotation policies",
+        "Restrict access to encryption keys"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::CloudTrail::Trail without KmsKeyId property",
+        "secure_pattern": "AWS::CloudTrail::Trail with KmsKeyId specifying customer-managed key"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-NO_PUBLIC_LOG_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_log_access.yaml",
+        "service_category": "logging",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudtrail"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "knowledge_of_bucket_name"
+      ],
+      "mitigation_strategies": [
+        "Set S3 bucket AccessControl to Private",
+        "Implement bucket policies restricting access",
+        "Enable S3 Block Public Access settings"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::S3::Bucket with AccessControl: AuthenticatedRead or PublicRead",
+        "secure_pattern": "AWS::S3::Bucket with AccessControl: Private"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_exposure",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_mapping",
+      "security_policy_validation"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "7 medium severity findings across RDS, EC2, SQS, IAM, and CloudTrail resources"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand common AWS security misconfigurations detected by Trivy",
+      "Learn to implement encryption at rest for databases and audit logs",
+      "Master principle of least privilege in IAM and SQS policies",
+      "Recognize importance of IMDS security in EC2 environments",
+      "Understand compliance requirements for enterprise monitoring systems"
+    ],
+    "prerequisite_knowledge": [
+      "Basic AWS services knowledge",
+      "CloudFormation template structure",
+      "Infrastructure as Code concepts",
+      "Security policy fundamentals"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Trivy can detect multiple categories of security issues in IaC templates",
+      "Encryption and access control are critical for monitoring infrastructure",
+      "Wildcard permissions create significant security risks",
+      "Documentation and proper configuration prevent operational security issues",
+      "Compliance requirements drive many security configurations"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "component_count": 7,
+    "file_count": 4,
+    "service_categories": [
+      "sqs",
+      "iam",
+      "cloudtrail",
+      "ec2",
+      "rds"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "enterprise-monitoring-alerting-platform",
+    "generation_timestamp": "2025-08-08T16:51:57.136543",
+    "version": "1.0",
+    "data_quality": "medium"
+  }
+}

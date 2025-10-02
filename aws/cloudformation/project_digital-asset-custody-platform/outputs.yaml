@@ -1,0 +1,181 @@
+# Digital Asset Custody Platform - Outputs Configuration
+# This file defines all outputs from the CloudFormation stack
+
+# Network Infrastructure Outputs
+VPCId:
+  Description: "VPC ID for the digital asset custody platform"
+  Value: !Ref CustodyVPC
+  Export:
+    Name: !Sub "${ProjectName}-vpc-id"
+
+PublicSubnetId:
+  Description: "Public subnet ID for DMZ resources"
+  Value: !Ref PublicSubnet
+  Export:
+    Name: !Sub "${ProjectName}-public-subnet-id"
+
+PrivateSubnetId:
+  Description: "Private subnet ID for application resources"
+  Value: !Ref PrivateSubnet
+  Export:
+    Name: !Sub "${ProjectName}-private-subnet-id"
+
+DataSubnetId:
+  Description: "Data subnet ID for database resources"
+  Value: !Ref DataSubnet
+  Export:
+    Name: !Sub "${ProjectName}-data-subnet-id"
+
+# Storage Infrastructure Outputs
+SecureVaultBucket:
+  Description: "S3 bucket name for secure cryptographic material storage"
+  Value: !Ref SecureVaultStorage
+  Export:
+    Name: !Sub "${ProjectName}-vault-bucket"
+
+SecureVaultBucketArn:
+  Description: "S3 bucket ARN for secure vault storage"
+  Value: !GetAtt SecureVaultStorage.Arn
+  Export:
+    Name: !Sub "${ProjectName}-vault-bucket-arn"
+
+# Database Infrastructure Outputs
+DatabaseEndpoint:
+  Description: "RDS PostgreSQL database endpoint for audit trails"
+  Value: !GetAtt AuditDatabase.Endpoint.Address
+  Export:
+    Name: !Sub "${ProjectName}-database-endpoint"
+
+DatabasePort:
+  Description: "RDS database port"
+  Value: !GetAtt AuditDatabase.Endpoint.Port
+  Export:
+    Name: !Sub "${ProjectName}-database-port"
+
+DatabaseId:
+  Description: "RDS database instance identifier"
+  Value: !Ref AuditDatabase
+  Export:
+    Name: !Sub "${ProjectName}-database-id"
+
+# Compute Infrastructure Outputs
+WalletManagementInstanceId:
+  Description: "EC2 instance ID for wallet management service"
+  Value: !Ref WalletManagementService
+  Export:
+    Name: !Sub "${ProjectName}-wallet-instance-id"
+
+WalletManagementPrivateIp:
+  Description: "Private IP address of wallet management service"
+  Value: !GetAtt WalletManagementService.PrivateIp
+  Export:
+    Name: !Sub "${ProjectName}-wallet-private-ip"
+
+MonitoringDashboardInstanceId:
+  Description: "EC2 instance ID for monitoring dashboard"
+  Value: !Ref MonitoringDashboard
+  Export:
+    Name: !Sub "${ProjectName}-monitoring-instance-id"
+
+MonitoringDashboardPublicIp:
+  Description: "Public IP address of monitoring dashboard"
+  Value: !GetAtt MonitoringDashboard.PublicIp
+  Export:
+    Name: !Sub "${ProjectName}-monitoring-public-ip"
+
+MonitoringDashboardPrivateIp:
+  Description: "Private IP address of monitoring dashboard"
+  Value: !GetAtt MonitoringDashboard.PrivateIp
+  Export:
+    Name: !Sub "${ProjectName}-monitoring-private-ip"
+
+# Lambda Function Outputs
+ComplianceProcessorArn:
+  Description: "ARN of the compliance processor Lambda function"
+  Value: !GetAtt ComplianceProcessor.Arn
+  Export:
+    Name: !Sub "${ProjectName}-compliance-lambda-arn"
+
+ComplianceProcessorName:
+  Description: "Name of the compliance processor Lambda function"
+  Value: !Ref ComplianceProcessor
+  Export:
+    Name: !Sub "${ProjectName}-compliance-lambda-name"
+
+# API Gateway Outputs
+ComplianceApiUrl:
+  Description: "Base URL for the compliance API Gateway"
+  Value: !Sub "https://${ComplianceApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+  Export:
+    Name: !Sub "${ProjectName}-compliance-api-url"
+
+ComplianceApiId:
+  Description: "API Gateway ID for compliance API"
+  Value: !Ref ComplianceApiGateway
+  Export:
+    Name: !Sub "${ProjectName}-compliance-api-id"
+
+ComplianceApiStage:
+  Description: "API Gateway deployment stage"
+  Value: !Ref Environment
+  Export:
+    Name: !Sub "${ProjectName}-compliance-api-stage"
+
+# Security Group Outputs
+WalletSecurityGroupId:
+  Description: "Security group ID for wallet management service"
+  Value: !Ref WalletManagementSecurityGroup
+  Export:
+    Name: !Sub "${ProjectName}-wallet-sg-id"
+
+MonitoringSecurityGroupId:
+  Description: "Security group ID for monitoring dashboard"
+  Value: !Ref MonitoringSecurityGroup
+  Export:
+    Name: !Sub "${ProjectName}-monitoring-sg-id"
+
+DatabaseSecurityGroupId:
+  Description: "Security group ID for audit database"
+  Value: !Ref DatabaseSecurityGroup
+  Export:
+    Name: !Sub "${ProjectName}-database-sg-id"
+
+# IAM Role Outputs
+WalletManagementRoleArn:
+  Description: "ARN of the wallet management IAM role"
+  Value: !GetAtt WalletManagementRole.Arn
+  Export:
+    Name: !Sub "${ProjectName}-wallet-role-arn"
+
+ComplianceLambdaRoleArn:
+  Description: "ARN of the compliance Lambda IAM role"
+  Value: !GetAtt ComplianceLambdaRole.Arn
+  Export:
+    Name: !Sub "${ProjectName}-compliance-role-arn"
+
+# Access Information
+MonitoringDashboardUrl:
+  Description: "URL to access the monitoring dashboard"
+  Value: !Sub "http://${MonitoringDashboard.PublicIp}"
+  Export:
+    Name: !Sub "${ProjectName}-monitoring-url"
+
+# Environment Information
+DeploymentEnvironment:
+  Description: "Deployment environment for this stack"
+  Value: !Ref Environment
+  Export:
+    Name: !Sub "${ProjectName}-environment"
+
+StackRegion:
+  Description: "AWS region where the stack is deployed"
+  Value: !Ref "AWS::Region"
+  Export:
+    Name: !Sub "${ProjectName}-region"
+
+# Connection Strings (for application configuration)
+DatabaseConnectionString:
+  Description: "Database connection string template (password not included)"
+  Value: !Sub "postgresql://custodyuser@${AuditDatabase.Endpoint.Address}:${AuditDatabase.Endpoint.Port}/postgres"
+  Export:
+    Name: !Sub "${ProjectName}-database-connection"

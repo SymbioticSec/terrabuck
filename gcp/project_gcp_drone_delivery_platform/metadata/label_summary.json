@@ -1,0 +1,14 @@
+{
+  "project_id": "gcp_drone_delivery_platform",
+  "security_posture": "vulnerable",
+  "vulnerability_count": 8,
+  "data_quality": "high",
+  "suitable_for": [
+    "vulnerability_detection",
+    "severity_classification",
+    "auto_remediation",
+    "trivy_rule_matching",
+    "security_posture_assessment",
+    "compliance_checking"
+  ]
+}

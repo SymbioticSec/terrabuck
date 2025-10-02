@@ -1,0 +1,285 @@
+{
+  "original_components": [
+    {
+      "name": "video_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Store original video files and transcoded outputs with lifecycle policies",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket_encryption",
+        "access_logging",
+        "versioning"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "video_transcoding",
+      "service_type": "aws_mediaconvert",
+      "purpose": "Transcode uploaded videos to multiple formats and bitrates for adaptive streaming",
+      "dependencies": [
+        "video_storage"
+      ],
+      "security_considerations": [
+        "iam_roles",
+        "encryption_in_transit"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "content_delivery",
+      "service_type": "aws_cloudfront",
+      "purpose": "Global CDN for fast video delivery with signed URLs for access control",
+      "dependencies": [
+        "video_storage"
+      ],
+      "security_considerations": [
+        "signed_urls",
+        "origin_access_identity",
+        "geo_restrictions"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "user_management",
+      "service_type": "aws_cognito",
+      "purpose": "User authentication and authorization with corporate AD integration",
+      "dependencies": [],
+      "security_considerations": [
+        "mfa_enforcement",
+        "password_policies",
+        "session_management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "purpose": "RESTful API for video metadata, user progress, and analytics with rate limiting",
+      "dependencies": [
+        "user_management",
+        "video_database"
+      ],
+      "security_considerations": [
+        "api_throttling",
+        "cors_configuration",
+        "request_validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "video_database",
+      "service_type": "aws_dynamodb",
+      "purpose": "Store video metadata, user progress, viewing analytics, and completion records",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "fine_grained_access",
+        "backup_encryption"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "processing_functions",
+      "service_type": "aws_lambda",
+      "purpose": "Handle video upload processing, progress tracking, and analytics aggregation",
+      "dependencies": [
+        "video_storage",
+        "video_database",
+        "video_transcoding"
+      ],
+      "security_considerations": [
+        "execution_role_permissions",
+        "environment_variables",
+        "vpc_configuration"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "video_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "video_transcoding",
+      "service_type": "aws_mediaconvert",
+      "implementation_confidence": 0.7
+    },
+    {
+      "name": "content_delivery",
+      "service_type": "aws_cloudfront",
+      "implementation_confidence": 0.8999999999999999
+    },
+    {
+      "name": "user_management",
+      "service_type": "aws_cognito",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "video_database",
+      "service_type": "aws_dynamodb",
+      "implementation_confidence": 0.7
+    },
+    {
+      "name": "processing_functions",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 0.9999999999999999
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 454,
+      "resource_count": 27,
+      "resources_found": [
+        {
+          "type": "aws_s3_bucket",
+          "name": "corporate_training_video_streaming_platform_storage_primary"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "video_storage_versioning"
+        },
+        {
+          "type": "aws_s3_bucket_server_side_encryption_configuration",
+          "name": "video_storage_encryption"
+        },
+        {
+          "type": "aws_s3_bucket_logging",
+          "name": "video_storage_logging"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "corporate_training_video_streaming_platform_storage_logs"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_cloudfront_origin_access_identity",
+          "name": "corporate_training_video_streaming_platform_cdn_oai"
+        },
+        {
+          "type": "aws_cloudfront_distribution",
+          "name": "corporate_training_video_streaming_platform_cdn_distribution"
+        },
+        {
+          "type": "aws_dynamodb_table",
+          "name": "corporate_training_video_streaming_platform_database_metadata"
+        },
+        {
+          "type": "aws_cognito_user_pool",
+          "name": "corporate_training_video_streaming_platform_user_pool"
+        },
+        {
+          "type": "aws_cognito_user_pool_client",
+          "name": "corporate_training_video_streaming_platform_user_pool_client"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "corporate_training_video_streaming_platform_lambda_role"
+        },
+        {
+          "type": "aws_iam_role_policy",
+          "name": "corporate_training_video_streaming_platform_lambda_policy"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "corporate_training_video_streaming_platform_lambda_logs"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "corporate_training_video_streaming_platform_processing_video"
+        },
+        {
+          "type": "aws_api_gateway_rest_api",
+          "name": "corporate_training_video_streaming_platform_api_gateway"
+        },
+        {
+          "type": "aws_api_gateway_domain_name",
+          "name": "corporate_training_video_streaming_platform_api_domain"
+        },
+        {
+          "type": "aws_acm_certificate",
+          "name": "corporate_training_video_streaming_platform_cert"
+        },
+        {
+          "type": "aws_api_gateway_method_settings",
+          "name": "corporate_training_video_streaming_platform_api_settings"
+        },
+        {
+          "type": "aws_api_gateway_stage",
+          "name": "corporate_training_video_streaming_platform_api_stage"
+        },
+        {
+          "type": "aws_api_gateway_deployment",
+          "name": "corporate_training_video_streaming_platform_api_deployment"
+        },
+        {
+          "type": "aws_api_gateway_resource",
+          "name": "corporate_training_video_streaming_platform_api_resource"
+        },
+        {
+          "type": "aws_api_gateway_method",
+          "name": "corporate_training_video_streaming_platform_api_method"
+        },
+        {
+          "type": "aws_api_gateway_authorizer",
+          "name": "corporate_training_video_streaming_platform_api_authorizer"
+        },
+        {
+          "type": "aws_secretsmanager_secret",
+          "name": "corporate_training_video_streaming_platform_secrets"
+        },
+        {
+          "type": "aws_cloudtrail",
+          "name": "corporate_training_video_streaming_platform_audit_trail"
+        },
+        {
+          "type": "aws_iam_account_password_policy",
+          "name": "corporate_training_video_streaming_platform_password_policy"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 23,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 39,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 102,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

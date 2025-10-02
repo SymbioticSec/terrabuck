@@ -1,0 +1,148 @@
+{
+  "original_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_ec2_instance",
+      "purpose": "Hosts the React-based web application and Node.js API server for document management interface",
+      "dependencies": [
+        "document_storage",
+        "search_engine",
+        "user_database"
+      ],
+      "security_considerations": [
+        "session_management",
+        "input_validation",
+        "https_enforcement"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Secure storage for uploaded documents with versioning and lifecycle policies",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_policies",
+        "versioning_controls"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "search_engine",
+      "service_type": "aws_elasticsearch",
+      "purpose": "Provides full-text search capabilities across document content and metadata",
+      "dependencies": [
+        "document_storage"
+      ],
+      "security_considerations": [
+        "index_access_control",
+        "query_injection_prevention"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "user_database",
+      "service_type": "aws_rds_mysql",
+      "purpose": "Stores user profiles, permissions, document metadata, and audit logs",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "connection_security",
+        "backup_encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "document_processor",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless function to extract text from uploaded documents and trigger search indexing",
+      "dependencies": [
+        "document_storage",
+        "search_engine"
+      ],
+      "security_considerations": [
+        "execution_role_permissions",
+        "temporary_file_handling"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Distributes traffic across web application instances with SSL termination",
+      "dependencies": [
+        "web_application_tier"
+      ],
+      "security_considerations": [
+        "ssl_certificate_management",
+        "ddos_protection"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_ec2_instance",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "search_engine",
+      "service_type": "aws_elasticsearch",
+      "implementation_confidence": 0.6
+    },
+    {
+      "name": "user_database",
+      "service_type": "aws_rds_mysql",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "document_processor",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 0.7999999999999999
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 0.6
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 591,
+      "resource_count": 174,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 122,
+      "resource_count": 29,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 133,
+      "resource_count": 44,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,163 @@
+{
+  "original_components": [
+    {
+      "name": "video_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Store raw uploaded videos and transcoded output files with lifecycle policies for cost optimization",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket_encryption",
+        "access_logging",
+        "versioning",
+        "cross_region_replication"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "video_processing",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless video transcoding pipeline triggered by S3 uploads, creates multiple bitrate versions",
+      "dependencies": [
+        "video_storage"
+      ],
+      "security_considerations": [
+        "execution_role_permissions",
+        "vpc_configuration",
+        "environment_variables_encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "content_delivery",
+      "service_type": "aws_cloudfront",
+      "purpose": "Global CDN for low-latency video streaming with edge caching and adaptive bitrate delivery",
+      "dependencies": [
+        "video_storage"
+      ],
+      "security_considerations": [
+        "signed_urls",
+        "geo_restrictions",
+        "ssl_certificates",
+        "origin_access_identity"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "purpose": "RESTful API for video metadata, user management, and streaming analytics with rate limiting",
+      "dependencies": [
+        "application_database",
+        "user_management"
+      ],
+      "security_considerations": [
+        "api_keys",
+        "throttling",
+        "cors_configuration",
+        "request_validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "application_database",
+      "service_type": "aws_rds",
+      "purpose": "PostgreSQL database storing video metadata, user profiles, viewing history, and analytics",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "vpc_security_groups",
+        "backup_encryption",
+        "parameter_group_hardening"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "user_management",
+      "service_type": "aws_ec2",
+      "purpose": "Authentication service with LDAP integration for corporate directory synchronization",
+      "dependencies": [
+        "application_database"
+      ],
+      "security_considerations": [
+        "security_groups",
+        "iam_roles",
+        "system_hardening",
+        "patch_management"
+      ],
+      "configuration_complexity": "high"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "video_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "video_processing",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 0.6
+    },
+    {
+      "name": "content_delivery",
+      "service_type": "aws_cloudfront",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_database",
+      "service_type": "aws_rds",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "user_management",
+      "service_type": "aws_ec2",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 478,
+      "resource_count": 137,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 24,
+      "resource_count": 4,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 66,
+      "resource_count": 23,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 197,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

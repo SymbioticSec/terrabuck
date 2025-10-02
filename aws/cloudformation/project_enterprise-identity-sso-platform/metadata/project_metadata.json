@@ -1,0 +1,320 @@
+{
+  "project_info": {
+    "project_id": "enterprise-identity-sso-platform",
+    "project_name": "Enterprise Identity and Single Sign-On Platform",
+    "description": "A comprehensive enterprise identity management platform providing single sign-on (SSO), multi-factor authentication (MFA), and centralized user directory services for a mid-size corporation with 2,000+ employees. The platform integrates with existing Active Directory, provides SAML/OAuth integration for SaaS applications, and includes audit logging for compliance requirements. Features include user provisioning/deprovisioning workflows, role-based access control, and self-service password reset capabilities.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "A growing technology company needs to consolidate identity management across 50+ SaaS applications, enforce MFA policies, and meet SOC 2 compliance requirements. The current fragmented approach with individual application logins creates security risks and administrative overhead. This platform will serve as the central authentication hub for all corporate applications and services.",
+    "components": [
+      {
+        "name": "identity_service_cluster",
+        "service_type": "aws_ecs_fargate",
+        "purpose": "Hosts the core identity management microservices including authentication, authorization, user management, and SAML/OAuth providers",
+        "dependencies": [
+          "user_directory_database",
+          "session_cache",
+          "audit_storage"
+        ],
+        "security_considerations": [
+          "JWT token security",
+          "API rate limiting",
+          "service-to-service authentication",
+          "secrets management"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "user_directory_database",
+        "service_type": "aws_rds_postgresql",
+        "purpose": "Stores user profiles, roles, permissions, group memberships, and application access mappings with encryption at rest",
+        "dependencies": [],
+        "security_considerations": [
+          "database encryption",
+          "connection security",
+          "backup encryption",
+          "access logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "session_cache",
+        "service_type": "aws_elasticache_redis",
+        "purpose": "Manages active user sessions, SSO tokens, and temporary authentication states for high-performance lookups",
+        "dependencies": [],
+        "security_considerations": [
+          "in-transit encryption",
+          "auth token storage",
+          "session timeout policies"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "audit_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Stores comprehensive audit logs of all authentication events, access attempts, and administrative actions for compliance reporting",
+        "dependencies": [],
+        "security_considerations": [
+          "log integrity",
+          "retention policies",
+          "access controls",
+          "encryption"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "application_load_balancer",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Distributes incoming authentication requests across identity service instances with SSL termination and health checks",
+        "dependencies": [
+          "identity_service_cluster"
+        ],
+        "security_considerations": [
+          "SSL/TLS configuration",
+          "DDoS protection",
+          "request filtering"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "mfa_notification_service",
+        "service_type": "aws_lambda",
+        "purpose": "Handles multi-factor authentication workflows including SMS, email, and push notifications for authentication challenges",
+        "dependencies": [
+          "user_directory_database",
+          "session_cache"
+        ],
+        "security_considerations": [
+          "secure communication channels",
+          "rate limiting",
+          "credential protection"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancer, private subnets for application services, and isolated subnets for databases",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet Gateway for external access",
+        "NAT Gateway for outbound service calls",
+        "VPC endpoints for AWS services",
+        "Private connectivity between application tiers"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3,
+      "total_estimated": 25
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:42:44.072022"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-ELASTICACHE-ENABLE_AT_REST_ENCRYPTION",
+        "title": "Enable At Rest Encryption",
+        "description": "The Redis session cache lacks at-rest encryption, exposing sensitive authentication tokens and session data stored in memory to potential unauthorized access if the underlying storage is compromised.",
+        "severity": "medium",
+        "affected_component": "session_cache",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Compromised session tokens could allow attackers to hijack user sessions and bypass authentication controls, potentially accessing sensitive corporate applications and data.",
+        "trivy_yaml_content": "cloudformation:\n  links:\n    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticache-replicationgroup.html\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ElastiCache::ReplicationGroup\n          Properties:\n            AtRestEncryptionEnabled: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ElastiCache::ReplicationGroup\n          Properties:\n            AtRestEncryptionEnabled: false",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "elasticache",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure ElastiCache ReplicationGroup with AtRestEncryptionEnabled set to false or omitted entirely",
+          "explanation": "Without at-rest encryption, session tokens and authentication state stored in Redis are vulnerable to disk-level attacks and unauthorized access to underlying storage"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "title": "Disable Public Access",
+        "description": "The PostgreSQL user directory database is configured with public accessibility enabled, exposing sensitive user credentials, roles, and identity information directly to the internet.",
+        "severity": "medium",
+        "affected_component": "user_directory_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Public database access creates a direct attack vector for credential theft, user enumeration, and potential data breaches affecting all 2,000+ employees' identity information.",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            PubliclyAccessible: false\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            PubliclyAccessible: true",
+        "file_name": "disable_public_access.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set PubliclyAccessible property to true on the RDS DBInstance resource",
+          "explanation": "Public accessibility exposes the database to internet-based attacks, bypassing VPC security controls and creating unnecessary attack surface"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ECS-ENABLE_CONTAINER_INSIGHT",
+        "title": "Enable Container Insight",
+        "description": "The ECS Fargate cluster hosting identity microservices lacks Container Insights monitoring, reducing visibility into security events and performance anomalies that could indicate attacks or system compromise.",
+        "severity": "medium",
+        "affected_component": "identity_service_cluster",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Limited monitoring capabilities hinder detection of authentication attacks, service abuse, and security incidents, potentially allowing prolonged unauthorized access to go unnoticed.",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ECS::Cluster\n          Properties:\n            ClusterName: MyCluster\n            ClusterSettings:\n              - Name: containerInsights\n                Value: enabled\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ECS::Cluster\n          Properties:\n            ClusterName: MyCluster",
+        "file_name": "enable_container_insight.yaml",
+        "service": "ecs",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit ClusterSettings configuration or set containerInsights to disabled in ECS Cluster resource",
+          "explanation": "Without Container Insights, security teams lack detailed metrics and logs needed to detect suspicious authentication patterns and service-level attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELB-DROP_INVALID_HEADERS",
+        "title": "Drop Invalid Headers",
+        "description": "The Application Load Balancer handling authentication requests does not drop invalid HTTP headers, potentially allowing header injection attacks and request smuggling against the identity services.",
+        "severity": "medium",
+        "affected_component": "application_load_balancer",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Header injection vulnerabilities could enable session fixation attacks, authentication bypass, or request smuggling that compromises the integrity of SSO authentication flows.",
+        "trivy_yaml_content": "cloudformation:\n  links:\n    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ElasticLoadBalancingV2::LoadBalancer\n          Properties:\n            LoadBalancerAttributes:\n              - Key: routing.http.drop_invalid_header_fields.enabled\n                Value: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ElasticLoadBalancingV2::LoadBalancer\n          Properties:\n            LoadBalancerAttributes:\n              - Key: routing.http.drop_invalid_header_fields.enabled\n                Value: false",
+        "file_name": "drop_invalid_headers.yaml",
+        "service": "elb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set routing.http.drop_invalid_header_fields.enabled to false or omit the configuration entirely",
+          "explanation": "Invalid headers can be used for HTTP request smuggling and header injection attacks that could bypass authentication controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "title": "Log Group Customer Key",
+        "description": "CloudWatch log groups storing audit logs and authentication events use AWS-managed encryption keys instead of customer-managed KMS keys, reducing control over audit log encryption and key rotation policies.",
+        "severity": "medium",
+        "affected_component": "audit_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Compliance requirements for SOC 2 may not be met without customer-controlled encryption keys for audit logs, and forensic investigations could be compromised if encryption keys are not properly managed.",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Logs::LogGroup\n          Properties:\n            KmsKeyId: arn:aws:kms:us-west-2:111122223333:key/lambdalogging\n            LogGroupName: aws/lambda/goodExample\n            RetentionInDays: 30\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Logs::LogGroup\n          Properties:\n            KmsKeyId: \"\"\n            LogGroupName: aws/lambda/badExample\n            RetentionInDays: 30",
+        "file_name": "log_group_customer_key.yaml",
+        "service": "cloudwatch",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit KmsKeyId property or set it to empty string in CloudWatch LogGroup resources",
+          "explanation": "Using AWS-managed keys reduces organizational control over encryption and may not meet compliance requirements for sensitive audit data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "title": "Require Symbols In Passwords",
+        "description": "The IAM account password policy does not enforce symbol requirements, allowing users to create weak passwords that are more susceptible to brute force and dictionary attacks in the identity management system.",
+        "severity": "medium",
+        "affected_component": "identity_service_cluster",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak passwords increase the risk of account compromise, potentially allowing attackers to gain administrative access to the identity platform and compromise the entire SSO infrastructure.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        # ...\n        require_symbols = true\n        # ...\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # require_symbols not set\n        # ...\n      }",
+        "file_name": "require_symbols_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit require_symbols setting in IAM account password policy or set it to false",
+          "explanation": "Without symbol requirements, passwords are significantly weaker and more vulnerable to automated attacks against the identity system"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP",
+        "title": "Add Description To Security Group",
+        "description": "Security groups protecting the identity services lack proper descriptions, making it difficult to understand their purpose and potentially leading to misconfigurations during security reviews and maintenance.",
+        "severity": "medium",
+        "affected_component": "identity_service_cluster",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Poor documentation of security group purposes increases the risk of misconfiguration during updates, potentially exposing identity services to unintended network access or blocking legitimate traffic.",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupEgress:\n              - CidrIp: 127.0.0.1/32\n                IpProtocol: \"-1\"\n  bad:\n    - |-\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            SecurityGroupEgress:\n              - CidrIp: 127.0.0.1/32\n                IpProtocol: \"-1\"",
+        "file_name": "add_description_to_security_group.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit GroupDescription property in SecurityGroup resources or set it to empty string",
+          "explanation": "Missing descriptions make security groups harder to audit and maintain, increasing the risk of misconfigurations that could expose services"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-ELASTICACHE-ENABLE_AT_REST_ENCRYPTION",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-ECS-ENABLE_CONTAINER_INSIGHT",
+        "AWS-ELB-DROP_INVALID_HEADERS",
+        "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "elasticache",
+        "elb",
+        "ecs",
+        "iam",
+        "cloudwatch",
+        "ec2",
+        "rds"
+      ],
+      "services_covered": [
+        "elasticache",
+        "elb",
+        "ecs",
+        "iam",
+        "cloudwatch",
+        "ec2",
+        "rds"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 0.6666666666666666,
+    "resource_count": 218,
+    "components_implemented": 4,
+    "components_missing": 2,
+    "recommendations": [
+      "WARNING: Some components may be missing from the implementation. Verify that all architecture components have corresponding resources.",
+      "Missing components: session_cache, mfa_notification_service. Add corresponding resources to the templates."
+    ]
+  }
+}

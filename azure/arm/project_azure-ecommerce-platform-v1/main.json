@@ -1,0 +1,657 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "defaultValue": "prod",
+      "metadata": {
+        "description": "Environment name (dev, staging, prod)"
+      }
+    },
+    "sqlAdminUsername": {
+      "type": "string",
+      "defaultValue": "sqladmin",
+      "metadata": {
+        "description": "SQL Server administrator username"
+      }
+    },
+    "sqlAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SQL Server administrator password"
+      }
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "S2",
+      "metadata": {
+        "description": "App Service Plan SKU"
+      }
+    },
+    "storageAccountType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "metadata": {
+        "description": "Storage Account replication type"
+      }
+    },
+    "redisCacheSku": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "metadata": {
+        "description": "Redis Cache SKU"
+      }
+    },
+    "applicationGatewayTier": {
+      "type": "string",
+      "defaultValue": "WAF_v2",
+      "metadata": {
+        "description": "Application Gateway tier"
+      }
+    }
+  },
+  "variables": {
+    "resourcePrefix": "[concat('multi-tenant-e-commerce-platform-', parameters('environmentName'))]",
+    "vnetName": "[concat(variables('resourcePrefix'), '-vnet')]",
+    "publicSubnetName": "public-subnet",
+    "privateSubnetName": "private-subnet",
+    "dataSubnetName": "data-subnet",
+    "nsgPublicName": "[concat(variables('resourcePrefix'), '-nsg-public')]",
+    "nsgPrivateName": "[concat(variables('resourcePrefix'), '-nsg-private')]",
+    "nsgDataName": "[concat(variables('resourcePrefix'), '-nsg-data')]",
+    "appServicePlanName": "[concat(variables('resourcePrefix'), '-app-service-plan')]",
+    "appServiceName": "[concat(variables('resourcePrefix'), '-web-app')]",
+    "sqlServerName": "[concat(variables('resourcePrefix'), '-sql-server')]",
+    "sqlDatabaseName": "[concat(variables('resourcePrefix'), '-sql-db')]",
+    "storageAccountName": "[replace(concat(variables('resourcePrefix'), 'storage'), '-', '')]",
+    "redisCacheName": "[concat(variables('resourcePrefix'), '-redis')]",
+    "functionAppName": "[concat(variables('resourcePrefix'), '-payment-func')]",
+    "applicationGatewayName": "[concat(variables('resourcePrefix'), '-app-gateway')]",
+    "publicIpName": "[concat(variables('resourcePrefix'), '-public-ip')]",
+    "logAnalyticsName": "[concat(variables('resourcePrefix'), '-log-analytics')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('publicSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.1.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgPublicName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('privateSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.2.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgPrivateName'))]"
+              },
+              "delegations": [
+                {
+                  "name": "Microsoft.Web.serverFarms",
+                  "properties": {
+                    "serviceName": "Microsoft.Web/serverFarms"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('dataSubnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.3.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgDataName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgPublicName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgPrivateName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgDataName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgPublicName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowHTTPS",
+            "properties": {
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "AllowHTTP",
+            "properties": {
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "AllowSSHFromInternet",
+            "properties": {
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 120,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgPrivateName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowVnetInbound",
+            "properties": {
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('nsgDataName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowPrivateSubnet",
+            "properties": {
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "10.0.2.0/24",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[concat(variables('resourcePrefix'), '-gateway')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "sku": {
+        "name": "[parameters('appServicePlanSku')]",
+        "capacity": 2
+      },
+      "kind": "app",
+      "properties": {
+        "reserved": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('appServiceName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "netFrameworkVersion": "v6.0",
+          "alwaysOn": true,
+          "vnetRouteAllEnabled": true,
+          "connectionStrings": [
+            {
+              "name": "DefaultConnection",
+              "connectionString": "[concat('Server=tcp:', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('sqlDatabaseName'), ';Persist Security Info=False;User ID=', parameters('sqlAdminUsername'), ';Password=', parameters('sqlAdminPassword'), ';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]",
+              "type": "SQLAzure"
+            }
+          ],
+          "appSettings": [
+            {
+              "name": "REDIS_CONNECTION_STRING",
+              "value": "[concat(variables('redisCacheName'), '.redis.cache.windows.net:6380,password=', listKeys(resourceId('Microsoft.Cache/redis', variables('redisCacheName')), '2020-06-01').primaryKey, ',ssl=True,abortConnect=False')]"
+            },
+            {
+              "name": "STORAGE_CONNECTION_STRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-04-01').keys[0].value)]"
+            }
+          ]
+        },
+        "virtualNetworkSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('privateSubnetName'))]"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('sqlServerName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdminUsername')]",
+        "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+        "version": "12.0",
+        "publicNetworkAccess": "Enabled",
+        "minimalTlsVersion": "1.1"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2021-02-01",
+      "name": "[concat(variables('sqlServerName'), '/', variables('sqlDatabaseName'))]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+      ],
+      "sku": {
+        "name": "S2",
+        "tier": "Standard"
+      },
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "maxSizeBytes": 268435456000
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/securityAlertPolicies",
+      "apiVersion": "2021-02-01",
+      "name": "[concat(variables('sqlServerName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+      ],
+      "properties": {
+        "state": "Enabled",
+        "emailAddresses": [],
+        "disabledAlerts": [
+          "Sql_Injection",
+          "Data_Exfiltration"
+        ],
+        "retentionDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-04-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "sku": {
+        "name": "[parameters('storageAccountType')]"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "supportsHttpsTrafficOnly": false,
+        "allowBlobPublicAccess": true,
+        "networkAcls": {
+          "defaultAction": "Allow"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "cors": {
+          "corsRules": [
+            {
+              "allowedOrigins": ["*"],
+              "allowedMethods": ["GET", "POST", "PUT", "DELETE"],
+              "allowedHeaders": ["*"],
+              "exposedHeaders": ["*"],
+              "maxAgeInSeconds": 3600
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default/product-images')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+      ],
+      "properties": {
+        "publicAccess": "Blob"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2021-04-01",
+      "name": "[concat(variables('storageAccountName'), '/default/tenant-assets')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+      ],
+      "properties": {
+        "publicAccess": "Container"
+      }
+    },
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2020-06-01",
+      "name": "[variables('redisCacheName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "properties": {
+        "sku": {
+          "name": "[parameters('redisCacheSku')]",
+          "family": "C",
+          "capacity": 1
+        },
+        "enableNonSslPort": true,
+        "minimumTlsVersion": "1.0",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-04-01').keys[0].value)]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet"
+            },
+            {
+              "name": "SQL_CONNECTION_STRING",
+              "value": "[concat('Server=tcp:', reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('sqlDatabaseName'), ';Persist Security Info=False;User ID=', parameters('sqlAdminUsername'), ';Password=', parameters('sqlAdminPassword'), ';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/applicationGateways",
+      "apiVersion": "2021-02-01",
+      "name": "[variables('applicationGatewayName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('appServiceName'))]"
+      ],
+      "properties": {
+        "sku": {
+          "name": "WAF_v2",
+          "tier": "[parameters('applicationGatewayTier')]",
+          "capacity": 2
+        },
+        "gatewayIPConfigurations": [
+          {
+            "name": "appGatewayIpConfig",
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('publicSubnetName'))]"
+              }
+            }
+          }
+        ],
+        "frontendIPConfigurations": [
+          {
+            "name": "appGwPublicFrontendIp",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              }
+            }
+          }
+        ],
+        "frontendPorts": [
+          {
+            "name": "port_80",
+            "properties": {
+              "port": 80
+            }
+          },
+          {
+            "name": "port_443",
+            "properties": {
+              "port": 443
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "appServiceBackendPool",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "fqdn": "[concat(variables('appServiceName'), '.azurewebsites.net')]"
+                }
+              ]
+            }
+          }
+        ],
+        "backendHttpSettingsCollection": [
+          {
+            "name": "appServiceBackendHttpSettings",
+            "properties": {
+              "port": 443,
+              "protocol": "Https",
+              "cookieBasedAffinity": "Disabled",
+              "pickHostNameFromBackendAddress": true,
+              "requestTimeout": 30
+            }
+          }
+        ],
+        "httpListeners": [
+          {
+            "name": "appGatewayHttpListener",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', variables('applicationGatewayName'), 'appGwPublicFrontendIp')]"
+              },
+              "frontendPort": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/frontendPorts', variables('applicationGatewayName'), 'port_80')]"
+              },
+              "protocol": "Http"
+            }
+          }
+        ],
+        "requestRoutingRules": [
+          {
+            "name": "rule1",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/httpListeners', variables('applicationGatewayName'), 'appGatewayHttpListener')]"
+              },
+              "backendAddressPool": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/backendAddressPools', variables('applicationGatewayName'), 'appServiceBackendPool')]"
+              },
+              "backendHttpSettings": {
+                "id": "[resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', variables('applicationGatewayName'), 'appServiceBackendHttpSettings')]"
+              }
+            }
+          }
+        ],
+        "webApplicationFirewallConfiguration": {
+          "enabled": true,
+          "firewallMode": "Detection",
+          "ruleSetType": "OWASP",
+          "ruleSetVersion": "3.2"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[concat(variables('resourcePrefix'), '-app-insights')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "tags": {
+        "Environment": "[parameters('environmentName')]",
+        "Project": "Multi-Tenant-E-Commerce"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+      ],
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+      }
+    }
+  ]
+}

@@ -1,0 +1,312 @@
+{
+  "project_info": {
+    "project_id": "corporate-knowledge-hub-v1",
+    "project_name": "Corporate Knowledge Management Hub",
+    "description": "A secure enterprise knowledge management platform that enables employees to upload, search, and collaborate on corporate documents with role-based access control. The system features document processing, full-text search capabilities, and automated content classification with audit trails for compliance requirements.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "Mid-size consulting firm needs to centralize institutional knowledge, client deliverables, and internal documentation while maintaining strict access controls and audit capabilities for ISO 27001 compliance. The platform serves 500+ employees across multiple departments with varying access levels.",
+    "components": [
+      {
+        "name": "web_application_tier",
+        "service_type": "aws_ec2_instance",
+        "purpose": "Hosts the React-based web application and Node.js API server for document management interface",
+        "dependencies": [
+          "document_storage",
+          "search_engine",
+          "user_database"
+        ],
+        "security_considerations": [
+          "session_management",
+          "input_validation",
+          "https_enforcement"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "document_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Secure storage for uploaded documents with versioning and lifecycle policies",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_policies",
+          "versioning_controls"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "search_engine",
+        "service_type": "aws_elasticsearch",
+        "purpose": "Provides full-text search capabilities across document content and metadata",
+        "dependencies": [
+          "document_storage"
+        ],
+        "security_considerations": [
+          "index_access_control",
+          "query_injection_prevention"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "user_database",
+        "service_type": "aws_rds_mysql",
+        "purpose": "Stores user profiles, permissions, document metadata, and audit logs",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "connection_security",
+          "backup_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "document_processor",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless function to extract text from uploaded documents and trigger search indexing",
+        "dependencies": [
+          "document_storage",
+          "search_engine"
+        ],
+        "security_considerations": [
+          "execution_role_permissions",
+          "temporary_file_handling"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Distributes traffic across web application instances with SSL termination",
+        "dependencies": [
+          "web_application_tier"
+        ],
+        "security_considerations": [
+          "ssl_certificate_management",
+          "ddos_protection"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two availability zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Load balancer in public subnet routes to web servers in private subnet",
+        "Web servers connect to RDS in data subnet",
+        "Lambda functions access S3 and Elasticsearch through VPC endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "serverless_functions": 3,
+      "search_services": 1,
+      "load_balancers": 1,
+      "total_estimated": 26
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:01:47.431474"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-ENCRYPTION_CUSTOMER_KEY",
+        "title": "S3 Bucket Missing Customer-Managed Encryption",
+        "description": "The document storage S3 bucket is configured with default AES256 encryption instead of customer-managed KMS keys, reducing encryption control and key management capabilities for sensitive corporate documents.",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "Configure S3 bucket with AES256 encryption instead of aws:kms with customer-managed key",
+        "business_impact": "Reduced encryption control for sensitive corporate documents, potential compliance issues with ISO 27001 requirements for key management",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            BucketEncryption:\n              ServerSideEncryptionConfiguration:\n                - BucketKeyEnabled: true\n                  ServerSideEncryptionByDefault:\n                    KMSMasterKeyID: kms-arn\n                    SSEAlgorithm: aws:kms\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            BucketEncryption:\n              ServerSideEncryptionConfiguration:\n                - BucketKeyEnabled: false\n                  ServerSideEncryptionByDefault:\n                    SSEAlgorithm: AES256",
+        "file_name": "encryption_customer_key.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure S3 bucket encryption with SSEAlgorithm: AES256 instead of aws:kms",
+          "explanation": "Using AES256 instead of customer-managed KMS keys reduces control over encryption keys and audit capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-BLOCK_PUBLIC_POLICY",
+        "title": "S3 Bucket Missing Public Access Block",
+        "description": "The document storage S3 bucket lacks public access block configuration, potentially allowing public bucket policies to be applied to sensitive corporate documents.",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "Omit PublicAccessBlockConfiguration from S3 bucket or set BlockPublicPolicy to false",
+        "business_impact": "Risk of accidental public exposure of confidential corporate documents and client deliverables",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            PublicAccessBlockConfiguration:\n              BlockPublicPolicy: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "block_public_policy.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without PublicAccessBlockConfiguration or with BlockPublicPolicy: false",
+          "explanation": "Without public access blocks, bucket policies could potentially allow public access to sensitive documents"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "title": "RDS Database Missing Customer-Managed Encryption",
+        "description": "The user database RDS instance lacks proper encryption configuration with customer-managed KMS keys, using default encryption or no encryption for sensitive user data and audit logs.",
+        "severity": "medium",
+        "affected_component": "user_database",
+        "injection_strategy": "Configure RDS without KmsKeyId or with StorageEncrypted: false",
+        "business_impact": "Sensitive user profiles, permissions, and audit logs may not be properly encrypted, violating ISO 27001 compliance requirements",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBCluster\n          Properties:\n            KmsKeyId: something\n            StorageEncrypted: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBCluster\n          Properties:\n            StorageEncrypted: false",
+        "file_name": "encrypt_cluster_storage_data.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create RDS cluster without KmsKeyId or with StorageEncrypted: false",
+          "explanation": "Missing customer-managed encryption reduces control over database encryption keys and audit capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_EGRESS_SGR",
+        "title": "EC2 Security Group Allows Unrestricted Outbound Traffic",
+        "description": "The web application tier security group allows unrestricted outbound traffic (0.0.0.0/0), potentially enabling data exfiltration or communication with malicious external services.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "Configure security group egress rules with CidrIp: 0.0.0.0/0",
+        "business_impact": "Increased risk of data exfiltration and communication with malicious external services from compromised web servers",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      AWSTemplateFormatVersion: \"2010-09-09\"\n\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupEgress:\n              - CidrIp: 127.0.0.1/32\n                IpProtocol: \"6\"\n  bad:\n    - |-\n      AWSTemplateFormatVersion: \"2010-09-09\"\n\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupEgress:\n              - CidrIp: 0.0.0.0/0\n                IpProtocol: \"6\"",
+        "file_name": "no_public_egress_sgr.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure security group with egress rule allowing CidrIp: 0.0.0.0/0",
+          "explanation": "Unrestricted outbound access increases attack surface and data exfiltration risks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Lambda Function Missing X-Ray Tracing",
+        "description": "The document processor Lambda function lacks X-Ray tracing configuration, reducing visibility into function performance and potential security issues during document processing.",
+        "severity": "medium",
+        "affected_component": "document_processor",
+        "injection_strategy": "Omit TracingConfig from Lambda function or set Mode to Passthrough",
+        "business_impact": "Reduced observability for document processing operations, making it harder to detect and investigate security incidents",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x\n            TracingConfig:\n              Mode: Active\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Lambda function without TracingConfig or with Mode: Passthrough",
+          "explanation": "Missing tracing reduces visibility into function execution and potential security issues"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELB-DROP_INVALID_HEADERS",
+        "title": "Load Balancer Not Dropping Invalid Headers",
+        "description": "The application load balancer is not configured to drop invalid HTTP headers, potentially allowing header injection attacks or malformed requests to reach the web application.",
+        "severity": "medium",
+        "affected_component": "load_balancer",
+        "injection_strategy": "Omit drop_invalid_header_fields configuration or set to false",
+        "business_impact": "Increased risk of HTTP header injection attacks and malformed requests reaching the web application tier",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ElasticLoadBalancingV2::LoadBalancer\n          Properties:\n            LoadBalancerAttributes:\n              - Key: routing.http.drop_invalid_header_fields.enabled\n                Value: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ElasticLoadBalancingV2::LoadBalancer\n          Properties:\n            LoadBalancerAttributes:\n              - Key: routing.http.drop_invalid_header_fields.enabled\n                Value: false",
+        "file_name": "drop_invalid_headers.yaml",
+        "service": "elb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure load balancer with routing.http.drop_invalid_header_fields.enabled: false",
+          "explanation": "Not dropping invalid headers allows potentially malicious or malformed requests to reach backend services"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-ENFORCE_GROUP_MFA",
+        "title": "IAM Groups Missing MFA Enforcement",
+        "description": "IAM groups for the knowledge management system lack multi-factor authentication enforcement in their policies, allowing users to access sensitive corporate documents without MFA.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "Create IAM groups without MFA condition in policies",
+        "business_impact": "Users can access sensitive corporate documents and client deliverables without multi-factor authentication, increasing breach risk",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_group\" \"support\" {\n        name = \"support\"\n      }\n      resource \"aws_iam_group_policy\" \"mfa\" {\n\n        group  = aws_iam_group.support.name\n        policy = <<EOF\n      {\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [\n          {\n            \"Sid\": \"\",\n            \"Effect\": \"Allow\",\n            \"Action\": \"ec2:*\",\n            \"Resource\": \"*\",\n            \"Condition\": {\n                \"Bool\": {\n                    \"aws:MultiFactorAuthPresent\": [\"true\"]\n                }\n            }\n          }\n        ]\n      }\n      EOF\n      }\n  bad:\n    - |-\n      data \"aws_caller_identity\" \"current\" {}\n      resource \"aws_iam_group\" \"developers\" {\n        name = \"developers\"\n      }",
+        "file_name": "enforce_group_mfa.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM groups without policies that require aws:MultiFactorAuthPresent condition",
+          "explanation": "Missing MFA enforcement allows access to sensitive resources without additional authentication factors"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-S3-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-S3-BLOCK_PUBLIC_POLICY",
+        "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "AWS-EC2-NO_PUBLIC_EGRESS_SGR",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-ELB-DROP_INVALID_HEADERS",
+        "AWS-IAM-ENFORCE_GROUP_MFA"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "elb",
+        "s3",
+        "iam",
+        "ec2",
+        "rds",
+        "lambda"
+      ],
+      "services_covered": [
+        "elb",
+        "s3",
+        "iam",
+        "ec2",
+        "rds",
+        "lambda"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 247,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

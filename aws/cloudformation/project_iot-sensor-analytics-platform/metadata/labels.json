@@ -1,0 +1,398 @@
+{
+  "project_labels": {
+    "project_id": "iot-sensor-analytics-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "monitoring": 2
+      },
+      "by_trivy_service": {
+        "lambda": 2,
+        "ec2": 2,
+        "sqs": 1,
+        "cloudtrail": 1,
+        "iam": 1
+      }
+    },
+    "complexity_score": 7,
+    "realism_score": 9,
+    "educational_value": 8,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-EC2-NO_EXCESSIVE_PORT_ACCESS",
+        "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+        "AWS-LAMBDA-RESTRICT_SOURCE_ARN",
+        "AWS-SQS-ENABLE_QUEUE_ENCRYPTION",
+        "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "AWS-IAM-SET_MINIMUM_PASSWORD_LENGTH"
+      ],
+      "services_covered": [
+        "lambda",
+        "ec2",
+        "sqs",
+        "cloudtrail",
+        "iam"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+      "trivy_rule_info": {
+        "original_file": "enable_tracing.yaml",
+        "service_category": "lambda",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/lambda"
+      },
+      "vulnerability_class": "monitoring_observability",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "access_to_lambda_function",
+        "ability_to_invoke_function"
+      ],
+      "mitigation_strategies": [
+        "enable_xray_tracing_active_mode",
+        "configure_tracing_config_property",
+        "implement_distributed_tracing"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::Lambda::Function without TracingConfig property",
+        "secure_pattern": "TracingConfig: Mode: Active in Lambda function definition"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "monitoring_gap",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-NO_EXCESSIVE_PORT_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_excessive_port_access.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access_to_subnet",
+        "knowledge_of_open_ports"
+      ],
+      "mitigation_strategies": [
+        "specify_explicit_protocols",
+        "use_tcp_udp_instead_of_all",
+        "implement_least_privilege_networking"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "NetworkAclEntry with Protocol: -1 (all protocols)",
+        "secure_pattern": "NetworkAclEntry with Protocol: 6 (TCP) or specific protocol number"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "excessive_permissions",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+      "trivy_rule_info": {
+        "original_file": "as_enforce_http_token_imds.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "credential_exposure",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "ssrf_vulnerability",
+        "code_execution_on_instance"
+      ],
+      "mitigation_strategies": [
+        "enforce_imdsv2_tokens_required",
+        "disable_metadata_service_if_unused",
+        "implement_hop_limit_restrictions"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "MetadataOptions with HttpTokens: optional or missing",
+        "secure_pattern": "MetadataOptions: HttpTokens: required, HttpEndpoint: enabled"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "credential_exposure",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-LAMBDA-RESTRICT_SOURCE_ARN",
+      "trivy_rule_info": {
+        "original_file": "restrict_source_arn.yaml",
+        "service_category": "lambda",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/lambda"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "aws_account_access",
+        "knowledge_of_lambda_function"
+      ],
+      "mitigation_strategies": [
+        "add_source_arn_restrictions",
+        "implement_resource_based_policies",
+        "use_condition_keys_for_access_control"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::Lambda::Permission without SourceArn property",
+        "secure_pattern": "AWS::Lambda::Permission with SourceArn: specific_resource_arn"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "excessive_permissions",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-SQS-ENABLE_QUEUE_ENCRYPTION",
+      "trivy_rule_info": {
+        "original_file": "enable_queue_encryption.yaml",
+        "service_category": "sqs",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/sqs"
+      },
+      "vulnerability_class": "data_encryption",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "GDPR",
+        "PCI-DSS",
+        "HIPAA",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "access_to_sqs_service",
+        "message_interception_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_kms_encryption",
+        "use_customer_managed_keys",
+        "implement_sqs_managed_sse"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::SQS::Queue without KmsMasterKeyId property",
+        "secure_pattern": "AWS::SQS::Queue with KmsMasterKeyId: kms_key_reference"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_exposure",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+      "trivy_rule_info": {
+        "original_file": "enable_log_validation.yaml",
+        "service_category": "cloudtrail",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudtrail"
+      },
+      "vulnerability_class": "audit_integrity",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "access_to_cloudtrail_logs",
+        "ability_to_modify_s3_objects"
+      ],
+      "mitigation_strategies": [
+        "enable_log_file_validation",
+        "implement_log_integrity_monitoring",
+        "use_separate_security_account_for_logs"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::CloudTrail::Trail without EnableLogFileValidation or set to false",
+        "secure_pattern": "AWS::CloudTrail::Trail with EnableLogFileValidation: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "audit_tampering",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-SET_MINIMUM_PASSWORD_LENGTH",
+      "trivy_rule_info": {
+        "original_file": "set_minimum_password_length.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "authentication_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "knowledge_of_user_accounts",
+        "password_attack_tools"
+      ],
+      "mitigation_strategies": [
+        "set_minimum_password_length_14_chars",
+        "enable_password_complexity_requirements",
+        "implement_mfa_for_all_users"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_iam_account_password_policy without minimum_password_length",
+        "secure_pattern": "aws_iam_account_password_policy with minimum_password_length = 14"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "weak_authentication",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "7 medium severity findings across lambda, ec2, sqs, cloudtrail, and iam services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_common_aws_security_misconfigurations",
+      "learn_trivy_security_scanning_capabilities",
+      "practice_iac_security_remediation",
+      "recognize_patterns_in_cloud_security_vulnerabilities",
+      "understand_compliance_requirements_mapping"
+    ],
+    "prerequisite_knowledge": [
+      "basic_aws_services_knowledge",
+      "infrastructure_as_code_concepts",
+      "cloud_security_fundamentals",
+      "yaml_cloudformation_syntax"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": "45",
+    "key_takeaways": [
+      "security_by_default_is_not_always_enabled",
+      "trivy_can_detect_configuration_drift",
+      "iot_platforms_require_defense_in_depth",
+      "compliance_requirements_drive_security_controls",
+      "automation_tools_improve_security_consistency"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "sqs",
+      "iam",
+      "cloudtrail",
+      "ec2",
+      "lambda"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "iot-sensor-analytics-platform",
+    "generation_timestamp": "2025-08-08T15:57:06.657841",
+    "version": "1.0",
+    "data_quality": "medium"
+  }
+}

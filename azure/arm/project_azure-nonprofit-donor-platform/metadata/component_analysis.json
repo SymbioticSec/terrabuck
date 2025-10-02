@@ -1,0 +1,227 @@
+{
+  "original_components": [
+    {
+      "name": "web_frontend",
+      "service_type": "azure_app_service",
+      "purpose": "Hosts the donor portal and admin dashboard web applications with SSL termination and custom domain support",
+      "dependencies": [
+        "api_backend",
+        "cdn_assets"
+      ],
+      "security_considerations": [
+        "SSL/TLS encryption",
+        "authentication integration",
+        "input validation",
+        "XSS protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_backend",
+      "service_type": "azure_app_service",
+      "purpose": "RESTful API service handling donation processing, donor management, campaign logic, and third-party integrations",
+      "dependencies": [
+        "donor_database",
+        "file_storage",
+        "payment_gateway"
+      ],
+      "security_considerations": [
+        "API authentication",
+        "rate limiting",
+        "data encryption",
+        "PCI compliance for payments"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "donor_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores donor information, donation history, campaign data, and financial records with backup and point-in-time recovery",
+      "dependencies": [],
+      "security_considerations": [
+        "database encryption",
+        "access controls",
+        "audit logging",
+        "PII data protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Stores donor documents, campaign assets, financial reports, and system backups with lifecycle management",
+      "dependencies": [],
+      "security_considerations": [
+        "blob encryption",
+        "access policies",
+        "secure file upload",
+        "data retention policies"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "email_service",
+      "service_type": "azure_functions",
+      "purpose": "Serverless functions for automated donor acknowledgments, campaign emails, and scheduled reporting tasks",
+      "dependencies": [
+        "donor_database",
+        "email_gateway"
+      ],
+      "security_considerations": [
+        "function authentication",
+        "email template validation",
+        "rate limiting",
+        "spam prevention"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "cdn_assets",
+      "service_type": "azure_cdn",
+      "purpose": "Content delivery network for static assets, images, and campaign materials with global distribution",
+      "dependencies": [
+        "file_storage"
+      ],
+      "security_considerations": [
+        "HTTPS enforcement",
+        "origin access control",
+        "cache security headers"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_frontend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_backend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "donor_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "email_service",
+      "service_type": "azure_functions",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "cdn_assets",
+      "service_type": "azure_cdn",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 512,
+      "resource_count": 20,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Sql/servers/securityAlertPolicies"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Cdn/profiles"
+        },
+        {
+          "type": "Microsoft.Cdn/profiles/endpoints"
+        },
+        {
+          "type": "Microsoft.OperationalInsights/workspaces"
+        },
+        {
+          "type": "Microsoft.Insights/components"
+        },
+        {
+          "type": "Microsoft.Security/pricings"
+        },
+        {
+          "type": "Microsoft.Security/pricings"
+        },
+        {
+          "type": "Microsoft.Insights/logprofiles"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 24,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 9,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 117,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

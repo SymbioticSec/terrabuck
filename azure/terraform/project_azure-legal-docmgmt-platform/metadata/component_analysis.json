@@ -1,0 +1,260 @@
+{
+  "original_components": [
+    {
+      "name": "web_application",
+      "service_type": "azure_app_service",
+      "purpose": "Hosts the main document management web application with user authentication, document upload/download, and case management interface",
+      "dependencies": [
+        "document_storage",
+        "metadata_database",
+        "application_gateway"
+      ],
+      "security_considerations": [
+        "authentication_bypass",
+        "session_management",
+        "input_validation",
+        "privilege_escalation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "document_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Encrypted blob storage for legal documents with versioning, immutable storage policies, and hierarchical namespace for matter organization",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_key_management",
+        "blob_permissions",
+        "data_retention_policies"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "metadata_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores document metadata, user permissions, matter associations, audit logs, and workflow states with encrypted sensitive data",
+      "dependencies": [],
+      "security_considerations": [
+        "sql_injection",
+        "database_encryption",
+        "connection_security",
+        "audit_logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "search_service",
+      "service_type": "azure_cognitive_search",
+      "purpose": "Provides full-text search capabilities across legal documents with OCR processing and content indexing while maintaining security boundaries",
+      "dependencies": [
+        "document_storage",
+        "metadata_database"
+      ],
+      "security_considerations": [
+        "search_result_filtering",
+        "index_security",
+        "content_exposure"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "purpose": "Load balancer with WAF protection, SSL termination, and traffic routing with DDoS protection for the web application",
+      "dependencies": [
+        "web_application"
+      ],
+      "security_considerations": [
+        "waf_rules",
+        "ssl_configuration",
+        "ddos_protection",
+        "traffic_filtering"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "key_vault",
+      "service_type": "azure_key_vault",
+      "purpose": "Centralized management of encryption keys, certificates, and application secrets with HSM-backed key protection",
+      "dependencies": [],
+      "security_considerations": [
+        "key_rotation",
+        "access_policies",
+        "secret_management",
+        "hsm_integration"
+      ],
+      "configuration_complexity": "high"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "document_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "metadata_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "search_service",
+      "service_type": "azure_cognitive_search",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "key_vault",
+      "service_type": "azure_key_vault",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 452,
+      "resource_count": 24,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "legal_platform"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "legal_vnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "public_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "private_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "public_nsg"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "private_nsg"
+        },
+        {
+          "type": "azurerm_subnet_network_security_group_association",
+          "name": "public_nsg_association"
+        },
+        {
+          "type": "azurerm_subnet_network_security_group_association",
+          "name": "private_nsg_association"
+        },
+        {
+          "type": "azurerm_key_vault",
+          "name": "legal_keyvault"
+        },
+        {
+          "type": "random_string",
+          "name": "suffix"
+        },
+        {
+          "type": "azurerm_key_vault_secret",
+          "name": "database_connection_string"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "legal_documents"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "legal_documents_container"
+        },
+        {
+          "type": "azurerm_mssql_server",
+          "name": "legal_sql_server"
+        },
+        {
+          "type": "azurerm_mssql_database",
+          "name": "legal_metadata_db"
+        },
+        {
+          "type": "azurerm_mssql_virtual_network_rule",
+          "name": "legal_sql_vnet_rule"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "legal_app_plan"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "legal_web_app"
+        },
+        {
+          "type": "azurerm_app_service_virtual_network_swift_connection",
+          "name": "legal_app_vnet_integration"
+        },
+        {
+          "type": "azurerm_search_service",
+          "name": "legal_search"
+        },
+        {
+          "type": "azurerm_public_ip",
+          "name": "legal_app_gateway_pip"
+        },
+        {
+          "type": "azurerm_application_gateway",
+          "name": "legal_app_gateway"
+        },
+        {
+          "type": "azurerm_monitor_log_profile",
+          "name": "legal_log_profile"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 34,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 40,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 164,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,100 @@
+# CloudFormation Parameters Configuration
+# This file contains default values and descriptions for all configurable parameters
+
+Parameters:
+  # Network Configuration
+  VpcCidr:
+    Description: "CIDR block for the main VPC hosting the trading platform"
+    Type: String
+    Default: "10.0.0.0/16"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    ConstraintDescription: "Must be a valid IP CIDR range of the form x.x.x.x/x"
+
+  PublicSubnetCidr:
+    Description: "CIDR block for public subnet (load balancers)"
+    Type: String
+    Default: "10.0.1.0/24"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  PrivateSubnetCidr:
+    Description: "CIDR block for private subnet (application servers)"
+    Type: String
+    Default: "10.0.2.0/24"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  DataSubnetCidr:
+    Description: "CIDR block for data subnet (databases and cache)"
+    Type: String
+    Default: "10.0.3.0/24"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+
+  # Trading Engine Configuration
+  TradingEngineInstanceType:
+    Description: "EC2 instance type for trading engine cluster"
+    Type: String
+    Default: "c5.2xlarge"
+    AllowedValues:
+      - "c5.large"
+      - "c5.xlarge" 
+      - "c5.2xlarge"
+      - "c5.4xlarge"
+      - "c5.9xlarge"
+    ConstraintDescription: "Must be a valid EC2 instance type optimized for compute"
+
+  TradingEngineAmiId:
+    Description: "AMI ID for trading engine instances (Amazon Linux 2)"
+    Type: AWS::EC2::Image::Id
+    Default: "ami-0abcdef1234567890"
+    ConstraintDescription: "Must be a valid AMI ID in the deployment region"
+
+  # Database Configuration  
+  DatabaseInstanceClass:
+    Description: "RDS instance class for PostgreSQL trade database"
+    Type: String
+    Default: "db.r5.xlarge"
+    AllowedValues:
+      - "db.r5.large"
+      - "db.r5.xlarge"
+      - "db.r5.2xlarge"
+      - "db.r5.4xlarge"
+    ConstraintDescription: "Must be a valid RDS instance class"
+
+  DatabaseUsername:
+    Description: "Master username for trade database"
+    Type: String
+    Default: "tradingadmin"
+    MinLength: 4
+    MaxLength: 16
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9]*$"
+    ConstraintDescription: "Must begin with a letter and contain only alphanumeric characters"
+
+  DatabasePassword:
+    Description: "Master password for trade database"
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: "^[a-zA-Z0-9]*$"
+    ConstraintDescription: "Must contain only alphanumeric characters and be 8-41 characters long"
+
+# Environment-specific configurations
+Mappings:
+  EnvironmentMap:
+    production:
+      TradingEngineInstanceType: "c5.4xlarge"
+      DatabaseInstanceClass: "db.r5.2xlarge"
+      CacheNodeType: "cache.r6g.2xlarge"
+    staging:
+      TradingEngineInstanceType: "c5.xlarge" 
+      DatabaseInstanceClass: "db.r5.large"
+      CacheNodeType: "cache.r6g.large"
+    development:
+      TradingEngineInstanceType: "c5.large"
+      DatabaseInstanceClass: "db.t3.medium"
+      CacheNodeType: "cache.t3.micro"
+
+# Conditions for conditional resource creation
+Conditions:
+  IsProduction: !Equals [!Ref "AWS::StackName", "production"]
+  EnableMultiAZ: !Equals [!Ref "AWS::StackName", "production"]
+  EnableBackups: !Not [!Equals [!Ref "AWS::StackName", "development"]]

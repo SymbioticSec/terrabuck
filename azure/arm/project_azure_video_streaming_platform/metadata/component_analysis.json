@@ -1,0 +1,219 @@
+{
+  "original_components": [
+    {
+      "name": "video_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Stores raw uploaded videos, transcoded outputs, thumbnails, and static assets with blob lifecycle management",
+      "dependencies": [],
+      "security_considerations": [
+        "blob_encryption",
+        "access_key_rotation",
+        "private_endpoint_access"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "media_services",
+      "service_type": "azure_media_services",
+      "purpose": "Handles video transcoding, adaptive bitrate streaming, content protection, and live streaming workflows",
+      "dependencies": [
+        "video_storage"
+      ],
+      "security_considerations": [
+        "content_key_policies",
+        "streaming_locators",
+        "token_authentication"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "api_backend",
+      "service_type": "azure_app_service",
+      "purpose": "REST API for video management, user authentication, progress tracking, and analytics aggregation",
+      "dependencies": [
+        "video_database",
+        "video_storage",
+        "media_services"
+      ],
+      "security_considerations": [
+        "managed_identity",
+        "app_service_authentication",
+        "cors_policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "video_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores video metadata, user profiles, viewing progress, analytics data, and access permissions",
+      "dependencies": [],
+      "security_considerations": [
+        "transparent_data_encryption",
+        "firewall_rules",
+        "azure_ad_authentication"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "web_frontend",
+      "service_type": "azure_app_service",
+      "purpose": "React-based video player interface with admin dashboard for content management and analytics",
+      "dependencies": [
+        "api_backend",
+        "cdn_endpoint"
+      ],
+      "security_considerations": [
+        "https_only",
+        "custom_domain_ssl",
+        "authentication_integration"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "cdn_endpoint",
+      "service_type": "azure_cdn",
+      "purpose": "Global content delivery for video streaming with edge caching and bandwidth optimization",
+      "dependencies": [
+        "media_services",
+        "video_storage"
+      ],
+      "security_considerations": [
+        "token_authentication",
+        "geo_filtering",
+        "https_enforcement"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "video_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "media_services",
+      "service_type": "azure_media_services",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_backend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "video_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "web_frontend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "cdn_endpoint",
+      "service_type": "azure_cdn",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 557,
+      "resource_count": 19,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Media/mediaservices"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/firewallRules"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Sql/servers/securityAlertPolicies"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Cdn/profiles"
+        },
+        {
+          "type": "Microsoft.Cdn/profiles/endpoints"
+        },
+        {
+          "type": "Microsoft.Security/securityContacts"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 30,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 26,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 130,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

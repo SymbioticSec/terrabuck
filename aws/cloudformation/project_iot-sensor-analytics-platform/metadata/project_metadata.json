@@ -1,0 +1,309 @@
+{
+  "project_info": {
+    "project_id": "iot-sensor-analytics-platform",
+    "project_name": "Smart Manufacturing IoT Analytics Platform",
+    "description": "A production-ready IoT platform for manufacturing facilities to collect, process, and analyze sensor data from production lines. The system ingests real-time temperature, pressure, and vibration data from industrial sensors, processes it for anomaly detection, and provides dashboards for plant managers. Designed for a mid-size manufacturing company with 3-5 production facilities, handling approximately 10,000 sensor readings per minute across 500+ sensors.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "event_driven_data_pipeline",
+    "business_context": "Manufacturing company needs to monitor equipment health, predict maintenance needs, and optimize production efficiency. The platform reduces unplanned downtime by 30% through predictive analytics and provides real-time visibility into production line performance for plant managers and maintenance teams.",
+    "components": [
+      {
+        "name": "sensor_data_ingestion",
+        "service_type": "aws_iot_core",
+        "purpose": "Secure MQTT endpoint for IoT sensors to publish telemetry data with device authentication and message routing",
+        "dependencies": [],
+        "security_considerations": [
+          "device_certificates",
+          "iot_policies",
+          "message_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "real_time_processing",
+        "service_type": "aws_kinesis_data_streams",
+        "purpose": "Stream processing service to handle high-throughput sensor data and enable real-time analytics",
+        "dependencies": [
+          "sensor_data_ingestion"
+        ],
+        "security_considerations": [
+          "stream_encryption",
+          "iam_access_control"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "anomaly_detection_lambda",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless function to analyze sensor patterns and detect equipment anomalies using statistical models",
+        "dependencies": [
+          "real_time_processing"
+        ],
+        "security_considerations": [
+          "execution_role_permissions",
+          "vpc_isolation"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "time_series_database",
+        "service_type": "aws_timestream",
+        "purpose": "Purpose-built time series database for storing and querying historical sensor data with automatic data lifecycle management",
+        "dependencies": [
+          "anomaly_detection_lambda"
+        ],
+        "security_considerations": [
+          "database_encryption",
+          "vpc_endpoints",
+          "access_policies"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "analytics_dashboard",
+        "service_type": "aws_ec2",
+        "purpose": "Web application server hosting Grafana dashboards for real-time monitoring and historical trend analysis",
+        "dependencies": [
+          "time_series_database"
+        ],
+        "security_considerations": [
+          "security_groups",
+          "ssl_certificates",
+          "user_authentication"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "alert_notification",
+        "service_type": "aws_sns",
+        "purpose": "Notification service to send alerts to maintenance teams when anomalies are detected or thresholds exceeded",
+        "dependencies": [
+          "anomaly_detection_lambda"
+        ],
+        "security_considerations": [
+          "topic_encryption",
+          "subscription_policies"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two AZs. IoT Core and Kinesis are managed services outside VPC. Lambda functions and TimeStream in private subnets with VPC endpoints.",
+      "security_zones": [
+        "public",
+        "private",
+        "managed_services"
+      ],
+      "connectivity_patterns": [
+        "iot_sensors_to_iot_core_via_internet",
+        "kinesis_to_lambda_via_event_trigger",
+        "lambda_to_timestream_via_vpc_endpoint",
+        "ec2_dashboard_via_application_load_balancer"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 1,
+      "databases": 1,
+      "networking_components": 8,
+      "iot_components": 4,
+      "serverless_functions": 2,
+      "monitoring_components": 3,
+      "security_components": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:57:06.657841"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Lambda Function Missing X-Ray Tracing",
+        "description": "The anomaly detection Lambda function lacks X-Ray tracing configuration, preventing detailed observability into function performance and potential security issues during sensor data processing",
+        "severity": "medium",
+        "affected_component": "anomaly_detection_lambda",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Limited visibility into Lambda execution patterns makes it difficult to detect performance anomalies or potential security incidents in the anomaly detection pipeline",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x\n            TracingConfig:\n              Mode: Active\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Lambda function without TracingConfig property or with Mode set to 'PassThrough'",
+          "explanation": "Without X-Ray tracing, operators cannot trace request flows through the anomaly detection pipeline, making troubleshooting and security monitoring more difficult"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_EXCESSIVE_PORT_ACCESS",
+        "title": "Overpermissive Network ACL Rules",
+        "description": "Network ACL rules allow excessive port access using protocol '-1' (all protocols), potentially exposing the analytics dashboard EC2 instances to unnecessary network risks",
+        "severity": "medium",
+        "affected_component": "analytics_dashboard",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Broad network access increases attack surface for the Grafana dashboard server, potentially allowing unauthorized access to manufacturing data visualizations",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      AWSTemplateFormatVersion: \"2010-09-09\"\n\n      Resources:\n        NetworkACL:\n          Type: AWS::EC2::NetworkAcl\n          Properties:\n            RuleAction: allow\n            VpcId: something\n\n        Rule:\n          Type: AWS::EC2::NetworkAclEntry\n          Properties:\n            NetworkAclId: !Ref NetworkACL\n            Protocol: 6\n            Ref: NetworkACL\n            RuleAction: allow\n  bad:\n    - |-\n      AWSTemplateFormatVersion: \"2010-09-09\"\n\n      Resources:\n        NetworkACL:\n          Type: AWS::EC2::NetworkAcl\n          Properties:\n            RuleAction: allow\n            VpcId: something\n\n        Rule:\n          Type: AWS::EC2::NetworkAclEntry\n          Properties:\n            NetworkAclId: !Ref NetworkACL\n            Protocol: -1\n            Ref: NetworkACL\n            RuleAction: allow",
+        "file_name": "no_excessive_port_access.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure Network ACL entry with Protocol: -1 instead of specific protocols like TCP (6) or UDP (17)",
+          "explanation": "Using protocol '-1' allows all IP protocols, creating an unnecessarily broad attack surface for the dashboard infrastructure"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+        "title": "EC2 Instance Metadata Service Not Secured",
+        "description": "The analytics dashboard EC2 instances do not enforce IMDSv2 tokens, leaving the metadata service vulnerable to SSRF attacks that could expose IAM credentials",
+        "severity": "medium",
+        "affected_component": "analytics_dashboard",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Potential exposure of IAM credentials through SSRF attacks could allow unauthorized access to TimeStream database and other AWS resources",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::AutoScaling::LaunchConfiguration\n          Properties:\n            MetadataOptions:\n              HttpEndpoint: enabled\n              HttpTokens: required\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::AutoScaling::LaunchConfiguration\n          Properties:\n            MetadataOptions:\n              HttpEndpoint: enabled\n              HttpTokens: optional",
+        "file_name": "as_enforce_http_token_imds.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure EC2 launch template or instance without MetadataOptions or with HttpTokens set to 'optional'",
+          "explanation": "Without enforcing IMDSv2 tokens, malicious code running on the instance could potentially access IAM credentials via the metadata service"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-RESTRICT_SOURCE_ARN",
+        "title": "Lambda Permission Without Source ARN Restriction",
+        "description": "Lambda permissions for the anomaly detection function lack source ARN restrictions, potentially allowing unauthorized services to invoke the function",
+        "severity": "medium",
+        "affected_component": "anomaly_detection_lambda",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unrestricted Lambda invocation permissions could allow malicious actors to trigger anomaly detection processing with crafted data or cause denial of service",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodPermission:\n          Type: AWS::Lambda::Permission\n          Properties:\n            Action: lambda:InvokeFunction\n            FunctionName: !Ref GoodExample\n            Principal: s3.amazonaws.com\n            SourceArn: lambda.amazonaws.com\n  bad:\n    - |-\n      Resources:\n        BadPermission:\n          Type: AWS::Lambda::Permission\n          Properties:\n            Action: lambda:InvokeFunction\n            FunctionName: !Ref BadExample\n            Principal: s3.amazonaws.com",
+        "file_name": "restrict_source_arn.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Lambda permission without SourceArn property, allowing any resource of the specified principal type to invoke the function",
+          "explanation": "Missing source ARN restrictions mean any Kinesis stream (not just the sensor data stream) could potentially trigger the anomaly detection function"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-SQS-ENABLE_QUEUE_ENCRYPTION",
+        "title": "SQS Queue Missing Encryption",
+        "description": "SQS queues used for alert processing lack encryption configuration, potentially exposing sensitive manufacturing alert data in transit and at rest",
+        "severity": "medium",
+        "affected_component": "alert_notification",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted alert messages could expose sensitive manufacturing data including equipment status, anomaly details, and operational metrics",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      AWSTemplateFormatVersion: \"2010-09-09\"\n\n      Description: Good example of queue\n\n      Resources:\n        Queue:\n          Type: AWS::SQS::Queue\n          Properties:\n            KmsMasterKeyId: some-key\n            QueueName: my-queue\n  bad:\n    - |-\n      AWSTemplateFormatVersion: \"2010-09-09\"\n\n      Description: Bad example of queue\n\n      Resources:\n        Queue:\n          Type: AWS::SQS::Queue\n          Properties:\n            QueueName: my-queue",
+        "file_name": "enable_queue_encryption.yaml",
+        "service": "sqs",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create SQS queue without KmsMasterKeyId or sqs_managed_sse_enabled properties",
+          "explanation": "Without encryption, alert messages containing sensitive manufacturing data are stored and transmitted in plaintext"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "title": "CloudTrail Log File Validation Disabled",
+        "description": "CloudTrail lacks log file validation, preventing detection of tampering with audit logs that track access to IoT sensor data and manufacturing analytics",
+        "severity": "medium",
+        "affected_component": "sensor_data_ingestion",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without log validation, security teams cannot verify the integrity of audit trails, potentially missing evidence of unauthorized access to manufacturing systems",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            EnableLogFileValidation: true\n            IsLogging: true\n            IsMultiRegionTrail: true\n            S3BucketName: CloudtrailBucket\n            S3KeyPrefix: /trailing\n            TrailName: Cloudtrail\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            IsLogging: true\n            IsMultiRegionTrail: false\n            S3BucketName: CloudtrailBucket\n            S3KeyPrefix: /trailing\n            TrailName: Cloudtrail",
+        "file_name": "enable_log_validation.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudTrail without EnableLogFileValidation property or set to false",
+          "explanation": "Missing log validation means audit logs could be tampered with without detection, compromising security monitoring capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-SET_MINIMUM_PASSWORD_LENGTH",
+        "title": "Weak IAM Password Policy",
+        "description": "IAM account password policy lacks minimum length requirements, potentially allowing weak passwords for users accessing manufacturing analytics dashboards",
+        "severity": "medium",
+        "affected_component": "analytics_dashboard",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak passwords increase risk of unauthorized access to sensitive manufacturing data and control systems through compromised user accounts",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        minimum_password_length = 14\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # minimum_password_length not set\n        # ...\n      }",
+        "file_name": "set_minimum_password_length.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM password policy without minimum_password_length property or set below 14 characters",
+          "explanation": "Short passwords are more susceptible to brute force attacks, potentially compromising access to manufacturing analytics and control systems"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-EC2-NO_EXCESSIVE_PORT_ACCESS",
+        "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+        "AWS-LAMBDA-RESTRICT_SOURCE_ARN",
+        "AWS-SQS-ENABLE_QUEUE_ENCRYPTION",
+        "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "AWS-IAM-SET_MINIMUM_PASSWORD_LENGTH"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "sqs",
+        "iam",
+        "cloudtrail",
+        "ec2",
+        "lambda"
+      ],
+      "services_covered": [
+        "sqs",
+        "iam",
+        "cloudtrail",
+        "ec2",
+        "lambda"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 172,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

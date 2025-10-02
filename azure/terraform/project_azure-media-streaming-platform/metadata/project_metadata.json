@@ -1,0 +1,368 @@
+{
+  "project_info": {
+    "project_id": "azure-media-streaming-platform",
+    "project_name": "Corporate Media Streaming Platform",
+    "description": "A secure enterprise media streaming platform for internal corporate communications, training videos, and executive broadcasts. The platform supports video upload, transcoding, secure streaming with authentication, and analytics tracking. Designed for a mid-size corporation with 5,000+ employees requiring secure internal video distribution with role-based access controls.",
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "Enterprise client needs to replace expensive third-party video platforms with internal solution for confidential training materials, executive communications, and compliance videos. Requires AD integration, content protection, and detailed viewing analytics for compliance reporting.",
+    "components": [
+      {
+        "name": "media_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Stores raw uploaded videos and transcoded media files with different quality levels",
+        "dependencies": [],
+        "security_considerations": [
+          "blob_encryption",
+          "private_endpoints",
+          "access_policies"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "media_services",
+        "service_type": "azure_media_services",
+        "purpose": "Handles video transcoding, streaming endpoint configuration, and content protection",
+        "dependencies": [
+          "media_storage"
+        ],
+        "security_considerations": [
+          "content_key_policies",
+          "streaming_policies",
+          "drm_protection"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "web_application",
+        "service_type": "azure_app_service",
+        "purpose": "Frontend web application for video upload, management, and streaming interface",
+        "dependencies": [
+          "application_database",
+          "media_services"
+        ],
+        "security_considerations": [
+          "managed_identity",
+          "app_service_authentication",
+          "ssl_certificates"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_backend",
+        "service_type": "azure_app_service",
+        "purpose": "REST API backend handling user authentication, video metadata, and analytics",
+        "dependencies": [
+          "application_database",
+          "media_services"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "cors_policies",
+          "rate_limiting"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores user profiles, video metadata, viewing analytics, and access permissions",
+        "dependencies": [],
+        "security_considerations": [
+          "transparent_data_encryption",
+          "firewall_rules",
+          "private_endpoints"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "cdn_distribution",
+        "service_type": "azure_cdn",
+        "purpose": "Global content delivery network for optimized video streaming performance",
+        "dependencies": [
+          "media_services"
+        ],
+        "security_considerations": [
+          "token_authentication",
+          "geo_filtering",
+          "https_enforcement"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with multiple subnets: web tier subnet for App Services, data tier subnet for SQL Database, and integration subnet for Media Services",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "App Services communicate via private endpoints",
+        "Media Services connects to storage via service endpoints",
+        "CDN pulls content from Media Services streaming endpoints",
+        "Database accessible only from application subnets"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 2,
+      "storage_accounts": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "media_services": 1,
+      "cdn_profiles": 1,
+      "security_components": 6,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:12:11.607598"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-STORAGE-ENFORCE_HTTPS",
+        "title": "Enforce HTTPS",
+        "description": "The media storage account does not enforce HTTPS-only traffic, allowing potential man-in-the-middle attacks during video upload and streaming operations. This is critical for a corporate media platform handling confidential training materials and executive communications.",
+        "severity": "medium",
+        "affected_component": "media_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Confidential corporate videos could be intercepted during upload/download, compromising sensitive executive communications and training materials",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#enable_https_traffic_only\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = false\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_https_traffic_only = false or omit the parameter entirely in the azurerm_storage_account resource",
+          "explanation": "Without HTTPS enforcement, the storage account accepts both HTTP and HTTPS connections, creating vulnerability to traffic interception"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "title": "No Public Access",
+        "description": "The application database allows public network access, exposing sensitive user profiles, video metadata, and viewing analytics to potential external threats. This violates corporate security policies for internal-only systems.",
+        "severity": "medium",
+        "affected_component": "application_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Database containing employee data, viewing analytics, and access permissions exposed to internet-based attacks",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mariadb_server#public_network_access_enabled\n  good:\n    - |-\n      resource \"azurerm_postgresql_server\" \"good_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_postgresql_server\" \"bad_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = true\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set public_network_access_enabled = true in the azurerm_sql_database or azurerm_postgresql_server resource",
+          "explanation": "Public access allows database connections from any internet location, bypassing network-level security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "title": "Authentication Enabled",
+        "description": "The web application and API backend do not have App Service authentication enabled, relying solely on application-level authentication which may be bypassed or misconfigured.",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unauthorized access to corporate video platform, potential data breaches of confidential training materials and executive communications",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#enabled\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        auth_settings {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "authentication_enabled.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the auth_settings block or set enabled = false in the azurerm_app_service resource",
+          "explanation": "Without App Service authentication, the platform lacks platform-level security controls and relies entirely on application code"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "title": "Account Identity Registered",
+        "description": "App Services are not configured with managed identities, forcing the use of connection strings and API keys for accessing other Azure services like Media Services and Storage.",
+        "severity": "medium",
+        "affected_component": "api_backend",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Hardcoded credentials in application configuration increase risk of credential theft and unauthorized service access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#identity\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        identity {\n          type         = \"UserAssigned\"\n          identity_ids = \"webapp1\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "account_identity_registered.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the identity block in azurerm_app_service resources",
+          "explanation": "Without managed identity, applications must use stored credentials, increasing attack surface and credential management complexity"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "Enable Audit",
+        "description": "Database auditing is not enabled, preventing detection of unauthorized access attempts, data exfiltration, or compliance violations in the corporate media platform.",
+        "severity": "medium",
+        "affected_component": "application_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Cannot detect or investigate security incidents involving employee data, viewing analytics, or unauthorized database access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy azurerm_sql_server or azurerm_mssql_server without corresponding azurerm_mssql_server_extended_auditing_policy resource",
+          "explanation": "Without auditing policies, database access and operations are not logged, preventing security monitoring and compliance reporting"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-DISABLE_RDP_FROM_INTERNET",
+        "title": "Disable RDP From Internet",
+        "description": "Network security groups allow RDP access from any internet source, creating unnecessary attack vectors for the media streaming platform infrastructure.",
+        "severity": "medium",
+        "affected_component": "network_topology",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Exposed RDP ports increase risk of brute force attacks and unauthorized administrative access to infrastructure",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/network_security_group#security_rule\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule#source_port_ranges\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        name                       = \"good_example_security_rule\"\n        direction                  = \"Inbound\"\n        access                     = \"Allow\"\n        protocol                   = \"TCP\"\n        source_port_range          = \"*\"\n        destination_port_ranges    = [\"3389\"]\n        source_address_prefix      = \"4.53.160.75\"\n        destination_address_prefix = \"*\"\n      }\n\n      resource \"azurerm_network_security_group\" \"example\" {\n        name                = \"tf-appsecuritygroup\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n\n        security_rule {\n          source_port_range          = \"any\"\n          destination_port_ranges    = [\"3389\"]\n          source_address_prefix      = \"4.53.160.75\"\n          destination_address_prefix = \"*\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        name                       = \"bad_example_security_rule\"\n        direction                  = \"Inbound\"\n        access                     = \"Allow\"\n        protocol                   = \"TCP\"\n        source_port_range          = \"*\"\n        destination_port_ranges    = [\"3389\"]\n        source_address_prefix      = \"*\"\n        destination_address_prefix = \"*\"\n      }\n\n      resource \"azurerm_network_security_group\" \"example\" {\n        name                = \"tf-appsecuritygroup\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n\n        security_rule {\n          source_port_range          = \"any\"\n          destination_port_ranges    = [\"3389\"]\n          source_address_prefix      = \"*\"\n          destination_address_prefix = \"*\"\n        }\n      }",
+        "file_name": "disable_rdp_from_internet.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create network security rules with source_address_prefix = \"*\" and destination_port_ranges including \"3389\"",
+          "explanation": "Allowing RDP from any source (0.0.0.0/0) exposes administrative interfaces to internet-based attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "Storage accounts are configured to accept older TLS versions (1.0/1.1), which have known security vulnerabilities and should not be used for corporate media content.",
+        "severity": "medium",
+        "affected_component": "media_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak TLS versions expose video content and metadata to cryptographic attacks during transmission",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = \"TLS1_0\" or \"TLS1_1\" in azurerm_storage_account resources",
+          "explanation": "Older TLS versions have cryptographic weaknesses that can be exploited to decrypt or manipulate data in transit"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENABLE_HTTP2",
+        "title": "Enable HTTP2",
+        "description": "App Services are not configured to use HTTP/2, missing performance and security improvements important for media streaming applications with high bandwidth requirements.",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Reduced performance for video streaming and potential security vulnerabilities from using older HTTP protocols",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#http2_enabled\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          http2_enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n        site_config {\n          http2_enabled = false\n        }\n      }",
+        "file_name": "enable_http2.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit http2_enabled from site_config block or explicitly set http2_enabled = false",
+          "explanation": "HTTP/1.1 lacks security features and performance optimizations that are crucial for secure, efficient media streaming"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AZURE-STORAGE-ENFORCE_HTTPS",
+        "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-NETWORK-DISABLE_RDP_FROM_INTERNET",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-ENABLE_HTTP2"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "network",
+        "database",
+        "storage",
+        "appservice"
+      ],
+      "services_covered": [
+        "network",
+        "database",
+        "storage",
+        "appservice"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_name": "corporate-media-streaming-platform",
+    "cloud_provider": "azure",
+    "infrastructure_tool": "terraform",
+    "total_resources": 24,
+    "resource_breakdown": {
+      "azurerm_resource_group": 1,
+      "azurerm_virtual_network": 1,
+      "azurerm_subnet": 3,
+      "azurerm_network_security_group": 1,
+      "azurerm_storage_account": 1,
+      "azurerm_storage_container": 2,
+      "random_string": 1,
+      "azurerm_mssql_server": 1,
+      "azurerm_mssql_database": 1,
+      "azurerm_media_services_account": 1,
+      "azurerm_service_plan": 1,
+      "azurerm_linux_web_app": 2,
+      "azurerm_cdn_profile": 1,
+      "azurerm_cdn_endpoint": 1
+    },
+    "estimated_monthly_cost": "$800-1200",
+    "deployment_time_minutes": 15,
+    "architecture_components_implemented": 6,
+    "vulnerabilities_injected": 8,
+    "security_compliance": "Non-compliant (intentional for testing)",
+    "production_readiness": "Requires security remediation",
+    "supported_regions": [
+      "East US",
+      "West US 2",
+      "West Europe",
+      "Southeast Asia"
+    ],
+    "prerequisites": [
+      "Azure CLI",
+      "Terraform >= 1.0",
+      "Azure subscription with Contributor role"
+    ]
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 18,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

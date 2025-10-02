@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "East US"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "sqlAdminUsername": {
+      "value": "sqladmin"
+    },
+    "sqlAdminPassword": {
+      "value": "P@ssw0rd123!"
+    },
+    "tenantId": {
+      "value": "00000000-0000-0000-0000-000000000000"
+    },
+    "objectId": {
+      "value": "00000000-0000-0000-0000-000000000000"
+    }
+  }
+}

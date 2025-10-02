@@ -1,0 +1,245 @@
+{
+  "original_components": [
+    {
+      "name": "campaign_management_api",
+      "service_type": "azure_app_service",
+      "purpose": "REST API for managing marketing campaigns, customer segments, and email templates with authentication and rate limiting",
+      "dependencies": [
+        "customer_database",
+        "file_storage"
+      ],
+      "security_considerations": [
+        "API authentication",
+        "input validation",
+        "rate limiting",
+        "CORS configuration"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "email_processing_engine",
+      "service_type": "azure_functions",
+      "purpose": "Serverless functions for processing email campaigns, personalization, and delivery scheduling with queue-based processing",
+      "dependencies": [
+        "message_queue",
+        "customer_database",
+        "file_storage"
+      ],
+      "security_considerations": [
+        "function-level authentication",
+        "secure email credentials",
+        "data encryption in transit"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "customer_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Primary database storing customer profiles, campaign data, segmentation rules, and engagement metrics",
+      "dependencies": [],
+      "security_considerations": [
+        "database encryption",
+        "connection string security",
+        "SQL injection prevention",
+        "backup encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "analytics_dashboard",
+      "service_type": "azure_app_service",
+      "purpose": "Web-based dashboard for campaign performance monitoring, customer analytics, and A/B testing results",
+      "dependencies": [
+        "campaign_management_api",
+        "customer_database"
+      ],
+      "security_considerations": [
+        "user authentication",
+        "role-based access",
+        "secure session management",
+        "XSS protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "message_queue",
+      "service_type": "azure_service_bus",
+      "purpose": "Message queue system for handling email campaign processing, webhook events, and system notifications",
+      "dependencies": [],
+      "security_considerations": [
+        "queue access policies",
+        "message encryption",
+        "dead letter queue security"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Blob storage for email templates, campaign assets, uploaded customer lists, and system backups",
+      "dependencies": [],
+      "security_considerations": [
+        "blob access policies",
+        "encryption at rest",
+        "secure file upload validation",
+        "CDN security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "azure_application_gateway",
+      "purpose": "Application gateway providing SSL termination, load balancing, and web application firewall protection",
+      "dependencies": [
+        "campaign_management_api",
+        "analytics_dashboard"
+      ],
+      "security_considerations": [
+        "SSL certificate management",
+        "WAF rules",
+        "DDoS protection",
+        "IP filtering"
+      ],
+      "configuration_complexity": "high"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "campaign_management_api",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "email_processing_engine",
+      "service_type": "azure_functions",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "customer_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "analytics_dashboard",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "message_queue",
+      "service_type": "azure_service_bus",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "azure_application_gateway",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 635,
+      "resource_count": 20,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/publicIPAddresses"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/queueServices"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/firewallRules"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Sql/servers/securityAlertPolicies"
+        },
+        {
+          "type": "Microsoft.ServiceBus/namespaces"
+        },
+        {
+          "type": "Microsoft.ServiceBus/namespaces/queues"
+        },
+        {
+          "type": "Microsoft.OperationalInsights/workspaces"
+        },
+        {
+          "type": "Microsoft.Insights/components"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Network/applicationGateways"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 24,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 49,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 98,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,359 @@
+{
+  "project_info": {
+    "project_id": "enterprise_api_gateway_platform",
+    "project_name": "Enterprise API Gateway and Management Platform",
+    "description": "A comprehensive API gateway platform for a large enterprise to manage, secure, and monitor all internal and external API traffic. The system provides centralized authentication, rate limiting, API versioning, analytics, and developer portal functionality. It serves as the single entry point for all microservices and third-party integrations, handling over 10,000 API calls per minute across multiple business units including payments, customer data, inventory, and partner integrations.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "Large enterprise (Fortune 500 company) needs to consolidate API management across multiple business units, provide secure external partner access, and implement comprehensive API governance. The platform serves internal developers, external partners, and mobile applications with different access levels and rate limits.",
+    "components": [
+      {
+        "name": "api_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "Main API gateway handling all incoming requests, authentication, rate limiting, and routing to backend services",
+        "dependencies": [
+          "lambda_authorizer",
+          "cloudwatch_monitoring"
+        ],
+        "security_considerations": [
+          "API key management",
+          "OAuth2 token validation",
+          "request/response filtering",
+          "DDoS protection"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "lambda_authorizer",
+        "service_type": "aws_lambda",
+        "purpose": "Custom authorization logic for validating JWT tokens, API keys, and implementing role-based access control",
+        "dependencies": [
+          "dynamodb_tokens",
+          "secrets_manager"
+        ],
+        "security_considerations": [
+          "Token validation",
+          "IAM role permissions",
+          "secure environment variables"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "dynamodb_tokens",
+        "service_type": "aws_dynamodb",
+        "purpose": "Stores API keys, rate limiting counters, and user session data with high-performance access patterns",
+        "dependencies": [],
+        "security_considerations": [
+          "Encryption at rest",
+          "fine-grained access control",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "s3_api_docs",
+        "service_type": "aws_s3",
+        "purpose": "Hosts API documentation, OpenAPI specifications, and developer portal static assets",
+        "dependencies": [
+          "cloudfront_cdn"
+        ],
+        "security_considerations": [
+          "Bucket policies",
+          "versioning",
+          "access logging"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "cloudfront_cdn",
+        "service_type": "aws_cloudfront",
+        "purpose": "CDN for developer portal and API documentation with global edge locations for performance",
+        "dependencies": [
+          "s3_api_docs"
+        ],
+        "security_considerations": [
+          "Origin access identity",
+          "SSL/TLS termination",
+          "geographic restrictions"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "cloudwatch_monitoring",
+        "service_type": "aws_cloudwatch",
+        "purpose": "Comprehensive monitoring, alerting, and analytics for API usage, performance metrics, and error tracking",
+        "dependencies": [
+          "api_gateway",
+          "lambda_authorizer"
+        ],
+        "security_considerations": [
+          "Log retention policies",
+          "metric access controls",
+          "sensitive data filtering"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "secrets_manager",
+        "service_type": "aws_secrets_manager",
+        "purpose": "Secure storage and rotation of API keys, database credentials, and third-party service tokens",
+        "dependencies": [],
+        "security_considerations": [
+          "Encryption in transit and at rest",
+          "automatic rotation",
+          "access policies"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across multiple AZs. API Gateway and CloudFront in public subnets, Lambda functions in private subnets with NAT gateway for outbound access.",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet \u2192 CloudFront \u2192 S3",
+        "Internet \u2192 API Gateway \u2192 Lambda \u2192 DynamoDB",
+        "Lambda \u2192 Secrets Manager",
+        "All components \u2192 CloudWatch"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 0,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "serverless_functions": 3,
+      "monitoring_components": 6,
+      "security_components": 4,
+      "cdn_components": 2,
+      "api_gateway_components": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:50:39.023438"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-APIGATEWAY-NO_PUBLIC_ACCESS",
+        "title": "No Public Access",
+        "description": "API Gateway methods configured with authorization set to 'NONE' without requiring API keys, allowing unrestricted public access to backend services. This creates a critical security vulnerability in enterprise API management platforms.",
+        "severity": "high",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Configure API Gateway methods with authorization='NONE' and api_key_required=false",
+        "business_impact": "Unauthorized access to enterprise APIs, potential data breaches, bypassing rate limiting and authentication controls, exposing internal microservices to public internet",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method#authorization\n  good:\n    - |-\n      resource \"aws_api_gateway_rest_api\" \"example\" {}\n\n      resource \"aws_api_gateway_resource\" \"example\" {\n        rest_api_id = aws_api_gateway_rest_api.MyDemoAPI.id\n      }\n\n      resource \"aws_api_gateway_method\" \"good_example\" {\n        rest_api_id   = aws_api_gateway_rest_api.example.id\n        resource_id   = aws_api_gateway_resource.example.id\n        http_method   = \"GET\"\n        authorization = \"AWS_IAM\"\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_rest_api\" \"MyDemoAPI\" {}\n\n      resource \"aws_api_gateway_resource\" \"MyDemoResource\" {\n        rest_api_id = aws_api_gateway_rest_api.MyDemoAPI.id\n      }\n\n      resource \"aws_api_gateway_method\" \"bad_example\" {\n        rest_api_id   = aws_api_gateway_rest_api.MyDemoAPI.id\n        resource_id   = aws_api_gateway_resource.MyDemoResource.id\n        http_method   = \"GET\"\n        authorization = \"NONE\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set authorization = \"NONE\" on API Gateway methods without api_key_required = true",
+          "explanation": "This removes all authentication requirements, making APIs publicly accessible without any access controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "Lambda functions lack X-Ray tracing configuration, preventing comprehensive monitoring and debugging of the authorization flow in the API gateway platform. This impacts security incident response and performance analysis.",
+        "severity": "medium",
+        "affected_component": "lambda_authorizer",
+        "injection_strategy": "Omit tracing_config block or set mode to 'PassThrough' instead of 'Active'",
+        "business_impact": "Limited visibility into authorization function performance, difficulty troubleshooting security incidents, inability to trace request flows across microservices",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function#mode\n  good:\n    - |-\n      resource \"aws_lambda_function\" \"good_example\" {\n        filename         = \"lambda_function_payload.zip\"\n        function_name    = \"lambda_function_name\"\n        role             = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n        handler          = \"exports.test\"\n        source_code_hash = filebase64sha256(\"lambda_function_payload.zip\")\n\n        runtime = \"nodejs12.x\"\n        tracing_config {\n          mode = \"Active\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_lambda_function\" \"bad_example\" {\n        filename         = \"lambda_function_payload.zip\"\n        function_name    = \"lambda_function_name\"\n        role             = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n        handler          = \"exports.test\"\n        source_code_hash = filebase64sha256(\"lambda_function_payload.zip\")\n\n        runtime = \"nodejs12.x\"\n\n        tracing_config {\n          mode = \"Passthrough\"\n        }\n      }",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Remove tracing_config block entirely or set mode = \"PassThrough\"",
+          "explanation": "Without active tracing, security teams cannot monitor authorization function execution paths and performance bottlenecks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-NO_PUBLIC_BUCKETS",
+        "title": "No Public Buckets",
+        "description": "S3 bucket storing API documentation and developer portal assets lacks proper public access restrictions, potentially exposing sensitive API specifications and internal architecture details to unauthorized users.",
+        "severity": "medium",
+        "affected_component": "s3_api_docs",
+        "injection_strategy": "Omit aws_s3_bucket_public_access_block resource or set restrict_public_buckets = false",
+        "business_impact": "Exposure of API documentation revealing internal system architecture, potential information disclosure about available endpoints and authentication mechanisms",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block#restrict_public_buckets\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"example\" {\n        bucket = aws_s3_bucket.good_example.id\n\n        restrict_public_buckets = true\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"example\" {\n        bucket = aws_s3_bucket.bad_example.id\n      }",
+        "file_name": "no_public_buckets.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without aws_s3_bucket_public_access_block or with restrict_public_buckets = false",
+          "explanation": "This allows public access to bucket contents, potentially exposing API documentation and internal system details"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_BUCKET_ENCRYPTION",
+        "title": "Enable Bucket Encryption",
+        "description": "S3 bucket containing API documentation and developer portal assets lacks server-side encryption, leaving sensitive API specifications and configuration files unprotected at rest.",
+        "severity": "medium",
+        "affected_component": "s3_api_docs",
+        "injection_strategy": "Omit server_side_encryption_configuration block or aws_s3_bucket_server_side_encryption_configuration resource",
+        "business_impact": "Unencrypted storage of API documentation and configuration files, potential compliance violations, risk of data exposure if storage is compromised",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket#enable-default-server-side-encryption\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        bucket = \"mybucket\"\n\n        server_side_encryption_configuration {\n          rule {\n            apply_server_side_encryption_by_default {\n              kms_master_key_id = \"arn\"\n              sse_algorithm     = \"aws:kms\"\n            }\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"mybucket\"\n      }",
+        "file_name": "enable_bucket_encryption.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without server_side_encryption_configuration block",
+          "explanation": "This leaves all stored API documentation and assets unencrypted, violating security best practices for enterprise data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_VERSIONING",
+        "title": "Enable Versioning",
+        "description": "S3 bucket storing API documentation lacks versioning configuration, preventing recovery from accidental deletions or modifications of critical API specifications and developer portal content.",
+        "severity": "medium",
+        "affected_component": "s3_api_docs",
+        "injection_strategy": "Omit versioning configuration block or set enabled = false",
+        "business_impact": "Risk of permanent loss of API documentation versions, inability to rollback changes, potential service disruption if critical documentation is accidentally modified or deleted",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket#versioning\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        versioning {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n\n      }",
+        "file_name": "enable_versioning.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without versioning block or with versioning { enabled = false }",
+          "explanation": "Without versioning, accidental changes or deletions to API documentation cannot be recovered"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-NO_ROOT_ACCESS_KEYS",
+        "title": "No Root Access Keys",
+        "description": "IAM configuration creates access keys for root user account, violating security best practices for enterprise API gateway platforms that require strict access controls and principle of least privilege.",
+        "severity": "high",
+        "affected_component": "lambda_authorizer",
+        "injection_strategy": "Create aws_iam_access_key resource with user name set to 'root'",
+        "business_impact": "Excessive privileges for API gateway operations, increased attack surface, violation of enterprise security policies, potential for privilege escalation attacks",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_access_key\n  good:\n    - |-\n      resource \"aws_iam_user\" \"test\" {\n        name = \"lowprivuser\"\n      }\n\n      resource \"aws_iam_access_key\" \"test\" {\n        user = aws_iam_user.test.name\n      }\n  bad:\n    - |-\n      resource \"aws_iam_user\" \"test\" {\n        name = \"root\"\n      }\n\n      resource \"aws_iam_access_key\" \"test\" {\n        user = aws_iam_user.test.name\n      }",
+        "file_name": "no_root_access_keys.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM user with name = \"root\" and associate access keys",
+          "explanation": "Root access keys provide unrestricted access to all AWS services, violating principle of least privilege"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+        "title": "Add Description To Security Group Rule",
+        "description": "Security group rules lack descriptive documentation, making it difficult to understand the purpose of network access rules in the API gateway platform and hindering security audits and compliance reviews.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Create security group rules without description field",
+        "business_impact": "Reduced visibility into network access patterns, difficulty in security audits, challenges in maintaining and updating security rules, potential for misconfigured access controls",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule\n  good:\n    - |-\n      resource \"aws_security_group\" \"good_example\" {\n        name        = \"http\"\n        description = \"Allow inbound HTTP traffic\"\n\n        ingress {\n          description = \"HTTP from VPC\"\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_security_group\" \"bad_example\" {\n        name = \"http\"\n\n        ingress {\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }",
+        "file_name": "add_description_to_security_group_rule.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create security group ingress/egress rules without description field",
+          "explanation": "Missing descriptions make it difficult to understand the purpose of network rules during security reviews"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-APIGATEWAY-NO_PUBLIC_ACCESS",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-S3-NO_PUBLIC_BUCKETS",
+        "AWS-S3-ENABLE_BUCKET_ENCRYPTION",
+        "AWS-S3-ENABLE_VERSIONING",
+        "AWS-IAM-NO_ROOT_ACCESS_KEYS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "lambda",
+        "s3",
+        "ec2",
+        "iam"
+      ],
+      "services_covered": [
+        "apigateway",
+        "lambda",
+        "s3",
+        "ec2",
+        "iam"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "enterprise-api-gateway-platform",
+    "architecture_type": "microservices",
+    "cloud_provider": "aws",
+    "iac_tool": "terraform",
+    "total_resources": 30,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 1,
+      "storage": 1,
+      "database": 1,
+      "security": 6,
+      "monitoring": 2,
+      "api_gateway": 6,
+      "cdn": 2,
+      "secrets": 2,
+      "random": 1
+    },
+    "components_implemented": [
+      "api_gateway",
+      "lambda_authorizer",
+      "dynamodb_tokens",
+      "s3_api_docs",
+      "cloudfront_cdn",
+      "cloudwatch_monitoring",
+      "secrets_manager"
+    ],
+    "vulnerabilities_injected": 7,
+    "estimated_monthly_cost": "$150-300",
+    "deployment_time": "10-15 minutes",
+    "complexity_level": "high"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 34,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

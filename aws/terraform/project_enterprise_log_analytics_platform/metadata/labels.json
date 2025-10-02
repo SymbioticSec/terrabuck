@@ -1,0 +1,400 @@
+{
+  "project_labels": {
+    "project_id": "enterprise_log_analytics_platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7
+      },
+      "by_type": {
+        "access_control": 2,
+        "encryption": 3,
+        "network": 1,
+        "logging": 1
+      },
+      "by_trivy_service": {
+        "apigateway": 1,
+        "lambda": 1,
+        "elasticsearch": 2,
+        "sns": 1,
+        "ec2": 1,
+        "cloudwatch": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "AWS-LAMBDA-RESTRICT_SOURCE_ARN",
+        "AWS-ELASTICSEARCH-ENABLE_DOMAIN_ENCRYPTION",
+        "AWS-ELASTICSEARCH-ENABLE_DOMAIN_LOGGING",
+        "AWS-SNS-TOPIC_ENCRYPTION_WITH_CMK",
+        "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+        "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY"
+      ],
+      "services_covered": [
+        "apigateway",
+        "lambda",
+        "elasticsearch",
+        "sns",
+        "ec2",
+        "cloudwatch"
+      ],
+      "detection_accuracy": "100%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+      "trivy_rule_info": {
+        "original_file": "enable_access_logging.yaml",
+        "service_category": "apigateway",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/apigateway"
+      },
+      "vulnerability_class": "audit_logging",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "API endpoint access",
+        "knowledge of API structure"
+      ],
+      "mitigation_strategies": [
+        "Enable access_log_settings block in API Gateway stage",
+        "Configure CloudWatch log group for API access logs",
+        "Set appropriate log format (JSON recommended)"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_apigatewayv2_stage without access_log_settings block",
+        "secure_pattern": "aws_apigatewayv2_stage with access_log_settings configured"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "audit_logging",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-LAMBDA-RESTRICT_SOURCE_ARN",
+      "trivy_rule_info": {
+        "original_file": "restrict_source_arn.yaml",
+        "service_category": "lambda",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/lambda"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "AWS service access",
+        "knowledge of Lambda function names"
+      ],
+      "mitigation_strategies": [
+        "Add source_arn parameter to aws_lambda_permission",
+        "Specify exact ARN of authorized trigger service",
+        "Use principle of least privilege for Lambda permissions"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_lambda_permission without source_arn parameter",
+        "secure_pattern": "aws_lambda_permission with specific source_arn restriction"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-ELASTICSEARCH-ENABLE_DOMAIN_ENCRYPTION",
+      "trivy_rule_info": {
+        "original_file": "enable_domain_encryption.yaml",
+        "service_category": "elasticsearch",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/elasticsearch"
+      },
+      "vulnerability_class": "encryption_at_rest",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "HIPAA",
+        "PCI-DSS",
+        "SOC2"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "Physical access to storage",
+        "storage compromise"
+      ],
+      "mitigation_strategies": [
+        "Enable encrypt_at_rest.enabled = true",
+        "Use customer-managed KMS keys for enhanced control",
+        "Implement key rotation policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_elasticsearch_domain with encrypt_at_rest.enabled = false",
+        "secure_pattern": "aws_elasticsearch_domain with encrypt_at_rest.enabled = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-ELASTICSEARCH-ENABLE_DOMAIN_LOGGING",
+      "trivy_rule_info": {
+        "original_file": "enable_domain_logging.yaml",
+        "service_category": "elasticsearch",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/elasticsearch"
+      },
+      "vulnerability_class": "audit_logging",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "Elasticsearch cluster access",
+        "valid credentials"
+      ],
+      "mitigation_strategies": [
+        "Configure log_publishing_options for AUDIT_LOGS",
+        "Set up CloudWatch log group for audit logs",
+        "Enable comprehensive audit trail monitoring"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_elasticsearch_domain without log_publishing_options",
+        "secure_pattern": "aws_elasticsearch_domain with AUDIT_LOGS log_publishing_options"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "audit_logging",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-SNS-TOPIC_ENCRYPTION_WITH_CMK",
+      "trivy_rule_info": {
+        "original_file": "topic_encryption_with_cmk.yaml",
+        "service_category": "sns",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/sns"
+      },
+      "vulnerability_class": "encryption_key_management",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "GDPR",
+        "HIPAA",
+        "SOC2"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "AWS account compromise",
+        "key management access"
+      ],
+      "mitigation_strategies": [
+        "Use customer-managed KMS key instead of alias/aws/sns",
+        "Implement proper key rotation policies",
+        "Configure granular key access policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_sns_topic with kms_master_key_id = \"alias/aws/sns\"",
+        "secure_pattern": "aws_sns_topic with customer-managed KMS key ARN"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+      "trivy_rule_info": {
+        "original_file": "no_public_ip_subnet.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "Internet connectivity",
+        "port scanning capabilities"
+      ],
+      "mitigation_strategies": [
+        "Set map_public_ip_on_launch = false",
+        "Use private subnets for internal resources",
+        "Implement NAT Gateway for outbound connectivity"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_subnet with map_public_ip_on_launch = true",
+        "secure_pattern": "aws_subnet with map_public_ip_on_launch = false"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+      "trivy_rule_info": {
+        "original_file": "log_group_customer_key.yaml",
+        "service_category": "cloudwatch",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudwatch"
+      },
+      "vulnerability_class": "encryption_key_management",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "GDPR",
+        "HIPAA",
+        "SOC2"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "AWS account compromise",
+        "CloudWatch access"
+      ],
+      "mitigation_strategies": [
+        "Add kms_key_id parameter with customer-managed key",
+        "Create dedicated KMS key for log encryption",
+        "Enable key rotation for enhanced security"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_cloudwatch_log_group without kms_key_id parameter",
+        "secure_pattern": "aws_cloudwatch_log_group with customer-managed kms_key_id"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_mapping",
+      "security_pattern_recognition"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "7 medium severity findings across apigateway, lambda, elasticsearch, sns, ec2, and cloudwatch services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand common AWS security misconfigurations in data pipeline architectures",
+      "Learn how Trivy detects infrastructure security issues",
+      "Master encryption at rest and key management best practices",
+      "Implement proper access controls and audit logging",
+      "Apply network security principles in cloud environments"
+    ],
+    "prerequisite_knowledge": [
+      "Basic AWS services knowledge",
+      "Terraform syntax understanding",
+      "Infrastructure as Code concepts",
+      "Cloud security fundamentals"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Always enable encryption at rest for data services",
+      "Implement comprehensive audit logging for compliance",
+      "Use customer-managed KMS keys for sensitive data",
+      "Apply principle of least privilege to service permissions",
+      "Avoid automatic public IP assignment in production subnets"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "apigateway",
+      "lambda",
+      "cloudwatch",
+      "ec2",
+      "elasticsearch",
+      "sns"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "enterprise_log_analytics_platform",
+    "generation_timestamp": "2025-08-06T23:55:51.923373",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

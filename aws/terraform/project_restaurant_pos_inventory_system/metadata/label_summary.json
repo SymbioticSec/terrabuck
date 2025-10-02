@@ -1,0 +1,14 @@
+{
+  "project_id": "restaurant_pos_inventory_system",
+  "security_posture": "vulnerable",
+  "vulnerability_count": 7,
+  "data_quality": "high",
+  "suitable_for": [
+    "vulnerability_detection",
+    "severity_classification",
+    "auto_remediation",
+    "trivy_rule_matching",
+    "compliance_gap_analysis",
+    "security_posture_assessment"
+  ]
+}

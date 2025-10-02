@@ -1,0 +1,286 @@
+{
+  "original_components": [
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Secure storage for employee documents, forms, and compliance materials with lifecycle management",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_logging",
+        "versioning",
+        "retention_policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "onboarding_api",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless API handling onboarding workflows, document processing, and system integrations",
+      "dependencies": [
+        "document_storage",
+        "employee_database"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "input_validation",
+        "secrets_management"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "employee_database",
+      "service_type": "aws_rds",
+      "purpose": "Stores employee records, onboarding status, task assignments, and audit trails",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "network_isolation",
+        "backup_security",
+        "access_controls"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "web_application",
+      "service_type": "aws_ec2",
+      "purpose": "React-based web interface for HR staff and new employees to manage onboarding tasks",
+      "dependencies": [
+        "onboarding_api",
+        "load_balancer"
+      ],
+      "security_considerations": [
+        "ssl_termination",
+        "session_management",
+        "input_sanitization"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_alb",
+      "purpose": "Distributes traffic to web application instances with health checks and SSL termination",
+      "dependencies": [
+        "web_application"
+      ],
+      "security_considerations": [
+        "ssl_certificates",
+        "security_headers",
+        "ddos_protection"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "task_queue",
+      "service_type": "aws_sqs",
+      "purpose": "Manages asynchronous processing of onboarding tasks, notifications, and system integrations",
+      "dependencies": [
+        "onboarding_api"
+      ],
+      "security_considerations": [
+        "message_encryption",
+        "dead_letter_queues",
+        "access_policies"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "onboarding_api",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "employee_database",
+      "service_type": "aws_rds",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "web_application",
+      "service_type": "aws_ec2",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_alb",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "task_queue",
+      "service_type": "aws_sqs",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 532,
+      "resource_count": 31,
+      "resources_found": [
+        {
+          "type": "aws_kms_key",
+          "name": "onboarding_key"
+        },
+        {
+          "type": "aws_kms_alias",
+          "name": "onboarding_key_alias"
+        },
+        {
+          "type": "aws_vpc",
+          "name": "main"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "main"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_2"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_2"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_1"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_2"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "document_storage"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "document_storage"
+        },
+        {
+          "type": "aws_s3_bucket_server_side_encryption_configuration",
+          "name": "document_storage"
+        },
+        {
+          "type": "random_string",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_sqs_queue",
+          "name": "task_queue"
+        },
+        {
+          "type": "aws_sqs_queue",
+          "name": "task_queue_dlq"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "employee_db"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "employee_database"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "alb"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "rds"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "lambda"
+        },
+        {
+          "type": "aws_lb",
+          "name": "main"
+        },
+        {
+          "type": "aws_lb_target_group",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_lb_listener",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_launch_template",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_autoscaling_group",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_role"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_basic"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "onboarding_api"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 72,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 65,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 122,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,170 @@
+{
+  "original_components": [
+    {
+      "name": "backup_orchestration_service",
+      "service_type": "aws_lambda",
+      "purpose": "Coordinates backup jobs, manages scheduling, and handles backup lifecycle management including retention policy enforcement",
+      "dependencies": [
+        "backup_storage",
+        "backup_metadata_db",
+        "monitoring_dashboard"
+      ],
+      "security_considerations": [
+        "IAM role permissions for cross-service access",
+        "encryption key management",
+        "backup job authentication"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Primary storage for backup data with multiple storage classes for cost optimization and cross-region replication for disaster recovery",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket encryption with KMS",
+        "access logging",
+        "versioning and MFA delete",
+        "cross-region replication security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "backup_metadata_db",
+      "service_type": "aws_rds",
+      "purpose": "Stores backup job metadata, schedules, retention policies, and recovery point information for fast backup catalog queries",
+      "dependencies": [
+        "backup_storage"
+      ],
+      "security_considerations": [
+        "database encryption",
+        "VPC security groups",
+        "backup authentication",
+        "audit logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "backup_agents_cluster",
+      "service_type": "aws_ec2",
+      "purpose": "Auto-scaling cluster of backup agents that perform actual backup operations on target systems and stream data to storage",
+      "dependencies": [
+        "backup_orchestration_service",
+        "backup_storage",
+        "backup_metadata_db"
+      ],
+      "security_considerations": [
+        "agent authentication certificates",
+        "network security groups",
+        "encrypted communication channels",
+        "privileged access management"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "recovery_service",
+      "service_type": "aws_lambda",
+      "purpose": "Handles recovery requests, validates recovery points, and orchestrates data restoration with progress tracking",
+      "dependencies": [
+        "backup_storage",
+        "backup_metadata_db",
+        "monitoring_dashboard"
+      ],
+      "security_considerations": [
+        "recovery authorization controls",
+        "data integrity verification",
+        "audit trail for recovery operations"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "monitoring_dashboard",
+      "service_type": "aws_cloudwatch",
+      "purpose": "Provides real-time monitoring of backup jobs, storage utilization, and system health with alerting for failed operations",
+      "dependencies": [
+        "backup_orchestration_service",
+        "backup_agents_cluster",
+        "recovery_service"
+      ],
+      "security_considerations": [
+        "dashboard access controls",
+        "sensitive data masking in logs",
+        "alert notification security"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "backup_orchestration_service",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_metadata_db",
+      "service_type": "aws_rds",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_agents_cluster",
+      "service_type": "aws_ec2",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "recovery_service",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "monitoring_dashboard",
+      "service_type": "aws_cloudwatch",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 501,
+      "resource_count": 136,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 44,
+      "resource_count": 1,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 99,
+      "resource_count": 23,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 252,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

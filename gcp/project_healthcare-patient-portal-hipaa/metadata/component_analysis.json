@@ -1,0 +1,293 @@
+{
+  "original_components": [
+    {
+      "name": "web_frontend",
+      "service_type": "google_compute_instance_group",
+      "purpose": "Hosts React-based patient portal frontend with SSL termination and auto-scaling",
+      "dependencies": [
+        "api_backend",
+        "load_balancer"
+      ],
+      "security_considerations": [
+        "SSL/TLS encryption",
+        "Content Security Policy",
+        "XSS protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_backend",
+      "service_type": "google_compute_instance_group",
+      "purpose": "Node.js API server handling patient authentication, medical record access, and appointment scheduling",
+      "dependencies": [
+        "patient_database",
+        "audit_logging"
+      ],
+      "security_considerations": [
+        "JWT authentication",
+        "API rate limiting",
+        "Input validation",
+        "PHI data handling"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "patient_database",
+      "service_type": "google_sql_database_instance",
+      "purpose": "PostgreSQL database storing patient records, appointments, and user authentication data with encryption at rest",
+      "dependencies": [],
+      "security_considerations": [
+        "Database encryption",
+        "Connection encryption",
+        "Access controls",
+        "Backup encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "document_storage",
+      "service_type": "google_storage_bucket",
+      "purpose": "Secure storage for medical documents, lab results, and medical imaging with customer-managed encryption",
+      "dependencies": [
+        "kms_encryption"
+      ],
+      "security_considerations": [
+        "Customer-managed encryption keys",
+        "Access logging",
+        "Versioning",
+        "Lifecycle policies"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "google_compute_global_forwarding_rule",
+      "purpose": "HTTPS load balancer with SSL certificates for high availability and traffic distribution",
+      "dependencies": [
+        "web_frontend"
+      ],
+      "security_considerations": [
+        "SSL certificate management",
+        "DDoS protection",
+        "Health checks"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "kms_encryption",
+      "service_type": "google_kms_crypto_key",
+      "purpose": "Customer-managed encryption keys for HIPAA compliance and data protection",
+      "dependencies": [],
+      "security_considerations": [
+        "Key rotation",
+        "Access controls",
+        "Audit logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "audit_logging",
+      "service_type": "google_logging_sink",
+      "purpose": "Centralized audit logging for HIPAA compliance tracking all PHI access and system events",
+      "dependencies": [],
+      "security_considerations": [
+        "Log integrity",
+        "Access controls",
+        "Retention policies",
+        "Tamper protection"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_frontend",
+      "service_type": "google_compute_instance_group",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_backend",
+      "service_type": "google_compute_instance_group",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "patient_database",
+      "service_type": "google_sql_database_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "document_storage",
+      "service_type": "google_storage_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "google_compute_global_forwarding_rule",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "kms_encryption",
+      "service_type": "google_kms_crypto_key",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "audit_logging",
+      "service_type": "google_logging_sink",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 392,
+      "resource_count": 28,
+      "resources_found": [
+        {
+          "type": "google_compute_network",
+          "name": "hipaa_vpc"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "public_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "private_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "data_subnet"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_web_traffic"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_internal"
+        },
+        {
+          "type": "google_kms_key_ring",
+          "name": "hipaa_keyring"
+        },
+        {
+          "type": "google_kms_crypto_key",
+          "name": "hipaa_key"
+        },
+        {
+          "type": "google_service_account",
+          "name": "app_service_account"
+        },
+        {
+          "type": "google_project_iam_member",
+          "name": "app_sa_binding"
+        },
+        {
+          "type": "google_compute_instance_template",
+          "name": "web_template"
+        },
+        {
+          "type": "google_compute_instance_template",
+          "name": "api_template"
+        },
+        {
+          "type": "google_compute_region_instance_group_manager",
+          "name": "web_frontend"
+        },
+        {
+          "type": "google_compute_region_instance_group_manager",
+          "name": "api_backend"
+        },
+        {
+          "type": "google_compute_health_check",
+          "name": "web_health_check"
+        },
+        {
+          "type": "google_compute_health_check",
+          "name": "api_health_check"
+        },
+        {
+          "type": "google_compute_backend_service",
+          "name": "web_backend"
+        },
+        {
+          "type": "google_compute_url_map",
+          "name": "web_url_map"
+        },
+        {
+          "type": "google_compute_target_http_proxy",
+          "name": "web_proxy"
+        },
+        {
+          "type": "google_compute_global_forwarding_rule",
+          "name": "load_balancer"
+        },
+        {
+          "type": "google_sql_database_instance",
+          "name": "patient_database"
+        },
+        {
+          "type": "google_compute_global_address",
+          "name": "private_ip_address"
+        },
+        {
+          "type": "google_service_networking_connection",
+          "name": "private_vpc_connection"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "document_storage"
+        },
+        {
+          "type": "random_string",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "google_logging_project_sink",
+          "name": "audit_logging"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "audit_logs"
+        },
+        {
+          "type": "random_string",
+          "name": "audit_suffix"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 27,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 45,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 161,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

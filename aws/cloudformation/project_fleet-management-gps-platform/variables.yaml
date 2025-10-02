@@ -1,0 +1,32 @@
+# CloudFormation Parameters File
+# This file contains all configurable parameters for the Fleet Management GPS Tracking Platform
+
+# Environment Configuration
+Environment: production
+ProjectName: fleet-management-gps-tracking-platform
+
+# Network Configuration
+VpcCidr: 10.0.0.0/16
+PublicSubnet1Cidr: 10.0.1.0/24
+PublicSubnet2Cidr: 10.0.2.0/24
+PrivateSubnet1Cidr: 10.0.10.0/24
+PrivateSubnet2Cidr: 10.0.20.0/24
+
+# Database Configuration
+DatabaseUsername: fleetadmin
+DatabasePassword: FleetManagement2024!
+DatabaseInstanceClass: db.t3.medium
+
+# Additional Configuration Options
+# Uncomment and modify as needed for different environments
+
+# Development Environment
+# Environment: development
+# DatabaseInstanceClass: db.t3.micro
+
+# Staging Environment
+# Environment: staging
+# DatabaseInstanceClass: db.t3.small
+
+# Production Environment (High Performance)
+# DatabaseInstanceClass: db.t3.large

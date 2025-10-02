@@ -1,0 +1,117 @@
+# CloudFormation Parameters Configuration
+# This file documents the parameters used in the main CloudFormation template
+
+Parameters:
+  Environment:
+    Description: Environment name for resource tagging and configuration
+    Type: String
+    Default: production
+    AllowedValues: 
+      - development
+      - staging  
+      - production
+    ConstraintDescription: Must be development, staging, or production
+
+  VpcCidr:
+    Description: CIDR block for the VPC network
+    Type: String
+    Default: 10.0.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: Must be a valid IP CIDR range
+
+  PublicSubnet1Cidr:
+    Description: CIDR block for public subnet in first availability zone
+    Type: String
+    Default: 10.0.1.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+
+  PublicSubnet2Cidr:
+    Description: CIDR block for public subnet in second availability zone
+    Type: String
+    Default: 10.0.2.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+
+  PrivateSubnet1Cidr:
+    Description: CIDR block for private subnet in first availability zone
+    Type: String
+    Default: 10.0.3.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+
+  PrivateSubnet2Cidr:
+    Description: CIDR block for private subnet in second availability zone
+    Type: String
+    Default: 10.0.4.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+
+  DataSubnet1Cidr:
+    Description: CIDR block for data subnet in first availability zone
+    Type: String
+    Default: 10.0.5.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+
+  DataSubnet2Cidr:
+    Description: CIDR block for data subnet in second availability zone
+    Type: String
+    Default: 10.0.6.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+
+  InstanceType:
+    Description: EC2 instance type for web application servers
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+      - t3.xlarge
+    ConstraintDescription: Must be a valid EC2 instance type
+
+  DatabaseInstanceClass:
+    Description: RDS instance class for patient database
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+      - db.t3.large
+    ConstraintDescription: Must be a valid RDS instance class
+
+  DatabaseUsername:
+    Description: Master username for RDS database instance
+    Type: String
+    Default: hipaaadmin
+    MinLength: 4
+    MaxLength: 16
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9]*$
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+
+  DatabasePassword:
+    Description: Master password for RDS database instance
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: ^[a-zA-Z0-9]*$
+    ConstraintDescription: Must contain only alphanumeric characters and be at least 8 characters long
+
+# Environment-specific configurations
+Mappings:
+  EnvironmentConfig:
+    development:
+      DatabaseBackupRetention: 1
+      LogRetentionDays: 30
+      MultiAZ: false
+    staging:
+      DatabaseBackupRetention: 7
+      LogRetentionDays: 90
+      MultiAZ: false
+    production:
+      DatabaseBackupRetention: 30
+      LogRetentionDays: 2555
+      MultiAZ: true
+
+# Conditions for environment-specific resources
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+  IsNotProduction: !Not [!Equals [!Ref Environment, production]]

@@ -1,0 +1,319 @@
+{
+  "project_info": {
+    "project_id": "restaurant_pos_inventory_system",
+    "project_name": "Restaurant POS and Inventory Management System",
+    "description": "A cloud-based Point of Sale system for a restaurant chain that handles order processing, payment transactions, inventory tracking, and real-time analytics. The system supports multiple restaurant locations with centralized inventory management, automated reordering, and sales reporting. Features include real-time menu updates, ingredient tracking, supplier integration, and compliance with PCI DSS requirements for payment processing.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "A growing restaurant chain with 15-20 locations needs to modernize their POS infrastructure, centralize inventory management, and gain real-time visibility into sales and stock levels across all locations. The system must handle peak dinner rush traffic, integrate with payment processors, and provide managers with actionable insights for menu optimization and cost control.",
+    "components": [
+      {
+        "name": "pos_application_servers",
+        "service_type": "aws_instance",
+        "purpose": "Hosts the main POS application handling order processing, menu management, and transaction processing across multiple restaurant locations",
+        "dependencies": [
+          "inventory_database",
+          "transaction_storage",
+          "load_balancer"
+        ],
+        "security_considerations": [
+          "PCI DSS compliance",
+          "encrypted payment data",
+          "secure API endpoints",
+          "restaurant location isolation"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "inventory_database",
+        "service_type": "aws_rds_instance",
+        "purpose": "Centralized MySQL database storing inventory levels, ingredient data, supplier information, and automated reorder thresholds for all locations",
+        "dependencies": [],
+        "security_considerations": [
+          "database encryption at rest",
+          "restricted network access",
+          "backup encryption",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "transaction_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Secure storage for transaction logs, receipt data, daily sales reports, and PCI-compliant payment audit trails",
+        "dependencies": [],
+        "security_considerations": [
+          "server-side encryption",
+          "versioning enabled",
+          "access logging",
+          "lifecycle policies for compliance retention"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "aws_lb",
+        "purpose": "Application load balancer distributing POS traffic across multiple application servers with health checks and SSL termination",
+        "dependencies": [
+          "pos_application_servers"
+        ],
+        "security_considerations": [
+          "SSL/TLS termination",
+          "WAF integration",
+          "DDoS protection",
+          "secure listener configuration"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "analytics_processor",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless functions processing sales data, generating inventory alerts, calculating food costs, and creating management dashboards",
+        "dependencies": [
+          "inventory_database",
+          "transaction_storage"
+        ],
+        "security_considerations": [
+          "IAM role restrictions",
+          "VPC configuration",
+          "environment variable encryption",
+          "function-level permissions"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "cache_layer",
+        "service_type": "aws_elasticache",
+        "purpose": "Redis cache for frequently accessed menu items, pricing data, and inventory levels to ensure fast POS response times during peak hours",
+        "dependencies": [
+          "inventory_database"
+        ],
+        "security_considerations": [
+          "encryption in transit",
+          "subnet group isolation",
+          "auth token authentication",
+          "backup encryption"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancer, private subnets for application servers and cache, and isolated data subnets for database with NAT gateway for outbound connectivity",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Load balancer routes to application servers in private subnets",
+        "Application servers connect to RDS in data subnet",
+        "Lambda functions access database and S3 through VPC endpoints",
+        "ElastiCache accessible only from application tier"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:24:01.708938"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "title": "Performance Insights Encryption Customer Key",
+        "description": "RDS Performance Insights is enabled without customer-managed KMS key encryption, using default AWS-managed keys instead of customer-controlled encryption for sensitive database performance metrics",
+        "severity": "medium",
+        "affected_component": "inventory_database",
+        "injection_strategy": "Configure RDS instance with Performance Insights enabled but without specifying a customer-managed KMS key",
+        "business_impact": "Performance metrics for the inventory database containing sensitive restaurant data patterns could be encrypted with AWS-managed keys, reducing customer control over encryption and potentially exposing operational patterns",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_instance#performance_insights_kms_key_id\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#performance_insights_kms_key_id\n  good:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"good_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab\"\n      }\n  bad:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"bad_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"\"\n      }",
+        "file_name": "performance_insights_encryption_customer_key.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Enable performance_insights_enabled = true on the RDS instance without specifying performance_insights_kms_key_id or setting it to empty string",
+          "explanation": "This creates a vulnerability where database performance metrics are encrypted with AWS-managed keys instead of customer-managed keys, reducing encryption control"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "Lambda function lacks X-Ray tracing configuration, preventing detailed observability and security monitoring of serverless analytics processing functions",
+        "severity": "medium",
+        "affected_component": "analytics_processor",
+        "injection_strategy": "Configure Lambda function without tracing_config block or with mode set to 'Passthrough'",
+        "business_impact": "Analytics functions processing sensitive restaurant sales data and inventory calculations cannot be properly monitored for performance issues or security anomalies, hindering incident response and compliance auditing",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function#mode\n  good:\n    - |-\n      resource \"aws_lambda_function\" \"good_example\" {\n        filename         = \"lambda_function_payload.zip\"\n        function_name    = \"lambda_function_name\"\n        role             = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n        handler          = \"exports.test\"\n        source_code_hash = filebase64sha256(\"lambda_function_payload.zip\")\n\n        runtime = \"nodejs12.x\"\n        tracing_config {\n          mode = \"Active\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_lambda_function\" \"bad_example\" {\n        filename         = \"lambda_function_payload.zip\"\n        function_name    = \"lambda_function_name\"\n        role             = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n        handler          = \"exports.test\"\n        source_code_hash = filebase64sha256(\"lambda_function_payload.zip\")\n\n        runtime = \"nodejs12.x\"\n\n        tracing_config {\n          mode = \"Passthrough\"\n        }\n      }",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the tracing_config block entirely or set tracing_config { mode = 'Passthrough' } in the Lambda function resource",
+          "explanation": "Without active tracing, the analytics processor lacks detailed execution visibility, making it difficult to detect security issues or performance problems in payment and inventory processing"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELB-ALB_NOT_PUBLIC",
+        "title": "Alb Not Public",
+        "description": "Application Load Balancer is configured as internet-facing when it should be internal-only for better security posture in the restaurant POS architecture",
+        "severity": "medium",
+        "affected_component": "load_balancer",
+        "injection_strategy": "Set internal = false or omit the internal parameter in the ALB configuration",
+        "business_impact": "The POS load balancer being publicly accessible increases attack surface for the restaurant payment processing system, potentially exposing internal application endpoints to internet-based attacks",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb\n  good:\n    - |-\n      resource \"aws_alb\" \"good_example\" {\n        load_balancer_type = \"gateway\"\n        internal           = false\n      }\n    - |-\n      resource \"aws_alb\" \"good_example\" {\n        internal = true\n      }\n  bad:\n    - |-\n      resource \"aws_alb\" \"bad_example\" {\n        internal = false\n      }",
+        "file_name": "alb_not_public.yaml",
+        "service": "elb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure the ALB with internal = false or omit the internal parameter, making it internet-facing by default",
+          "explanation": "This exposes the load balancer to the public internet, increasing the attack surface for the POS system that should only be accessible from restaurant locations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-AS_ENABLE_AT_REST_ENCRYPTION",
+        "title": "As Enable At Rest Encryption",
+        "description": "Auto Scaling Launch Configuration lacks encryption for EBS volumes, leaving POS application server storage unencrypted and vulnerable to data exposure",
+        "severity": "medium",
+        "affected_component": "pos_application_servers",
+        "injection_strategy": "Configure launch configuration with root_block_device having encrypted = false or omit encryption settings",
+        "business_impact": "POS application servers storing temporary payment data, session information, and cached inventory data would have unencrypted storage, violating PCI DSS requirements and exposing sensitive restaurant operational data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance#ebs-ephemeral-and-root-block-devices\n  good:\n    - |-\n      resource \"aws_launch_configuration\" \"good_example\" {\n        root_block_device {\n          encrypted = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_launch_configuration\" \"bad_example\" {\n        root_block_device {\n          encrypted = false\n        }\n      }",
+        "file_name": "as_enable_at_rest_encryption.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set encrypted = false in the root_block_device configuration of the launch configuration",
+          "explanation": "Unencrypted EBS volumes on POS servers could expose payment processing data and inventory information if storage is compromised"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENSURE_CLOUDWATCH_INTEGRATION",
+        "title": "Ensure Cloudwatch Integration",
+        "description": "CloudTrail lacks CloudWatch Logs integration, preventing centralized logging and real-time monitoring of API activities across the restaurant POS infrastructure",
+        "severity": "medium",
+        "affected_component": "pos_application_servers",
+        "injection_strategy": "Configure CloudTrail without cloud_watch_logs_group_arn parameter",
+        "business_impact": "Critical API activities for payment processing, inventory updates, and user access cannot be monitored in real-time, hindering security incident detection and compliance reporting for PCI DSS requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudtrail\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"good_example\" {\n        cloud_watch_logs_group_arn = \"${aws_cloudwatch_log_group.example.arn}:*\"\n      }\n\n      resource \"aws_cloudwatch_log_group\" \"example\" {\n        name = \"Example\"\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n      }",
+        "file_name": "ensure_cloudwatch_integration.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudTrail resource without specifying cloud_watch_logs_group_arn parameter",
+          "explanation": "Without CloudWatch integration, audit logs are only stored in S3, preventing real-time security monitoring and alerting on suspicious activities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "title": "Require Symbols In Passwords",
+        "description": "IAM password policy does not require symbols, weakening authentication security for restaurant staff and management accounts accessing the POS system",
+        "severity": "medium",
+        "affected_component": "pos_application_servers",
+        "injection_strategy": "Configure IAM password policy without require_symbols = true or omit the parameter",
+        "business_impact": "Weak password requirements increase the risk of credential compromise for restaurant staff accounts, potentially leading to unauthorized access to payment processing systems and sensitive customer data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        # ...\n        require_symbols = true\n        # ...\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # require_symbols not set\n        # ...\n      }",
+        "file_name": "require_symbols_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM password policy resource without including require_symbols = true parameter",
+          "explanation": "Passwords without symbol requirements are more susceptible to brute force and dictionary attacks, compromising restaurant staff accounts"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP",
+        "title": "Add Description To Security Group",
+        "description": "Security groups lack proper descriptions, making it difficult to understand their purpose and maintain proper access controls in the restaurant POS network architecture",
+        "severity": "medium",
+        "affected_component": "pos_application_servers",
+        "injection_strategy": "Create security group with empty description or omit description parameter",
+        "business_impact": "Undocumented security groups make it difficult for restaurant IT teams to maintain proper network segmentation and access controls, potentially leading to misconfigurations that expose payment processing systems",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule\n  good:\n    - |-\n      resource \"aws_security_group\" \"good_example\" {\n        name        = \"http\"\n        description = \"Allow inbound HTTP traffic\"\n\n        ingress {\n          description = \"HTTP from VPC\"\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_security_group\" \"bad_example\" {\n        name        = \"http\"\n        description = \"\"\n\n        ingress {\n          description = \"HTTP from VPC\"\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }",
+        "file_name": "add_description_to_security_group.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set description = \"\" or omit the description parameter in security group resources",
+          "explanation": "Missing descriptions make it difficult to understand security group purposes, leading to potential misconfigurations in network access controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-ELB-ALB_NOT_PUBLIC",
+        "AWS-EC2-AS_ENABLE_AT_REST_ENCRYPTION",
+        "AWS-CLOUDTRAIL-ENSURE_CLOUDWATCH_INTEGRATION",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "lambda",
+        "cloudtrail",
+        "ec2",
+        "iam",
+        "rds",
+        "elb"
+      ],
+      "services_covered": [
+        "lambda",
+        "cloudtrail",
+        "ec2",
+        "iam",
+        "rds",
+        "elb"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 33,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

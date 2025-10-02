@@ -1,0 +1,403 @@
+{
+  "project_labels": {
+    "project_id": "azure-legal-docmgmt-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4
+      },
+      "by_type": {
+        "access_control": 2,
+        "encryption": 3,
+        "network": 2
+      },
+      "by_trivy_service": {
+        "keyvault": 2,
+        "database": 1,
+        "storage": 1,
+        "appservice": 1,
+        "network": 1,
+        "monitor": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AZURE-KEYVAULT-SPECIFY_NETWORK_ACL",
+        "AZURE-KEYVAULT-ENSURE_SECRET_EXPIRY",
+        "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-ENABLE_HTTP2",
+        "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+        "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET"
+      ],
+      "services_covered": [
+        "keyvault",
+        "database",
+        "storage",
+        "appservice",
+        "network",
+        "monitor"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AZURE-KEYVAULT-SPECIFY_NETWORK_ACL",
+      "trivy_rule_info": {
+        "original_file": "specify_network_acl.yaml",
+        "service_category": "keyvault",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/keyvault/specify_network_acl.yaml"
+      },
+      "vulnerability_class": "network_access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "SOC2",
+        "GDPR",
+        "ABA Model Rules"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "knowledge_of_keyvault_endpoint"
+      ],
+      "mitigation_strategies": [
+        "Configure network_acls block with default_action = 'Deny'",
+        "Specify allowed IP ranges or virtual networks",
+        "Enable bypass for Azure services if needed"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_key_vault resource without network_acls block",
+        "secure_pattern": "azurerm_key_vault with network_acls { default_action = 'Deny' }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-KEYVAULT-ENSURE_SECRET_EXPIRY",
+      "trivy_rule_info": {
+        "original_file": "ensure_secret_expiry.yaml",
+        "service_category": "keyvault",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/keyvault/ensure_secret_expiry.yaml"
+      },
+      "vulnerability_class": "credential_lifecycle_management",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "compromised_secret",
+        "persistent_access"
+      ],
+      "mitigation_strategies": [
+        "Add expiration_date parameter to all key vault secrets",
+        "Implement automated secret rotation",
+        "Set up monitoring for expiring secrets"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_key_vault_secret without expiration_date parameter",
+        "secure_pattern": "azurerm_key_vault_secret with expiration_date = future_date"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "credential_management",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+      "trivy_rule_info": {
+        "original_file": "enable_ssl_enforcement.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/enable_ssl_enforcement.yaml"
+      },
+      "vulnerability_class": "encryption_in_transit",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "HIPAA",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "ability_to_intercept_traffic"
+      ],
+      "mitigation_strategies": [
+        "Set minimum_tls_version to '1.2'",
+        "Enable SSL enforcement on database server",
+        "Configure connection strings to require SSL"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "database server with minimum_tls_version = '1.0' or ssl_enforcement_enabled = false",
+        "secure_pattern": "database server with minimum_tls_version = '1.2' and ssl_enforcement_enabled = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/storage/use_secure_tls_policy.yaml"
+      },
+      "vulnerability_class": "encryption_in_transit",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "tls_downgrade_attack_capability"
+      ],
+      "mitigation_strategies": [
+        "Set min_tls_version = 'TLS1_2' on storage account",
+        "Disable older TLS versions at network level",
+        "Monitor for TLS version usage"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_storage_account with min_tls_version = 'TLS1_0' or 'TLS1_1'",
+        "secure_pattern": "azurerm_storage_account with min_tls_version = 'TLS1_2'"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-APPSERVICE-ENABLE_HTTP2",
+      "trivy_rule_info": {
+        "original_file": "enable_http2.yaml",
+        "service_category": "appservice",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/appservice/enable_http2.yaml"
+      },
+      "vulnerability_class": "protocol_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "Security Best Practices"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "protocol_downgrade_capability"
+      ],
+      "mitigation_strategies": [
+        "Add http2_enabled = true in site_config block",
+        "Ensure client applications support HTTP/2",
+        "Test application compatibility with HTTP/2"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_app_service without http2_enabled = true in site_config",
+        "secure_pattern": "azurerm_app_service with site_config { http2_enabled = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "protocol_configuration",
+        "severity_numeric": 4.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+      "trivy_rule_info": {
+        "original_file": "ssh_blocked_from_internet.yaml",
+        "service_category": "network",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/network/ssh_blocked_from_internet.yaml"
+      },
+      "vulnerability_class": "network_access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "CIS Benchmarks",
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "ssh_client",
+        "brute_force_tools"
+      ],
+      "mitigation_strategies": [
+        "Remove overly permissive SSH rules",
+        "Restrict source_address_prefix to specific IP ranges",
+        "Use Azure Bastion for secure remote access",
+        "Implement just-in-time VM access"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_network_security_rule with source_address_prefix = '*' and destination_port_range = '22'",
+        "secure_pattern": "azurerm_network_security_rule with specific source IP ranges for SSH access"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET",
+      "trivy_rule_info": {
+        "original_file": "activity_log_retention_set.yaml",
+        "service_category": "monitor",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/monitor/activity_log_retention_set.yaml"
+      },
+      "vulnerability_class": "audit_and_compliance",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "GDPR",
+        "Legal Industry Requirements"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "administrative_access",
+        "log_tampering_capability"
+      ],
+      "mitigation_strategies": [
+        "Set retention policy days to 365 or higher",
+        "Enable log retention in multiple locations",
+        "Implement log forwarding to SIEM systems",
+        "Set up alerts for retention policy changes"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_monitor_log_profile with retention_policy days < 365",
+        "secure_pattern": "azurerm_monitor_log_profile with retention_policy { days = 365 }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "audit_logging",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_checking",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,MEDIUM .",
+      "expected_trivy_output": "7 vulnerabilities detected across keyvault, database, storage, appservice, network, and monitor services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand Azure security misconfigurations detected by Trivy",
+      "Learn proper network access controls for Key Vault",
+      "Master credential lifecycle management best practices",
+      "Implement secure TLS configurations across Azure services",
+      "Configure proper audit logging and retention policies",
+      "Apply defense-in-depth principles for legal document platforms"
+    ],
+    "prerequisite_knowledge": [
+      "Basic Terraform syntax and Azure provider usage",
+      "Understanding of Azure Key Vault and storage services",
+      "Network security fundamentals (NSGs, firewalls)",
+      "TLS/SSL encryption concepts",
+      "Legal industry compliance requirements"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Network access controls are critical for protecting sensitive services",
+      "Credential rotation and expiration prevent long-term compromise",
+      "Encryption in transit must use modern TLS versions",
+      "Audit logging retention must meet compliance requirements",
+      "Trivy can automatically detect common Azure misconfigurations",
+      "Defense-in-depth requires securing multiple layers simultaneously"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "storage",
+      "appservice",
+      "network",
+      "database",
+      "monitor",
+      "keyvault"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "azure-legal-docmgmt-platform",
+    "generation_timestamp": "2025-08-06T22:21:57.578592",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

@@ -1,0 +1,319 @@
+{
+  "project_info": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "project_name": "HIPAA-Compliant Patient Portal System",
+    "description": "A secure healthcare patient portal enabling patients to access medical records, schedule appointments, communicate with providers, and manage prescriptions. Built with HIPAA compliance requirements including encryption at rest and in transit, audit logging, and strict access controls. Features include patient authentication, secure document storage, appointment scheduling integration, and provider messaging system.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "Healthcare organization needs to provide patients with secure online access to their medical information while maintaining HIPAA compliance. The system must handle PHI (Protected Health Information) with appropriate security controls, audit trails, and data encryption. Typical deployment for hospitals, clinics, or healthcare networks serving 10,000-50,000 patients.",
+    "components": [
+      {
+        "name": "web_application_tier",
+        "service_type": "aws_ec2_instance",
+        "purpose": "Hosts the patient portal web application with SSL termination and session management",
+        "dependencies": [
+          "application_load_balancer",
+          "patient_database"
+        ],
+        "security_considerations": [
+          "SSL/TLS encryption",
+          "session security",
+          "input validation",
+          "OWASP compliance"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_load_balancer",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Distributes traffic across web servers and provides SSL termination with health checks",
+        "dependencies": [],
+        "security_considerations": [
+          "SSL certificate management",
+          "security headers",
+          "DDoS protection"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "patient_database",
+        "service_type": "aws_rds_mysql",
+        "purpose": "Stores patient records, appointments, and user authentication data with encryption",
+        "dependencies": [
+          "database_subnet_group"
+        ],
+        "security_considerations": [
+          "encryption at rest",
+          "backup encryption",
+          "access logging",
+          "parameter group hardening"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "document_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Secure storage for medical documents, lab results, and imaging files with versioning",
+        "dependencies": [],
+        "security_considerations": [
+          "server-side encryption",
+          "bucket policies",
+          "access logging",
+          "versioning for audit"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "audit_logging_system",
+        "service_type": "aws_cloudwatch_logs",
+        "purpose": "Centralized logging for HIPAA audit requirements and security monitoring",
+        "dependencies": [
+          "web_application_tier",
+          "patient_database"
+        ],
+        "security_considerations": [
+          "log encryption",
+          "retention policies",
+          "access controls",
+          "tamper protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "backup_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Encrypted backup storage for database and document backups with lifecycle policies",
+        "dependencies": [
+          "patient_database",
+          "document_storage"
+        ],
+        "security_considerations": [
+          "cross-region replication",
+          "encryption",
+          "access controls",
+          "immutable backups"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancer, private subnets for application servers, and isolated subnets for database tier",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet Gateway to ALB in public subnet",
+        "ALB to EC2 in private subnet",
+        "EC2 to RDS in data subnet",
+        "S3 access via VPC endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 4,
+      "total_estimated": 24
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:52:28.184050"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-ENABLE_LOGGING",
+        "title": "Enable Logging",
+        "description": "S3 buckets storing PHI (Protected Health Information) lack access logging, preventing audit trail visibility required for HIPAA compliance. This vulnerability affects both document storage and backup storage buckets containing sensitive medical records.",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "HIPAA compliance violation due to missing audit trails for PHI access, potential regulatory fines, inability to detect unauthorized access to patient medical records",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            LoggingConfiguration:\n              DestinationBucketName: !Ref TestLoggingBucket\n              LogFilePrefix: accesslogs/\n\n        TestLoggingBucket:\n          Type: AWS::S3::Bucket\n          Properties:\n            AccessControl: LogDeliveryWrite\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket\n          Properties: null",
+        "file_name": "enable_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 buckets without LoggingConfiguration property in CloudFormation template",
+          "explanation": "Missing access logging prevents healthcare organizations from tracking who accessed patient documents, when they were accessed, and from where - critical for HIPAA audit requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELB-ALB_NOT_PUBLIC",
+        "title": "Alb Not Public",
+        "description": "Application Load Balancer is configured as internet-facing when it should be internal-only for a healthcare application handling PHI. This creates unnecessary exposure of the patient portal to the public internet.",
+        "severity": "medium",
+        "affected_component": "application_load_balancer",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Increased attack surface for healthcare application, potential unauthorized access attempts to patient portal, violation of defense-in-depth security principles",
+        "trivy_yaml_content": "cloudformation:\n  links:\n    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ElasticLoadBalancingV2::LoadBalancer\n          Properties:\n            Scheme: internal\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ElasticLoadBalancingV2::LoadBalancer",
+        "file_name": "alb_not_public.yaml",
+        "service": "elb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create ALB without explicitly setting Scheme property to 'internal', defaulting to internet-facing",
+          "explanation": "Healthcare applications should minimize public exposure; an internal ALB with VPN/private access provides better security posture for PHI handling systems"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_IP",
+        "title": "No Public Ip",
+        "description": "EC2 instances hosting the patient portal web application are configured with public IP addresses, exposing healthcare application servers directly to the internet instead of keeping them in private subnets.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Direct internet exposure of servers processing PHI, increased risk of unauthorized access, potential HIPAA violation due to inadequate network security controls",
+        "trivy_yaml_content": "cloudformation:\n  links:\n    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-autoscaling-launchconfiguration.html\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::AutoScaling::LaunchConfiguration\n          Properties:\n            ImageId: ami-123456\n            InstanceType: t2.small\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::AutoScaling::LaunchConfiguration\n          Properties:\n            AssociatePublicIpAddress: true\n            ImageId: ami-123456\n            InstanceType: t2.small",
+        "file_name": "no_public_ip.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set AssociatePublicIpAddress: true in Launch Configuration or EC2 instance configuration",
+          "explanation": "Healthcare applications processing PHI should operate in private subnets with no direct internet access, using NAT gateways for outbound connectivity only"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENSURE_CLOUDWATCH_INTEGRATION",
+        "title": "Ensure Cloudwatch Integration",
+        "description": "CloudTrail audit logging system lacks CloudWatch integration, preventing real-time monitoring and alerting on API calls affecting PHI. This gap in monitoring could delay detection of unauthorized access to patient data.",
+        "severity": "medium",
+        "affected_component": "audit_logging_system",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Delayed detection of security incidents involving PHI, inability to set up real-time alerts for suspicious activities, potential HIPAA compliance issues with audit monitoring",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExampleTrail:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            CloudWatchLogsLogGroupArn: arn:aws:logs:us-east-1:123456789012:log-group:CloudTrail/DefaultLogGroup:*\n            TrailName: Cloudtrail\n  bad:\n    - |-\n      Resources:\n        BadExampleTrail:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            TrailName: Cloudtrail",
+        "file_name": "ensure_cloudwatch_integration.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudTrail without CloudWatchLogsLogGroupArn property",
+          "explanation": "Healthcare organizations need real-time monitoring of API calls affecting PHI; CloudWatch integration enables immediate alerting on suspicious activities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENABLE_ALL_REGIONS",
+        "title": "Enable All Regions",
+        "description": "CloudTrail is not configured for multi-region logging, creating blind spots in audit coverage for a healthcare system that may have resources across multiple AWS regions. This could miss critical security events.",
+        "severity": "medium",
+        "affected_component": "audit_logging_system",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Incomplete audit coverage for PHI-related activities, potential HIPAA compliance gaps, inability to detect cross-region unauthorized access or data movement",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            IsLogging: true\n            IsMultiRegionTrail: true\n            S3BucketName: CloudtrailBucket\n            S3KeyPrefix: /trailing\n            TrailName: Cloudtrail\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            IsLogging: true\n            IsMultiRegionTrail: false\n            S3BucketName: CloudtrailBucket\n            S3KeyPrefix: /trailing\n            TrailName: Cloudtrail",
+        "file_name": "enable_all_regions.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set IsMultiRegionTrail: false or omit the property entirely in CloudTrail configuration",
+          "explanation": "Healthcare organizations must maintain comprehensive audit trails across all regions where PHI might be processed to ensure complete HIPAA compliance"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_UPPERCASE_IN_PASSWORDS",
+        "title": "Require Uppercase In Passwords",
+        "description": "IAM password policy for healthcare staff and administrators lacks uppercase character requirements, weakening authentication security for accounts that may access PHI through the patient portal system.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak password policies increase risk of credential compromise, potential unauthorized access to PHI, non-compliance with healthcare security standards requiring strong authentication",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        # ...\n        require_uppercase_characters = true\n        # ...\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # require_uppercase_characters not set\n        # ...\n      }",
+        "file_name": "require_uppercase_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM password policy without setting require_uppercase_characters property",
+          "explanation": "Healthcare environments require strong authentication controls; weak password policies make it easier for attackers to compromise accounts with PHI access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-SQS-ENABLE_QUEUE_ENCRYPTION",
+        "title": "Enable Queue Encryption",
+        "description": "SQS queues used for processing patient appointment requests and provider communications lack encryption, potentially exposing PHI in transit between microservices in the healthcare system.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "PHI exposure in message queues, HIPAA violation due to unencrypted health information in transit, potential data breach during inter-service communication",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      AWSTemplateFormatVersion: \"2010-09-09\"\n\n      Description: Good example of queue\n\n      Resources:\n        Queue:\n          Type: AWS::SQS::Queue\n          Properties:\n            KmsMasterKeyId: some-key\n            QueueName: my-queue\n  bad:\n    - |-\n      AWSTemplateFormatVersion: \"2010-09-09\"\n\n      Description: Bad example of queue\n\n      Resources:\n        Queue:\n          Type: AWS::SQS::Queue\n          Properties:\n            QueueName: my-queue",
+        "file_name": "enable_queue_encryption.yaml",
+        "service": "sqs",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create SQS queue without KmsMasterKeyId property in CloudFormation template",
+          "explanation": "Healthcare microservices often pass PHI through message queues; encryption ensures this sensitive data remains protected during inter-service communication"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-S3-ENABLE_LOGGING",
+        "AWS-ELB-ALB_NOT_PUBLIC",
+        "AWS-EC2-NO_PUBLIC_IP",
+        "AWS-CLOUDTRAIL-ENSURE_CLOUDWATCH_INTEGRATION",
+        "AWS-CLOUDTRAIL-ENABLE_ALL_REGIONS",
+        "AWS-IAM-REQUIRE_UPPERCASE_IN_PASSWORDS",
+        "AWS-SQS-ENABLE_QUEUE_ENCRYPTION"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "sqs",
+        "elb",
+        "iam",
+        "s3",
+        "cloudtrail",
+        "ec2"
+      ],
+      "services_covered": [
+        "sqs",
+        "elb",
+        "iam",
+        "s3",
+        "cloudtrail",
+        "ec2"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 178,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

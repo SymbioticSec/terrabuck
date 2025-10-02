@@ -1,0 +1,311 @@
+{
+  "project_info": {
+    "project_id": "event-streaming-platform",
+    "project_name": "Real-Time Event Streaming Analytics Platform",
+    "description": "A scalable event streaming platform for processing and analyzing real-time user behavior data from mobile applications and web platforms. The system ingests millions of events per day, processes them in real-time for immediate insights, and stores aggregated data for historical analysis. Designed for a SaaS company providing user analytics services to mobile app developers.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "event_driven_microservices",
+    "business_context": "A growing analytics SaaS company needs to process real-time user events (clicks, page views, purchases) from client mobile apps and websites. The platform must handle traffic spikes during peak usage, provide real-time dashboards, and maintain historical data for trend analysis. Clients access their analytics through a secure web dashboard with multi-tenant data isolation.",
+    "components": [
+      {
+        "name": "event_ingestion_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "Receives and validates incoming events from client applications with rate limiting and authentication",
+        "dependencies": [],
+        "security_considerations": [
+          "API key management",
+          "rate limiting",
+          "request validation",
+          "DDoS protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "event_stream_processor",
+        "service_type": "aws_kinesis_data_streams",
+        "purpose": "Buffers and streams events for real-time processing with automatic scaling based on throughput",
+        "dependencies": [
+          "event_ingestion_gateway"
+        ],
+        "security_considerations": [
+          "data encryption in transit",
+          "stream access policies",
+          "cross-account access"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "real_time_analytics_engine",
+        "service_type": "aws_lambda",
+        "purpose": "Processes streaming events to generate real-time metrics and trigger alerts for anomalies",
+        "dependencies": [
+          "event_stream_processor"
+        ],
+        "security_considerations": [
+          "execution role permissions",
+          "environment variable encryption",
+          "VPC access"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "metrics_cache_layer",
+        "service_type": "aws_elasticache_redis",
+        "purpose": "Caches frequently accessed real-time metrics and user session data for fast dashboard loading",
+        "dependencies": [
+          "real_time_analytics_engine"
+        ],
+        "security_considerations": [
+          "encryption at rest",
+          "subnet group isolation",
+          "auth token management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "historical_data_warehouse",
+        "service_type": "aws_rds_postgresql",
+        "purpose": "Stores aggregated historical analytics data and user configuration settings with automated backups",
+        "dependencies": [
+          "real_time_analytics_engine"
+        ],
+        "security_considerations": [
+          "database encryption",
+          "backup encryption",
+          "connection SSL",
+          "parameter group hardening"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "raw_event_archive",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Archives raw event data for compliance and reprocessing with lifecycle management for cost optimization",
+        "dependencies": [
+          "event_stream_processor"
+        ],
+        "security_considerations": [
+          "bucket encryption",
+          "access logging",
+          "versioning",
+          "cross-region replication"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for API Gateway and private subnets for processing components and data stores",
+      "security_zones": [
+        "public",
+        "private_compute",
+        "private_data"
+      ],
+      "connectivity_patterns": [
+        "API Gateway in public subnet connects to Kinesis",
+        "Lambda functions in private compute subnet",
+        "RDS and ElastiCache in private data subnets",
+        "S3 accessed via VPC endpoint"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:05:57.562875"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-ENCRYPTION_CUSTOMER_KEY",
+        "title": "S3 Bucket Missing Customer-Managed KMS Encryption",
+        "description": "The raw event archive S3 bucket uses default AES256 encryption instead of customer-managed KMS keys, reducing control over encryption keys and audit capabilities for sensitive event data",
+        "severity": "medium",
+        "affected_component": "raw_event_archive",
+        "injection_strategy": "Configure S3 bucket with AES256 encryption instead of KMS customer-managed keys",
+        "business_impact": "Reduced encryption key control and audit capabilities for sensitive user behavior data, potential compliance issues",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            BucketEncryption:\n              ServerSideEncryptionConfiguration:\n                - BucketKeyEnabled: true\n                  ServerSideEncryptionByDefault:\n                    KMSMasterKeyID: kms-arn\n                    SSEAlgorithm: aws:kms\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            BucketEncryption:\n              ServerSideEncryptionConfiguration:\n                - BucketKeyEnabled: false\n                  ServerSideEncryptionByDefault:\n                    SSEAlgorithm: AES256",
+        "file_name": "encryption_customer_key.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Use AES256 encryption instead of aws:kms with customer-managed key",
+          "explanation": "While data is encrypted, using AWS-managed keys reduces control over key rotation, access policies, and audit trails"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-NO_PUBLIC_BUCKETS",
+        "title": "S3 Bucket Public Access Not Restricted",
+        "description": "The raw event archive S3 bucket lacks proper public access block configuration, potentially allowing unauthorized access to sensitive user behavior data",
+        "severity": "medium",
+        "affected_component": "raw_event_archive",
+        "injection_strategy": "Omit RestrictPublicBuckets configuration in S3 bucket public access block",
+        "business_impact": "Risk of exposing sensitive user analytics data to unauthorized parties, potential data breach and compliance violations",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            PublicAccessBlockConfiguration:\n              RestrictPublicBuckets: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "no_public_buckets.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without PublicAccessBlockConfiguration or with RestrictPublicBuckets set to false",
+          "explanation": "Without proper public access restrictions, bucket policies or ACLs could inadvertently expose data publicly"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELASTICACHE-ENABLE_AT_REST_ENCRYPTION",
+        "title": "ElastiCache Redis Cluster Missing At-Rest Encryption",
+        "description": "The metrics cache layer Redis cluster does not have at-rest encryption enabled, leaving cached real-time metrics and user session data vulnerable",
+        "severity": "medium",
+        "affected_component": "metrics_cache_layer",
+        "injection_strategy": "Set AtRestEncryptionEnabled to false or omit the property in ElastiCache replication group",
+        "business_impact": "Cached user metrics and session data stored unencrypted, potential exposure of sensitive analytics information",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ElastiCache::ReplicationGroup\n          Properties:\n            AtRestEncryptionEnabled: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ElastiCache::ReplicationGroup\n          Properties:\n            AtRestEncryptionEnabled: false",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "elasticache",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure ElastiCache replication group with AtRestEncryptionEnabled: false",
+          "explanation": "Without at-rest encryption, cached data including user metrics and session information is stored in plaintext on disk"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELASTICACHE-ENABLE_BACKUP_RETENTION",
+        "title": "ElastiCache Redis Missing Backup Retention",
+        "description": "The Redis cache cluster lacks proper backup retention configuration, risking data loss of cached metrics and user session data",
+        "severity": "medium",
+        "affected_component": "metrics_cache_layer",
+        "injection_strategy": "Omit SnapshotRetentionLimit property for Redis engine in ElastiCache cluster",
+        "business_impact": "Risk of losing cached real-time metrics and user session data without proper backup retention, affecting service availability",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ElastiCache::CacheCluster\n          Properties:\n            CacheNodeType: cache.m3.medium\n            Engine: redis\n            SnapshotRetentionLimit: 7\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ElastiCache::CacheCluster\n          Properties:\n            Engine: redis\n            CacheNodeType: cache.m3.medium",
+        "file_name": "enable_backup_retention.yaml",
+        "service": "elasticache",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure Redis cache cluster without SnapshotRetentionLimit property",
+          "explanation": "Without backup retention, cache data cannot be recovered in case of failures, impacting dashboard performance and user experience"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+        "title": "Lambda Execution Role with Excessive S3 Permissions",
+        "description": "The real-time analytics engine Lambda function has overly broad S3 permissions (s3:*) instead of specific actions needed for event archiving",
+        "severity": "medium",
+        "affected_component": "real_time_analytics_engine",
+        "injection_strategy": "Grant s3:* permissions on all resources (*) instead of specific S3 actions on specific buckets",
+        "business_impact": "Lambda function has unnecessary broad access to all S3 resources, violating principle of least privilege and increasing attack surface",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodPolicy:\n          Type: AWS::IAM::Policy\n          Properties:\n            PolicyDocument:\n              Statement:\n                - Effect: Allow\n                  Action:\n                    - s3:GetObject\n                    - s3:PutObject\n                  Resource: arn:aws:s3:::examplebucket/*\n  bad:\n    - |-\n      Resources:\n        BadPolicy:\n          Type: AWS::IAM::Policy\n          Properties:\n            PolicyDocument:\n              Statement:\n                - Effect: Allow\n                  Action: s3:*\n                  Resource: '*'",
+        "file_name": "limit_s3_full_access.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Grant Action: s3:* with Resource: '*' instead of specific actions like s3:PutObject on specific bucket ARNs",
+          "explanation": "Excessive permissions allow the Lambda function to perform any S3 action on any bucket, far beyond its actual requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-IGNORE_PUBLIC_ACLS",
+        "title": "S3 Bucket Public ACL Protection Missing",
+        "description": "The raw event archive S3 bucket does not ignore public ACLs, potentially allowing public access through ACL modifications",
+        "severity": "medium",
+        "affected_component": "raw_event_archive",
+        "injection_strategy": "Omit IgnorePublicAcls setting or set it to false in S3 bucket public access block configuration",
+        "business_impact": "Risk of inadvertent public exposure of user event data through ACL misconfigurations, potential privacy violations",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            PublicAccessBlockConfiguration:\n              IgnorePublicAcls: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "ignore_public_acls.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure S3 bucket without IgnorePublicAcls: true in PublicAccessBlockConfiguration",
+          "explanation": "Without ignoring public ACLs, the bucket could be made publicly accessible through ACL modifications, bypassing bucket policies"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+        "title": "Private Subnet Auto-Assigns Public IPs",
+        "description": "Private subnets for Lambda functions and data stores are configured to auto-assign public IP addresses, violating network isolation principles",
+        "severity": "medium",
+        "affected_component": "network_topology",
+        "injection_strategy": "Set MapPublicIpOnLaunch to true for subnets intended to be private",
+        "business_impact": "Compromises network security by exposing private compute resources to the internet, increasing attack surface",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EC2::Subnet\n          Properties:\n            VpcId: vpc-123456\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EC2::Subnet\n          Properties:\n            MapPublicIpOnLaunch: true\n            VpcId: vpc-123456",
+        "file_name": "no_public_ip_subnet.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure private subnets with MapPublicIpOnLaunch: true",
+          "explanation": "Private subnets should not auto-assign public IPs as this exposes resources to the internet unnecessarily"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-S3-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-S3-NO_PUBLIC_BUCKETS",
+        "AWS-ELASTICACHE-ENABLE_AT_REST_ENCRYPTION",
+        "AWS-ELASTICACHE-ENABLE_BACKUP_RETENTION",
+        "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+        "AWS-S3-IGNORE_PUBLIC_ACLS",
+        "AWS-EC2-NO_PUBLIC_IP_SUBNET"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "elasticache",
+        "ec2",
+        "iam",
+        "s3"
+      ],
+      "services_covered": [
+        "elasticache",
+        "ec2",
+        "iam",
+        "s3"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 180,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

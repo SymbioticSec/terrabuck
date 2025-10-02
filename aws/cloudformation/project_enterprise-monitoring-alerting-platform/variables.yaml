@@ -1,0 +1,100 @@
+# CloudFormation Parameters File
+# This file contains all configurable parameters for the Enterprise Monitoring Platform
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: 
+      - development
+      - staging
+      - production
+    Description: Deployment environment for the monitoring platform
+    
+  ProjectName:
+    Type: String
+    Default: enterprise-monitoring-platform
+    Description: Project name used for resource naming and tagging
+    MinLength: 3
+    MaxLength: 50
+    
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC (must be valid IPv4 CIDR)
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    
+  PublicSubnetCidr1:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for the public subnet (load balancer tier)
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    
+  PrivateSubnetCidr1:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for the private subnet (application tier)
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    
+  DataSubnetCidr1:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for the data subnet (database tier)
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    
+  DatabaseUsername:
+    Type: String
+    Default: monitoringadmin
+    Description: Master username for RDS databases
+    MinLength: 4
+    MaxLength: 16
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9]*$
+    
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 128
+    Description: Master password for RDS databases (minimum 8 characters)
+    AllowedPattern: ^[a-zA-Z0-9!@#$%^&*()_+=-]*$
+    
+  DatabaseInstanceClass:
+    Type: String
+    Default: db.r5.large
+    AllowedValues:
+      - db.r5.large
+      - db.r5.xlarge
+      - db.r5.2xlarge
+      - db.r5.4xlarge
+    Description: RDS instance class for database performance requirements
+
+# Environment-specific configurations
+Mappings:
+  EnvironmentMap:
+    development:
+      MinInstances: 1
+      MaxInstances: 3
+      DesiredInstances: 1
+      DatabaseMultiAZ: false
+      BackupRetention: 3
+    staging:
+      MinInstances: 2
+      MaxInstances: 6
+      DesiredInstances: 2
+      DatabaseMultiAZ: false
+      BackupRetention: 5
+    production:
+      MinInstances: 3
+      MaxInstances: 10
+      DesiredInstances: 3
+      DatabaseMultiAZ: true
+      BackupRetention: 7
+
+# Regional AMI mappings for EC2 instances
+RegionMap:
+  us-east-1:
+    AMI: ami-0abcdef1234567890
+  us-west-2:
+    AMI: ami-0fedcba0987654321
+  eu-west-1:
+    AMI: ami-0123456789abcdef0

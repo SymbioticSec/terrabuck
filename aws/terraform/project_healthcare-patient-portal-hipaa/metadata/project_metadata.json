@@ -1,0 +1,336 @@
+{
+  "project_info": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "project_name": "HIPAA-Compliant Patient Portal",
+    "description": "A secure healthcare patient portal enabling patients to access medical records, schedule appointments, and communicate with healthcare providers. The system implements HIPAA compliance requirements including data encryption, audit logging, and secure authentication. Features include patient registration, medical record viewing, appointment scheduling, secure messaging, and document upload capabilities.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "multi-tier web application",
+    "business_context": "Regional healthcare provider serving 50,000+ patients needs a secure digital platform to improve patient engagement and reduce administrative overhead. The portal must comply with HIPAA regulations and integrate with existing Electronic Health Record (EHR) systems.",
+    "components": [
+      {
+        "name": "web_application_tier",
+        "service_type": "aws_ec2_instance",
+        "purpose": "Hosts the patient portal web application with load balancing for high availability",
+        "dependencies": [
+          "database_tier",
+          "file_storage"
+        ],
+        "security_considerations": [
+          "SSL/TLS encryption",
+          "WAF protection",
+          "session management",
+          "input validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_load_balancer",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Distributes traffic across web servers and terminates SSL connections",
+        "dependencies": [
+          "web_application_tier"
+        ],
+        "security_considerations": [
+          "SSL certificate management",
+          "security headers",
+          "DDoS protection"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "database_tier",
+        "service_type": "aws_rds_mysql",
+        "purpose": "Stores patient data, appointments, and user authentication information with encryption at rest",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption at rest",
+          "encryption in transit",
+          "database access controls",
+          "backup encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "file_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Secure storage for medical documents, test results, and patient-uploaded files",
+        "dependencies": [],
+        "security_considerations": [
+          "server-side encryption",
+          "access logging",
+          "versioning",
+          "lifecycle policies"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "audit_logging",
+        "service_type": "aws_cloudwatch_logs",
+        "purpose": "Centralized logging for HIPAA audit trail requirements and security monitoring",
+        "dependencies": [
+          "web_application_tier",
+          "database_tier"
+        ],
+        "security_considerations": [
+          "log encryption",
+          "access controls",
+          "retention policies",
+          "integrity monitoring"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "backup_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Encrypted backup storage for database and file backups with cross-region replication",
+        "dependencies": [
+          "database_tier",
+          "file_storage"
+        ],
+        "security_considerations": [
+          "cross-region encryption",
+          "access controls",
+          "versioning",
+          "MFA delete protection"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancer and private subnets for application and database tiers",
+      "security_zones": [
+        "public",
+        "private_app",
+        "private_data"
+      ],
+      "connectivity_patterns": [
+        "Internet Gateway to ALB",
+        "ALB to EC2 instances",
+        "EC2 to RDS in isolated subnets",
+        "VPC endpoints for S3 access"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 4,
+      "total_estimated": 24
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:41:04.694898"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "title": "RDS Instance Storage Not Encrypted",
+        "description": "The RDS MySQL database storing sensitive patient health information lacks encryption at rest. This violates HIPAA requirements for protecting PHI (Protected Health Information) and creates a significant compliance risk.",
+        "severity": "high",
+        "affected_component": "database_tier",
+        "injection_strategy": "Remove or set storage_encrypted = false in the aws_db_instance resource",
+        "business_impact": "HIPAA compliance violation, potential $1.5M+ fines, patient data exposure risk, loss of healthcare provider license",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance\n  good:\n    - |-\n      resource \"aws_db_instance\" \"good_example\" {\n        storage_encrypted = true\n      }\n  bad:\n    - |-\n      resource \"aws_db_instance\" \"bad_example\" {\n\n      }",
+        "file_name": "encrypt_instance_storage_data.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create RDS instance without storage_encrypted parameter or explicitly set to false",
+          "explanation": "Without encryption at rest, patient medical records, appointment data, and authentication information stored in the database are vulnerable to unauthorized access if the underlying storage is compromised"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "title": "RDS Instance Publicly Accessible",
+        "description": "The patient portal database is configured to be publicly accessible from the internet, creating an unnecessary attack vector for healthcare data containing sensitive PHI.",
+        "severity": "high",
+        "affected_component": "database_tier",
+        "injection_strategy": "Set publicly_accessible = true in the aws_db_instance resource",
+        "business_impact": "Direct internet exposure of patient database, increased attack surface, potential unauthorized access to 50,000+ patient records",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_db_instance\" \"good_example\" {\n        publicly_accessible = false\n      }\n  bad:\n    - |-\n      resource \"aws_db_instance\" \"bad_example\" {\n        publicly_accessible = true\n      }",
+        "file_name": "disable_public_access.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure RDS instance with publicly_accessible = true",
+          "explanation": "Public accessibility allows direct database connections from the internet, bypassing application-layer security controls and exposing patient data to potential brute force attacks and unauthorized access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-SPECIFY_PUBLIC_ACCESS_BLOCK",
+        "title": "S3 Bucket Missing Public Access Block",
+        "description": "The S3 buckets storing medical documents and patient-uploaded files lack comprehensive public access block configuration, risking accidental exposure of sensitive healthcare documents.",
+        "severity": "medium",
+        "affected_component": "file_storage",
+        "injection_strategy": "Create S3 bucket without aws_s3_bucket_public_access_block resource",
+        "business_impact": "Risk of accidental public exposure of medical documents, test results, and patient files leading to HIPAA violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block#bucket\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"example\"\n        acl    = \"private-read\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"example\" {\n        bucket              = aws_s3_bucket.example.id\n        block_public_acls   = true\n        block_public_policy = true\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"example\"\n        acl    = \"private-read\"\n      }",
+        "file_name": "specify_public_access_block.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without corresponding aws_s3_bucket_public_access_block resource",
+          "explanation": "Without explicit public access blocks, S3 buckets are vulnerable to misconfigurations that could accidentally expose patient documents and medical files to public access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-IGNORE_PUBLIC_ACLS",
+        "title": "S3 Bucket Not Ignoring Public ACLs",
+        "description": "The backup storage S3 bucket doesn't ignore public ACLs, creating risk that public access could be granted through ACL modifications to encrypted database and file backups.",
+        "severity": "medium",
+        "affected_component": "backup_storage",
+        "injection_strategy": "Set ignore_public_acls = false or omit the setting in aws_s3_bucket_public_access_block",
+        "business_impact": "Risk of backup data exposure, potential access to historical patient records and system backups",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block#ignore_public_acls\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"good_example\" {\n        bucket = aws_s3_bucket.example.id\n\n        ignore_public_acls = true\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"bad_example\" {\n        bucket = aws_s3_bucket.example.id\n\n        ignore_public_acls = false\n      }",
+        "file_name": "ignore_public_acls.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure public access block with ignore_public_acls = false",
+          "explanation": "When ignore_public_acls is false, the bucket respects public ACLs that could be applied, potentially exposing backup data containing patient information and system configurations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+        "title": "Security Group Rules Missing Descriptions",
+        "description": "Security group rules for the web application tier lack descriptive documentation, making it difficult to audit access controls and maintain proper security governance for the patient portal.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "Create security group rules without description fields",
+        "business_impact": "Reduced security auditability, difficulty in compliance reviews, increased risk of misconfigured access controls",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule\n  good:\n    - |-\n      resource \"aws_security_group\" \"good_example\" {\n        name        = \"http\"\n        description = \"Allow inbound HTTP traffic\"\n\n        ingress {\n          description = \"HTTP from VPC\"\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_security_group\" \"bad_example\" {\n        name = \"http\"\n\n        ingress {\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }",
+        "file_name": "add_description_to_security_group_rule.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create security group ingress/egress rules without description fields",
+          "explanation": "Missing descriptions make it difficult to understand the purpose of network rules during security audits and compliance reviews, potentially leading to overpermissive configurations going unnoticed"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+        "title": "Private Subnet Auto-Assigns Public IPs",
+        "description": "Private subnets hosting application servers are configured to automatically assign public IP addresses, violating the intended network isolation for the healthcare application tier.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "Set map_public_ip_on_launch = true for private subnets",
+        "business_impact": "Unintended internet exposure of application servers, increased attack surface, potential bypass of network security controls",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet#map_public_ip_on_launch\n  good:\n    - |-\n      resource \"aws_subnet\" \"good_example\" {\n        vpc_id                  = \"vpc-123456\"\n        map_public_ip_on_launch = false\n      }\n  bad:\n    - |-\n      resource \"aws_subnet\" \"bad_example\" {\n        vpc_id                  = \"vpc-123456\"\n        map_public_ip_on_launch = true\n      }",
+        "file_name": "no_public_ip_subnet.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure private subnets with map_public_ip_on_launch = true",
+          "explanation": "Auto-assigning public IPs to instances in private subnets defeats the purpose of network segmentation and creates unintended internet-facing endpoints that could be exploited"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ENCRYPTION_CUSTOMER_KEY",
+        "title": "EBS Volumes Missing Customer-Managed Encryption",
+        "description": "EBS volumes attached to web application servers lack customer-managed KMS encryption keys, relying on default AWS-managed keys which provide less control over encryption key management for healthcare data processing.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "Create EBS volumes without specifying kms_key_id parameter",
+        "business_impact": "Reduced control over encryption keys, potential compliance issues with healthcare data processing requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ebs_volume#kms_key_id\n  good:\n    - |-\n      resource \"aws_kms_key\" \"ebs_encryption\" {\n        enable_key_rotation = true\n      }\n\n      resource \"aws_ebs_volume\" \"example\" {\n        kms_key_id = aws_kms_key.ebs_encryption.arn\n      }\n  bad:\n    - |-\n      resource \"aws_ebs_volume\" \"example\" {}",
+        "file_name": "encryption_customer_key.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create EBS volumes without specifying customer-managed KMS keys",
+          "explanation": "Without customer-managed keys, organizations have less control over encryption key rotation, access policies, and audit trails, which may not meet strict healthcare compliance requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-REQUIRE_BUCKET_ACCESS_LOGGING",
+        "title": "CloudTrail S3 Bucket Missing Access Logging",
+        "description": "The S3 bucket used for storing CloudTrail audit logs lacks access logging configuration, reducing visibility into who accesses the HIPAA audit trail data required for compliance monitoring.",
+        "severity": "medium",
+        "affected_component": "audit_logging",
+        "injection_strategy": "Create CloudTrail with S3 bucket that doesn't have logging configuration",
+        "business_impact": "Reduced audit trail visibility, potential compliance gaps in monitoring access to healthcare audit logs",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudtrail#is_multi_region_trail\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"good_example\" {\n        s3_bucket_name = aws_s3_bucket.example.id\n      }\n\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"example\"\n        logging {\n          target_bucket = \"target-bucket\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n        s3_bucket_name = aws_s3_bucket.example.id\n      }\n\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"example\"\n      }",
+        "file_name": "require_bucket_access_logging.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudTrail S3 bucket without logging configuration",
+          "explanation": "Without access logging on the CloudTrail bucket, there's no record of who accessed the audit logs themselves, creating a gap in the audit trail that's required for comprehensive HIPAA compliance monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-S3-SPECIFY_PUBLIC_ACCESS_BLOCK",
+        "AWS-S3-IGNORE_PUBLIC_ACLS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+        "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+        "AWS-EC2-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-CLOUDTRAIL-REQUIRE_BUCKET_ACCESS_LOGGING"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 2,
+        "medium": 6,
+        "low": 0
+      },
+      "service_categories": [
+        "s3",
+        "rds",
+        "ec2",
+        "cloudtrail"
+      ],
+      "services_covered": [
+        "s3",
+        "rds",
+        "ec2",
+        "cloudtrail"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 33,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

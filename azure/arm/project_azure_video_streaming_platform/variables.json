@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": {
+      "value": "enterprise-video-streaming-and-training-platform"
+    },
+    "location": {
+      "value": "East US"
+    },
+    "environment": {
+      "value": "prod"
+    },
+    "sqlAdminUsername": {
+      "value": "videoadmin"
+    },
+    "sqlAdminPassword": {
+      "value": "VideoStreaming123!"
+    },
+    "appServicePlanSku": {
+      "value": "S2"
+    },
+    "storageAccountType": {
+      "value": "Standard_LRS"
+    },
+    "cdnSkuName": {
+      "value": "Standard_Microsoft"
+    }
+  }
+}

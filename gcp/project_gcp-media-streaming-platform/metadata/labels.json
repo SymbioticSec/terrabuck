@@ -1,0 +1,402 @@
+{
+  "project_labels": {
+    "project_id": "gcp-media-streaming-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "network": 1,
+        "logging": 1
+      },
+      "by_trivy_service": {
+        "compute": 4,
+        "sql": 2,
+        "storage": 0,
+        "network": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "GOOGLE-COMPUTE-NO_DEFAULT_SERVICE_ACCOUNT",
+        "GOOGLE-SQL-ENABLE_BACKUP",
+        "GOOGLE-COMPUTE-DISABLE_ALLOW_ALL_PORTS_FIREWALL_RULE",
+        "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_PRIVATE_GOOGLE_ACCESS",
+        "GOOGLE-COMPUTE-DISK_ENCRYPTION_NO_PLAINTEXT_KEY",
+        "GOOGLE-COMPUTE-PROJECT_LEVEL_OSLOGIN",
+        "GOOGLE-SQL-PG_LOG_LOCK_WAITS"
+      ],
+      "services_covered": [
+        "compute",
+        "sql",
+        "networking"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "GOOGLE-COMPUTE-NO_DEFAULT_SERVICE_ACCOUNT",
+      "trivy_rule_info": {
+        "original_file": "no_default_service_account.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "privilege_escalation",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "compromised_compute_instance",
+        "lateral_movement_capability"
+      ],
+      "mitigation_strategies": [
+        "create_custom_service_account",
+        "apply_principle_of_least_privilege",
+        "use_iam_roles_instead_of_editor_permissions"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "email = \"${project_number}-compute@developer.gserviceaccount.com\"",
+        "secure_pattern": "email = google_service_account.custom_sa.email"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-SQL-ENABLE_BACKUP",
+      "trivy_rule_info": {
+        "original_file": "enable_backup.yaml",
+        "service_category": "sql",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/sql"
+      },
+      "vulnerability_class": "data_protection",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "data_corruption_event",
+        "hardware_failure",
+        "ransomware_attack"
+      ],
+      "mitigation_strategies": [
+        "enable_automated_backups",
+        "configure_point_in_time_recovery",
+        "implement_backup_retention_policy",
+        "test_backup_restoration_procedures"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "backup_configuration { enabled = false }",
+        "secure_pattern": "backup_configuration { enabled = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_protection",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-DISABLE_ALLOW_ALL_PORTS_FIREWALL_RULE",
+      "trivy_rule_info": {
+        "original_file": "disable_allow_all_ports_firewall_rule.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access_to_gcp",
+        "port_scanning_tools"
+      ],
+      "mitigation_strategies": [
+        "implement_principle_of_least_privilege_networking",
+        "specify_exact_required_ports",
+        "use_target_tags_for_granular_control",
+        "implement_network_segmentation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "ports = [\"0-65535\"]",
+        "secure_pattern": "ports = [\"80\", \"443\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_PRIVATE_GOOGLE_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "enable_subnetwork_private_google_access.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_traffic_interception",
+        "man_in_the_middle_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_private_google_access",
+        "route_api_calls_through_private_network",
+        "reduce_internet_exposure",
+        "implement_vpc_security_controls"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "private_ip_google_access = false",
+        "secure_pattern": "private_ip_google_access = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-DISK_ENCRYPTION_NO_PLAINTEXT_KEY",
+      "trivy_rule_info": {
+        "original_file": "disk_encryption_no_plaintext_key.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "cryptographic_failure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "PCI-DSS",
+        "HIPAA",
+        "SOX"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "access_to_terraform_state",
+        "configuration_file_exposure"
+      ],
+      "mitigation_strategies": [
+        "use_google_kms_managed_keys",
+        "implement_key_rotation_policies",
+        "secure_terraform_state_storage",
+        "avoid_hardcoded_encryption_keys"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "disk_encryption_key_raw = \"base64_encoded_key\"",
+        "secure_pattern": "kms_key_self_link = google_kms_crypto_key.key.id"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-PROJECT_LEVEL_OSLOGIN",
+      "trivy_rule_info": {
+        "original_file": "project_level_oslogin.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "ssh_key_compromise",
+        "unauthorized_key_distribution"
+      ],
+      "mitigation_strategies": [
+        "enable_os_login_project_wide",
+        "implement_centralized_ssh_key_management",
+        "enforce_two_factor_authentication",
+        "audit_ssh_access_regularly"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "enable-oslogin = false",
+        "secure_pattern": "enable-oslogin = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-SQL-PG_LOG_LOCK_WAITS",
+      "trivy_rule_info": {
+        "original_file": "pg_log_lock_waits.yaml",
+        "service_category": "sql",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/sql"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "database_access",
+        "denial_of_service_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_lock_wait_logging",
+        "implement_database_monitoring",
+        "configure_performance_alerting",
+        "establish_baseline_performance_metrics"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "database_flags { name = \"log_lock_waits\", value = \"off\" }",
+        "secure_pattern": "database_flags { name = \"log_lock_waits\", value = \"on\" }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging",
+        "severity_numeric": 4.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "7_medium_severity_findings_across_compute_sql_services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_google_cloud_security_best_practices",
+      "learn_trivy_security_scanning_capabilities",
+      "identify_common_terraform_security_misconfigurations",
+      "apply_principle_of_least_privilege_in_cloud_environments",
+      "implement_defense_in_depth_strategies",
+      "understand_compliance_requirements_mapping"
+    ],
+    "prerequisite_knowledge": [
+      "basic_terraform_syntax",
+      "google_cloud_platform_fundamentals",
+      "infrastructure_as_code_concepts",
+      "basic_security_principles"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": "45",
+    "key_takeaways": [
+      "default_service_accounts_violate_least_privilege",
+      "backup_configuration_critical_for_data_protection",
+      "network_security_requires_granular_firewall_rules",
+      "private_google_access_improves_security_posture",
+      "encryption_key_management_essential_for_compliance",
+      "centralized_access_control_improves_auditability",
+      "comprehensive_logging_enables_threat_detection"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "sql",
+      "compute"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "gcp-media-streaming-platform",
+    "generation_timestamp": "2025-08-08T14:50:55.751120",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

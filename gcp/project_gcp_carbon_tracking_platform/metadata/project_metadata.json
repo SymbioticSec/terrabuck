@@ -1,0 +1,365 @@
+{
+  "project_info": {
+    "project_id": "gcp_carbon_tracking_platform",
+    "project_name": "Corporate Carbon Footprint Tracking Platform",
+    "description": "A comprehensive platform for enterprises to track, analyze, and report their carbon emissions across multiple facilities and operations. The system ingests data from IoT sensors, utility bills, and manual inputs to calculate carbon footprints, generate sustainability reports, and provide actionable insights for carbon reduction initiatives. Designed for compliance with ESG reporting requirements and carbon credit trading.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "data_pipeline",
+    "business_context": "Large corporations need to track and report carbon emissions for ESG compliance, sustainability goals, and carbon credit trading. This platform serves Fortune 500 companies with multiple facilities requiring real-time emissions monitoring and quarterly reporting to stakeholders and regulatory bodies.",
+    "components": [
+      {
+        "name": "iot_data_ingestion",
+        "service_type": "google_cloud_functions",
+        "purpose": "Serverless functions to ingest real-time data from IoT sensors measuring energy consumption, air quality, and equipment efficiency across corporate facilities",
+        "dependencies": [],
+        "security_considerations": [
+          "API authentication",
+          "data validation",
+          "rate limiting"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "emissions_data_lake",
+        "service_type": "google_storage_bucket",
+        "purpose": "Centralized storage for raw emissions data, utility bills, facility information, and historical carbon footprint records with lifecycle management",
+        "dependencies": [
+          "iot_data_ingestion"
+        ],
+        "security_considerations": [
+          "data encryption",
+          "access controls",
+          "audit logging"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "carbon_calculation_engine",
+        "service_type": "google_compute_engine",
+        "purpose": "Managed compute instances running carbon footprint calculation algorithms, emissions factor databases, and sustainability analytics workloads",
+        "dependencies": [
+          "emissions_data_lake"
+        ],
+        "security_considerations": [
+          "instance hardening",
+          "network isolation",
+          "service accounts"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "reporting_database",
+        "service_type": "google_cloud_sql",
+        "purpose": "PostgreSQL database storing calculated carbon metrics, facility profiles, compliance reports, and user access controls for the web dashboard",
+        "dependencies": [
+          "carbon_calculation_engine"
+        ],
+        "security_considerations": [
+          "database encryption",
+          "backup security",
+          "connection encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "sustainability_dashboard",
+        "service_type": "google_app_engine",
+        "purpose": "Web application providing interactive dashboards for carbon footprint visualization, ESG reporting, and sustainability goal tracking for corporate users",
+        "dependencies": [
+          "reporting_database"
+        ],
+        "security_considerations": [
+          "authentication",
+          "authorization",
+          "session management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "report_generation_service",
+        "service_type": "google_cloud_run",
+        "purpose": "Containerized service for generating automated ESG compliance reports, carbon credit documentation, and executive sustainability summaries",
+        "dependencies": [
+          "reporting_database",
+          "emissions_data_lake"
+        ],
+        "security_considerations": [
+          "container security",
+          "API security",
+          "document encryption"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with regional subnets for compute resources, private subnets for databases, and public subnets for load balancers and web services",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "IoT sensors connect via HTTPS to Cloud Functions",
+        "Compute Engine instances access Cloud SQL via private IP",
+        "App Engine connects to Cloud SQL and Cloud Storage",
+        "Cloud Run services communicate via internal load balancers"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 6,
+      "serverless_functions": 3,
+      "security_components": 8,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:08:55.299580"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_PUBLIC_IP",
+        "title": "Compute Instance with Public IP Exposure",
+        "description": "Carbon calculation engine compute instances are configured with public IP addresses, exposing sensitive carbon footprint processing workloads directly to the internet. This violates security best practices for data processing infrastructure handling corporate emissions data.",
+        "severity": "medium",
+        "affected_component": "carbon_calculation_engine",
+        "injection_strategy": "Configure google_compute_instance with access_config block to assign public IP",
+        "business_impact": "Exposes carbon calculation algorithms and potentially sensitive corporate emissions data to internet-based attacks, risking intellectual property theft and compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#access_config\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        network_interface {\n          network = \"default\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        network_interface {\n          network = \"default\"\n\n          access_config {\n            // Ephemeral IP\n          }\n        }\n      }",
+        "file_name": "no_public_ip.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add access_config block to network_interface in carbon calculation compute instances",
+          "explanation": "The access_config block automatically assigns a public IP, making the instance accessible from the internet"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_CONNECTIONS",
+        "title": "PostgreSQL Connection Logging Disabled",
+        "description": "The reporting database storing carbon metrics and compliance reports has connection logging disabled, preventing audit trails of who accessed sensitive emissions data and when. This creates compliance risks for ESG reporting requirements.",
+        "severity": "medium",
+        "affected_component": "reporting_database",
+        "injection_strategy": "Set log_connections database flag to 'off' in google_sql_database_instance",
+        "business_impact": "Inability to track database access for compliance audits, forensic investigations, and detecting unauthorized access to carbon footprint data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_connections\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_connections\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_connections.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure database_flags with log_connections set to 'off'",
+          "explanation": "Disables PostgreSQL's ability to log connection attempts, removing audit trail capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "title": "Project-Wide SSH Keys Enabled",
+        "description": "Carbon calculation engine instances allow project-wide SSH keys, enabling any user with project-level SSH access to connect to compute instances processing sensitive emissions calculations and proprietary carbon footprint algorithms.",
+        "severity": "medium",
+        "affected_component": "carbon_calculation_engine",
+        "injection_strategy": "Set block-project-ssh-keys metadata to false in google_compute_instance",
+        "business_impact": "Overprivileged access to carbon calculation infrastructure, risking data breaches and unauthorized access to proprietary sustainability algorithms",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#\n  good:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          block-project-ssh-keys = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_service_account\" \"default\" {\n        account_id   = \"service_account_id\"\n        display_name = \"Service Account\"\n      }\n\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          block-project-ssh-keys = false\n        }\n      }",
+        "file_name": "no_project_wide_ssh_keys.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set metadata block-project-ssh-keys to false",
+          "explanation": "Allows any project-level SSH key to access the instance, bypassing instance-specific access controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_IM",
+        "title": "Shielded VM Integrity Monitoring Disabled",
+        "description": "Carbon calculation engine instances have integrity monitoring disabled, preventing detection of boot-level attacks or rootkits that could compromise carbon footprint calculations or inject false emissions data.",
+        "severity": "medium",
+        "affected_component": "carbon_calculation_engine",
+        "injection_strategy": "Set enable_integrity_monitoring to false in shielded_instance_config",
+        "business_impact": "Inability to detect boot-level compromises that could manipulate carbon calculations, leading to fraudulent ESG reporting and compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#enable_vtpm\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_integrity_monitoring = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_integrity_monitoring = false\n        }\n      }",
+        "file_name": "enable_shielded_vm_im.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure shielded_instance_config with enable_integrity_monitoring = false",
+          "explanation": "Disables Google's integrity monitoring that detects unauthorized changes to the VM boot sequence"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_FLOW_LOGS",
+        "title": "VPC Flow Logs Disabled",
+        "description": "Network subnets hosting carbon tracking infrastructure lack flow logging, preventing detection of suspicious network traffic patterns, data exfiltration attempts, or unauthorized access to emissions data processing systems.",
+        "severity": "medium",
+        "affected_component": "network_topology",
+        "injection_strategy": "Omit log_config or set enable_flow_logs to false in google_compute_subnetwork",
+        "business_impact": "Limited visibility into network traffic patterns, hindering detection of data breaches or unauthorized access to carbon footprint data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork#enable_flow_logs\n  good:\n    - |-\n      resource \"google_compute_subnetwork\" \"good_example_with_log_config\" {\n        name          = \"test-subnetwork\"\n        ip_cidr_range = \"10.2.0.0/16\"\n        region        = \"us-central1\"\n        network       = google_compute_network.custom-test.id\n        log_config {\n          aggregation_interval = \"INTERVAL_10_MIN\"\n          flow_sampling        = 0.5\n          metadata             = \"INCLUDE_ALL_METADATA\"\n        }\n      }\n      resource \"google_compute_network\" \"custom-test\" {\n        name                    = \"test-network\"\n        auto_create_subnetworks = false\n      }\n  bad:\n    - |-\n      resource \"google_compute_subnetwork\" \"bad_example\" {\n        name             = \"test-subnetwork\"\n        ip_cidr_range    = \"10.2.0.0/16\"\n        region           = \"us-central1\"\n        network          = google_compute_network.custom-test.id\n        enable_flow_logs = false\n      }\n      resource \"google_compute_network\" \"custom-test\" {\n        name                    = \"test-network\"\n        auto_create_subnetworks = false\n      }",
+        "file_name": "enable_subnetwork_flow_logs.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create subnetwork without log_config or with enable_flow_logs = false",
+          "explanation": "Prevents collection of network flow metadata needed for security monitoring and compliance"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_PROJECT_LEVEL_DEFAULT_SERVICE_ACCOUNT_ASSIGNMENT",
+        "title": "Default Service Account Usage",
+        "description": "Carbon tracking platform components use default Compute Engine service accounts instead of dedicated service accounts with minimal permissions, violating principle of least privilege for accessing emissions data and calculation resources.",
+        "severity": "medium",
+        "affected_component": "carbon_calculation_engine",
+        "injection_strategy": "Assign default service account (@developer.gserviceaccount.com) to project IAM roles",
+        "business_impact": "Overprivileged access to GCP resources, increasing blast radius if service accounts are compromised and risking unauthorized access to carbon data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/google_project_iam\n  good:\n    - |-\n      resource \"google_service_account\" \"test\" {\n        account_id   = \"account123\"\n        display_name = \"account123\"\n      }\n\n      resource \"google_project_iam_member\" \"project-123\" {\n        project = \"project-123\"\n        role    = \"roles/whatever\"\n        member  = \"serviceAccount:${google_service_account.test.email}\"\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_member\" \"project-123\" {\n        project = \"project-123\"\n        role    = \"roles/whatever\"\n        member  = \"123-compute@developer.gserviceaccount.com\"\n      }",
+        "file_name": "no_project_level_default_service_account_assignment.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Use default service account email pattern in IAM member assignments",
+          "explanation": "Default service accounts have broad permissions and violate least privilege principles"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_ERRORS",
+        "title": "PostgreSQL Error Logging Insufficient",
+        "description": "The reporting database has insufficient error logging configured, potentially missing critical security events, failed authentication attempts, or data access violations in the carbon footprint reporting system.",
+        "severity": "medium",
+        "affected_component": "reporting_database",
+        "injection_strategy": "Set log_min_messages database flag to 'PANIC' instead of 'WARNING' or 'ERROR'",
+        "business_impact": "Reduced visibility into database security events and errors, hampering incident response and compliance monitoring for ESG data access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"WARNING\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"PANIC\"\n          }\n        }\n      }",
+        "file_name": "pg_log_errors.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set log_min_messages to 'PANIC' to only log the most severe errors",
+          "explanation": "PANIC level logging misses important security-related warnings and errors that should be monitored"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-DISABLE_ALLOW_ALL_PORTS_FIREWALL_RULE",
+        "title": "Overpermissive Firewall Rules",
+        "description": "Firewall rules allow traffic on all ports (0-65535) to carbon tracking infrastructure, creating unnecessary attack surface and violating network segmentation principles for sensitive emissions data processing systems.",
+        "severity": "medium",
+        "affected_component": "network_topology",
+        "injection_strategy": "Configure firewall rules with ports '0-65535' or omit ports specification for TCP protocol",
+        "business_impact": "Increased attack surface exposing carbon calculation services to unnecessary network risks and potential data breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall#allow\n  good:\n    - |-\n      resource \"google_compute_firewall\" \"good_example\" {\n        name    = \"allow-specific-ports\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"80\", \"443\"]\n        }\n\n        source_ranges = [\"0.0.0.0/0\"]\n        target_tags   = [\"web-servers\"]\n      }\n  bad:\n    - |-\n      resource \"google_compute_firewall\" \"bad_example\" {\n        name    = \"allow-all-ports\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"0-65535\"]\n        }\n\n        source_ranges = [\"0.0.0.0/0\"]\n        target_tags   = [\"servers\"]\n      }",
+        "file_name": "disable_allow_all_ports_firewall_rule.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure firewall allow rules with ports = ['0-65535'] or omit ports for TCP",
+          "explanation": "Opens all TCP ports, creating unnecessary attack surface and violating least privilege networking"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "GOOGLE-COMPUTE-NO_PUBLIC_IP",
+        "GOOGLE-SQL-PG_LOG_CONNECTIONS",
+        "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_IM",
+        "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_FLOW_LOGS",
+        "GOOGLE-IAM-NO_PROJECT_LEVEL_DEFAULT_SERVICE_ACCOUNT_ASSIGNMENT",
+        "GOOGLE-SQL-PG_LOG_ERRORS",
+        "GOOGLE-COMPUTE-DISABLE_ALLOW_ALL_PORTS_FIREWALL_RULE"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_name": "corporate-carbon-footprint-tracking-platform",
+    "architecture_type": "data_pipeline",
+    "total_resources": 25,
+    "resource_breakdown": {
+      "networking": 6,
+      "compute": 2,
+      "storage": 4,
+      "database": 2,
+      "serverless": 3,
+      "security": 4,
+      "iam": 4
+    },
+    "estimated_monthly_cost_usd": 850,
+    "deployment_time_minutes": 15,
+    "components_implemented": [
+      "iot_data_ingestion",
+      "emissions_data_lake",
+      "carbon_calculation_engine",
+      "reporting_database",
+      "sustainability_dashboard",
+      "report_generation_service"
+    ],
+    "vulnerabilities_injected": 8,
+    "security_zones": [
+      "public",
+      "private",
+      "data"
+    ],
+    "compliance_frameworks": [
+      "ESG",
+      "Carbon Credit Trading"
+    ],
+    "terraform_version": ">=1.0",
+    "provider_versions": {
+      "google": "~>4.0"
+    }
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 24,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "storageAccountName": {
+    "description": "Name of the storage account for video content",
+    "sensitive": false
+  },
+  "mediaServicesName": {
+    "description": "Name of the Azure Media Services account",
+    "sensitive": false
+  },
+  "sqlServerFqdn": {
+    "description": "Fully qualified domain name of the SQL Server",
+    "sensitive": false
+  },
+  "apiBackendUrl": {
+    "description": "URL of the API backend service",
+    "sensitive": false
+  },
+  "webFrontendUrl": {
+    "description": "URL of the web frontend application",
+    "sensitive": false
+  },
+  "cdnEndpointUrl": {
+    "description": "URL of the CDN endpoint for content delivery",
+    "sensitive": false
+  }
+}

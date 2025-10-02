@@ -1,0 +1,257 @@
+{
+  "original_components": [
+    {
+      "name": "iot_data_ingestion",
+      "service_type": "google_cloud_functions",
+      "purpose": "Serverless functions to ingest real-time data from IoT sensors measuring energy consumption, air quality, and equipment efficiency across corporate facilities",
+      "dependencies": [],
+      "security_considerations": [
+        "API authentication",
+        "data validation",
+        "rate limiting"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "emissions_data_lake",
+      "service_type": "google_storage_bucket",
+      "purpose": "Centralized storage for raw emissions data, utility bills, facility information, and historical carbon footprint records with lifecycle management",
+      "dependencies": [
+        "iot_data_ingestion"
+      ],
+      "security_considerations": [
+        "data encryption",
+        "access controls",
+        "audit logging"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "carbon_calculation_engine",
+      "service_type": "google_compute_engine",
+      "purpose": "Managed compute instances running carbon footprint calculation algorithms, emissions factor databases, and sustainability analytics workloads",
+      "dependencies": [
+        "emissions_data_lake"
+      ],
+      "security_considerations": [
+        "instance hardening",
+        "network isolation",
+        "service accounts"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "reporting_database",
+      "service_type": "google_cloud_sql",
+      "purpose": "PostgreSQL database storing calculated carbon metrics, facility profiles, compliance reports, and user access controls for the web dashboard",
+      "dependencies": [
+        "carbon_calculation_engine"
+      ],
+      "security_considerations": [
+        "database encryption",
+        "backup security",
+        "connection encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "sustainability_dashboard",
+      "service_type": "google_app_engine",
+      "purpose": "Web application providing interactive dashboards for carbon footprint visualization, ESG reporting, and sustainability goal tracking for corporate users",
+      "dependencies": [
+        "reporting_database"
+      ],
+      "security_considerations": [
+        "authentication",
+        "authorization",
+        "session management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "report_generation_service",
+      "service_type": "google_cloud_run",
+      "purpose": "Containerized service for generating automated ESG compliance reports, carbon credit documentation, and executive sustainability summaries",
+      "dependencies": [
+        "reporting_database",
+        "emissions_data_lake"
+      ],
+      "security_considerations": [
+        "container security",
+        "API security",
+        "document encryption"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "iot_data_ingestion",
+      "service_type": "google_cloud_functions",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "emissions_data_lake",
+      "service_type": "google_storage_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "carbon_calculation_engine",
+      "service_type": "google_compute_engine",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "reporting_database",
+      "service_type": "google_cloud_sql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "sustainability_dashboard",
+      "service_type": "google_app_engine",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "report_generation_service",
+      "service_type": "google_cloud_run",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 326,
+      "resource_count": 24,
+      "resources_found": [
+        {
+          "type": "google_compute_network",
+          "name": "carbon_tracking_vpc"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "public_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "private_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "data_subnet"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_all_internal"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_web_traffic"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "emissions_data_lake"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "reports_storage"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "google_kms_key_ring",
+          "name": "carbon_tracking_keyring"
+        },
+        {
+          "type": "google_kms_crypto_key",
+          "name": "storage_key"
+        },
+        {
+          "type": "google_project_iam_member",
+          "name": "default_service_account_assignment"
+        },
+        {
+          "type": "google_service_account",
+          "name": "carbon_calculation_sa"
+        },
+        {
+          "type": "google_compute_instance",
+          "name": "carbon_calculation_engine"
+        },
+        {
+          "type": "google_sql_database_instance",
+          "name": "reporting_database"
+        },
+        {
+          "type": "google_sql_database",
+          "name": "carbon_metrics_db"
+        },
+        {
+          "type": "google_compute_global_address",
+          "name": "private_ip_address"
+        },
+        {
+          "type": "google_service_networking_connection",
+          "name": "private_vpc_connection"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "function_source"
+        },
+        {
+          "type": "google_storage_bucket_object",
+          "name": "function_zip"
+        },
+        {
+          "type": "google_cloudfunctions_function",
+          "name": "iot_data_ingestion"
+        },
+        {
+          "type": "google_app_engine_application",
+          "name": "sustainability_dashboard"
+        },
+        {
+          "type": "google_cloud_run_service",
+          "name": "report_generation_service"
+        },
+        {
+          "type": "google_cloud_run_service_iam_member",
+          "name": "report_service_invoker"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 34,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 49,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 168,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

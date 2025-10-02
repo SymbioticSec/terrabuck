@@ -1,0 +1,14 @@
+{
+  "project_id": "healthcare-patient-portal-hipaa",
+  "security_posture": "critical",
+  "vulnerability_count": 7,
+  "data_quality": "high",
+  "suitable_for": [
+    "vulnerability_detection",
+    "severity_classification",
+    "compliance_mapping",
+    "trivy_rule_matching",
+    "remediation_recommendation",
+    "security_posture_assessment"
+  ]
+}

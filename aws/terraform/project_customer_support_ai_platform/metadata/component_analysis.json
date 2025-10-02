@@ -1,0 +1,284 @@
+{
+  "original_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_instance",
+      "purpose": "Hosts the main customer support portal and admin dashboard with auto-scaling capabilities",
+      "dependencies": [
+        "ticket_database",
+        "knowledge_base_storage"
+      ],
+      "security_considerations": [
+        "web_application_firewall",
+        "ssl_termination",
+        "session_management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "ai_processing_service",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless functions for AI-powered ticket classification, sentiment analysis, and chatbot responses",
+      "dependencies": [
+        "ticket_database",
+        "knowledge_base_storage"
+      ],
+      "security_considerations": [
+        "function_permissions",
+        "api_authentication",
+        "data_encryption_in_transit"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "ticket_database",
+      "service_type": "aws_rds_instance",
+      "purpose": "PostgreSQL database storing customer tickets, conversations, user accounts, and support analytics",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "backup_security",
+        "access_control",
+        "network_isolation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "knowledge_base_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Stores support articles, FAQ documents, chat logs, and file attachments with full-text search indexing",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket_policies",
+        "object_encryption",
+        "access_logging",
+        "versioning"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "purpose": "RESTful API endpoints for mobile apps, third-party integrations, and webhook notifications",
+      "dependencies": [
+        "web_application_tier",
+        "ai_processing_service"
+      ],
+      "security_considerations": [
+        "api_key_management",
+        "rate_limiting",
+        "request_validation",
+        "cors_policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Distributes incoming traffic across web application instances with health checks and SSL termination",
+      "dependencies": [
+        "web_application_tier"
+      ],
+      "security_considerations": [
+        "ssl_certificates",
+        "security_groups",
+        "ddos_protection"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "ai_processing_service",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "ticket_database",
+      "service_type": "aws_rds_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "knowledge_base_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 431,
+      "resource_count": 30,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "main"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "main"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "web_tier"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "database"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "knowledge_base"
+        },
+        {
+          "type": "aws_s3_bucket_public_access_block",
+          "name": "knowledge_base"
+        },
+        {
+          "type": "aws_s3_bucket_server_side_encryption_configuration",
+          "name": "knowledge_base"
+        },
+        {
+          "type": "random_string",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "main"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "tickets"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_role"
+        },
+        {
+          "type": "aws_iam_policy",
+          "name": "lambda_s3_policy"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_s3_policy"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_basic_execution"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "ai_classifier"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "sentiment_analysis"
+        },
+        {
+          "type": "aws_lb",
+          "name": "main"
+        },
+        {
+          "type": "aws_lb_target_group",
+          "name": "web"
+        },
+        {
+          "type": "aws_lb_listener",
+          "name": "web"
+        },
+        {
+          "type": "aws_instance",
+          "name": "web"
+        },
+        {
+          "type": "aws_lb_target_group_attachment",
+          "name": "web"
+        },
+        {
+          "type": "aws_api_gateway_rest_api",
+          "name": "main"
+        },
+        {
+          "type": "aws_api_gateway_deployment",
+          "name": "main"
+        },
+        {
+          "type": "aws_api_gateway_method_settings",
+          "name": "main"
+        },
+        {
+          "type": "aws_api_gateway_resource",
+          "name": "tickets"
+        },
+        {
+          "type": "aws_api_gateway_method",
+          "name": "tickets_get"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 48,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 48,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 152,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

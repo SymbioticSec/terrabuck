@@ -1,0 +1,238 @@
+{
+  "original_components": [
+    {
+      "name": "iot_hub",
+      "service_type": "azure_iothub",
+      "purpose": "Secure ingestion of SCADA telemetry data from field devices with device authentication and message routing",
+      "dependencies": [],
+      "security_considerations": [
+        "device_certificate_management",
+        "message_encryption",
+        "connection_throttling"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "stream_processor",
+      "service_type": "azure_stream_analytics",
+      "purpose": "Real-time processing of sensor data to detect anomalies, calculate power flow metrics, and trigger critical alerts",
+      "dependencies": [
+        "iot_hub",
+        "time_series_database"
+      ],
+      "security_considerations": [
+        "data_transformation_validation",
+        "output_sanitization"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "time_series_database",
+      "service_type": "azure_data_explorer",
+      "purpose": "High-performance storage and querying of historical SCADA data with time-series optimization for trend analysis",
+      "dependencies": [],
+      "security_considerations": [
+        "data_encryption_at_rest",
+        "access_control_policies",
+        "audit_logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "alert_processor",
+      "service_type": "azure_functions",
+      "purpose": "Serverless processing of critical grid alerts with automated notification routing to on-call operators",
+      "dependencies": [
+        "stream_processor",
+        "notification_storage"
+      ],
+      "security_considerations": [
+        "function_isolation",
+        "secrets_management",
+        "execution_monitoring"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "operator_dashboard",
+      "service_type": "azure_app_service",
+      "purpose": "Web-based SCADA HMI dashboard for grid operators with real-time visualization and control capabilities",
+      "dependencies": [
+        "time_series_database",
+        "notification_storage"
+      ],
+      "security_considerations": [
+        "authentication_integration",
+        "session_management",
+        "input_validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "notification_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Secure storage of alert logs, operator actions, and compliance audit trails with immutable retention",
+      "dependencies": [],
+      "security_considerations": [
+        "blob_encryption",
+        "access_logging",
+        "retention_policies"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "iot_hub",
+      "service_type": "azure_iothub",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "stream_processor",
+      "service_type": "azure_stream_analytics",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "time_series_database",
+      "service_type": "azure_data_explorer",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "alert_processor",
+      "service_type": "azure_functions",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "operator_dashboard",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "notification_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 330,
+      "resource_count": 20,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "smart_grid_rg"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "scada_vnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "iot_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "iot_nsg"
+        },
+        {
+          "type": "azurerm_key_vault",
+          "name": "scada_kv"
+        },
+        {
+          "type": "azurerm_key_vault_secret",
+          "name": "iot_connection_string"
+        },
+        {
+          "type": "random_string",
+          "name": "suffix"
+        },
+        {
+          "type": "azurerm_iothub",
+          "name": "scada_iot_hub"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "notification_storage"
+        },
+        {
+          "type": "azurerm_storage_account_network_rules",
+          "name": "notification_storage_rules"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "telemetry_container"
+        },
+        {
+          "type": "azurerm_kusto_cluster",
+          "name": "time_series_database"
+        },
+        {
+          "type": "azurerm_kusto_database",
+          "name": "scada_telemetry_db"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "scada_plan"
+        },
+        {
+          "type": "azurerm_linux_function_app",
+          "name": "alert_processor"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "operator_dashboard"
+        },
+        {
+          "type": "azurerm_stream_analytics_job",
+          "name": "stream_processor"
+        },
+        {
+          "type": "azurerm_monitor_log_profile",
+          "name": "scada_monitoring"
+        },
+        {
+          "type": "azurerm_security_center_contact",
+          "name": "scada_security_contact"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 35,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 51,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 140,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

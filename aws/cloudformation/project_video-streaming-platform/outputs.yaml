@@ -1,0 +1,66 @@
+Outputs:
+  VPCId:
+    Description: VPC ID for the video streaming platform
+    Value: !Ref VideoStreamingVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+
+  VideoStorageBucketName:
+    Description: S3 bucket name for video storage
+    Value: !Ref VideoStorageBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-VideoStorage-Bucket"
+
+  CloudFrontDistributionId:
+    Description: CloudFront distribution ID
+    Value: !Ref VideoContentDistribution
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFront-ID"
+
+  CloudFrontDomainName:
+    Description: CloudFront distribution domain name
+    Value: !GetAtt VideoContentDistribution.DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFront-Domain"
+
+  DatabaseEndpoint:
+    Description: RDS database endpoint
+    Value: !GetAtt ApplicationDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-Database-Endpoint"
+
+  APIGatewayURL:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${VideoStreamingAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Export:
+      Name: !Sub "${AWS::StackName}-API-URL"
+
+  UserManagementInstanceId:
+    Description: EC2 instance ID for user management service
+    Value: !Ref UserManagementInstance
+    Export:
+      Name: !Sub "${AWS::StackName}-UserMgmt-Instance"
+
+  VideoProcessingFunctionArn:
+    Description: Lambda function ARN for video processing
+    Value: !GetAtt VideoProcessingFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-VideoProcessing-Function"
+
+  ElastiCacheEndpoint:
+    Description: ElastiCache Redis endpoint
+    Value: !GetAtt VideoMetadataCache.RedisEndpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-Cache-Endpoint"
+
+  PublicSubnetId:
+    Description: Public subnet ID
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-Public-Subnet"
+
+  PrivateSubnetId:
+    Description: Private subnet ID
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-Subnet"

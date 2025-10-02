@@ -1,0 +1,408 @@
+{
+  "project_labels": {
+    "project_id": "azure_hr_talent_platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 3,
+        "monitoring": 1
+      },
+      "by_trivy_service": {
+        "storage": 2,
+        "database": 1,
+        "appservice": 1,
+        "network": 1,
+        "monitor": 1,
+        "authorization": 1
+      }
+    },
+    "complexity_score": 7,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AZURE-STORAGE-ENFORCE_HTTPS",
+        "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET",
+        "AZURE-AUTHORIZATION-LIMIT_ROLE_ACTIONS"
+      ],
+      "services_covered": [
+        "storage",
+        "database",
+        "appservice",
+        "network",
+        "monitor",
+        "authorization"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AZURE-STORAGE-ENFORCE_HTTPS",
+      "trivy_rule_info": {
+        "original_file": "enforce_https.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/storage/enforce_https.yaml"
+      },
+      "vulnerability_class": "transport_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access_to_storage",
+        "ability_to_intercept_traffic"
+      ],
+      "mitigation_strategies": [
+        "enable_https_traffic_only",
+        "enforce_tls_minimum_version",
+        "implement_network_restrictions"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "enable_https_traffic_only = false",
+        "secure_pattern": "enable_https_traffic_only = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "transport_security",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_access.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/no_public_access.yaml"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity",
+        "database_credentials_or_exploits"
+      ],
+      "mitigation_strategies": [
+        "disable_public_network_access",
+        "implement_private_endpoints",
+        "configure_firewall_rules",
+        "use_vnet_integration"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "public_network_access_enabled = true",
+        "secure_pattern": "public_network_access_enabled = false"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+      "trivy_rule_info": {
+        "original_file": "enforce_https.yaml",
+        "service_category": "appservice",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/appservice/enforce_https.yaml"
+      },
+      "vulnerability_class": "transport_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access_to_application",
+        "ability_to_intercept_traffic"
+      ],
+      "mitigation_strategies": [
+        "enable_https_only",
+        "configure_ssl_certificates",
+        "implement_hsts_headers"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "missing https_only = true",
+        "secure_pattern": "https_only = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "transport_security",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+      "trivy_rule_info": {
+        "original_file": "ssh_blocked_from_internet.yaml",
+        "service_category": "network",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/network/ssh_blocked_from_internet.yaml"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "CIS_CONTROLS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "ssh_credentials",
+        "brute_force_capabilities",
+        "internet_access"
+      ],
+      "mitigation_strategies": [
+        "restrict_source_ip_ranges",
+        "use_bastion_hosts",
+        "implement_just_in_time_access",
+        "disable_ssh_entirely"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "source_address_prefix = \"*\" for port 22",
+        "secure_pattern": "source_address_prefix = \"specific_ip_range\" for port 22"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/storage/use_secure_tls_policy.yaml"
+      },
+      "vulnerability_class": "cryptographic_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "tls_downgrade_attack_capabilities"
+      ],
+      "mitigation_strategies": [
+        "set_minimum_tls_1_2",
+        "disable_legacy_protocols",
+        "implement_perfect_forward_secrecy"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "min_tls_version = \"TLS1_0\"",
+        "secure_pattern": "min_tls_version = \"TLS1_2\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "cryptographic_weakness",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET",
+      "trivy_rule_info": {
+        "original_file": "activity_log_retention_set.yaml",
+        "service_category": "monitor",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/monitor/activity_log_retention_set.yaml"
+      },
+      "vulnerability_class": "logging_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "SOC2",
+        "GDPR",
+        "HIPAA",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "existing_system_compromise",
+        "insider_threat_scenario"
+      ],
+      "mitigation_strategies": [
+        "configure_adequate_retention_period",
+        "implement_log_forwarding",
+        "enable_immutable_storage"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "retention_policy { days = 7 }",
+        "secure_pattern": "retention_policy { days = 365 }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_monitoring",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-AUTHORIZATION-LIMIT_ROLE_ACTIONS",
+      "trivy_rule_info": {
+        "original_file": "limit_role_actions.yaml",
+        "service_category": "authorization",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/authorization/limit_role_actions.yaml"
+      },
+      "vulnerability_class": "privilege_escalation",
+      "detection_difficulty": "medium",
+      "remediation_effort": "high",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "GDPR",
+        "LEAST_PRIVILEGE"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "role_assignment",
+        "authenticated_access",
+        "privilege_abuse"
+      ],
+      "mitigation_strategies": [
+        "implement_least_privilege",
+        "scope_roles_appropriately",
+        "regular_access_reviews",
+        "use_built_in_roles"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "assignable_scopes = [\"/\"]",
+        "secure_pattern": "assignable_scopes = [data.azurerm_subscription.primary.id]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "privilege_escalation",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "7 medium severity findings across storage, database, appservice, network, monitor, and authorization services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_azure_security_misconfigurations",
+      "learn_trivy_detection_capabilities",
+      "master_infrastructure_security_best_practices",
+      "recognize_common_cloud_security_patterns",
+      "understand_compliance_requirements_mapping"
+    ],
+    "prerequisite_knowledge": [
+      "basic_azure_services_knowledge",
+      "terraform_syntax_understanding",
+      "cloud_security_fundamentals",
+      "network_security_concepts"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "transport_security_is_critical_for_sensitive_data",
+      "public_database_access_creates_major_risk",
+      "network_security_groups_need_careful_configuration",
+      "logging_retention_supports_incident_response",
+      "least_privilege_principle_prevents_privilege_escalation",
+      "trivy_provides_comprehensive_iac_security_scanning"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "component_count": 7,
+    "file_count": 4,
+    "service_categories": [
+      "database",
+      "authorization",
+      "monitor",
+      "storage",
+      "network",
+      "appservice"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "azure_hr_talent_platform",
+    "generation_timestamp": "2025-08-08T17:53:16.157641",
+    "version": "1.0",
+    "data_quality": "medium"
+  }
+}

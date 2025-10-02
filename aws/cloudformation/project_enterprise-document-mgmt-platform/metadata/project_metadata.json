@@ -1,0 +1,334 @@
+{
+  "project_info": {
+    "project_id": "enterprise-document-mgmt-platform",
+    "project_name": "Enterprise Document Management Platform",
+    "description": "A secure document management system for a mid-size law firm handling sensitive legal documents. The platform provides document upload, version control, full-text search, automated retention policies, and audit trails. Features include client portal access, attorney collaboration tools, and integration with existing practice management systems. All documents are encrypted at rest and in transit with detailed access logging for compliance requirements.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "web_application",
+    "business_context": "Legal firm with 50+ attorneys needs to digitize and securely manage client documents, contracts, and case files. Must support concurrent access by attorneys, paralegals, and clients while maintaining strict access controls and audit trails for regulatory compliance and client confidentiality.",
+    "components": [
+      {
+        "name": "web_application_tier",
+        "service_type": "aws_ec2_instance",
+        "purpose": "Hosts the main web application for document management interface, user authentication, and business logic",
+        "dependencies": [
+          "document_storage",
+          "metadata_database",
+          "search_engine"
+        ],
+        "security_considerations": [
+          "web_application_vulnerabilities",
+          "session_management",
+          "input_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "document_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Encrypted storage for all legal documents with versioning and lifecycle policies for retention management",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_policies",
+          "data_retention_compliance"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "metadata_database",
+        "service_type": "aws_rds_instance",
+        "purpose": "Stores document metadata, user permissions, access logs, and audit trails in encrypted PostgreSQL database",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "connection_security",
+          "backup_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "search_engine",
+        "service_type": "aws_elasticsearch_domain",
+        "purpose": "Provides full-text search capabilities across document content with role-based result filtering",
+        "dependencies": [
+          "document_storage"
+        ],
+        "security_considerations": [
+          "search_result_authorization",
+          "index_encryption",
+          "query_logging"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Distributes traffic across web application instances with SSL termination and health checks",
+        "dependencies": [
+          "web_application_tier"
+        ],
+        "security_considerations": [
+          "ssl_certificate_management",
+          "ddos_protection",
+          "request_filtering"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "document_processor",
+        "service_type": "aws_lambda_function",
+        "purpose": "Serverless function for document processing tasks like OCR, format conversion, and metadata extraction",
+        "dependencies": [
+          "document_storage",
+          "metadata_database"
+        ],
+        "security_considerations": [
+          "function_permissions",
+          "temporary_file_handling",
+          "processing_isolation"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two availability zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Load balancer in public subnet routes to web servers in private subnet",
+        "Web servers connect to RDS and Elasticsearch in data subnet",
+        "Lambda functions access S3 and RDS through VPC endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "security_components": 6,
+      "serverless_functions": 2,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:28:11.040357"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-ENABLE_BUCKET_ENCRYPTION",
+        "title": "Enable Bucket Encryption",
+        "description": "S3 bucket storing sensitive legal documents lacks server-side encryption configuration, exposing confidential client data to potential unauthorized access if the bucket is compromised",
+        "severity": "high",
+        "affected_component": "document_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted legal documents could expose sensitive client information, violating attorney-client privilege and regulatory compliance requirements",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            BucketEncryption:\n              ServerSideEncryptionConfiguration:\n                - BucketKeyEnabled: true\n                  ServerSideEncryptionByDefault:\n                    SSEAlgorithm: AES256\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "enable_bucket_encryption.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket resource without BucketEncryption property in CloudFormation template",
+          "explanation": "Missing encryption configuration leaves documents stored in plaintext, vulnerable to data breaches"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "title": "Encrypt Instance Storage Data",
+        "description": "RDS PostgreSQL database storing document metadata, user permissions, and audit trails lacks storage encryption, exposing sensitive legal case information",
+        "severity": "high",
+        "affected_component": "metadata_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted database could expose client case details, attorney work product, and access logs, creating legal liability and compliance violations",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            KmsKeyId: something\n            StorageEncrypted: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            StorageEncrypted: false",
+        "file_name": "encrypt_instance_storage_data.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set StorageEncrypted to false or omit the property in RDS instance configuration",
+          "explanation": "Database storage remains unencrypted, making metadata and audit logs vulnerable to unauthorized access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELASTICSEARCH-ENFORCE_HTTPS",
+        "title": "Enforce Https",
+        "description": "Elasticsearch domain providing full-text search across legal documents does not enforce HTTPS, allowing potential interception of sensitive search queries and results",
+        "severity": "medium",
+        "affected_component": "search_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Search queries containing sensitive legal terms and document content could be intercepted, compromising client confidentiality",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Elasticsearch::Domain\n          Properties:\n            DomainEndpointOptions:\n              EnforceHTTPS: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Elasticsearch::Domain",
+        "file_name": "enforce_https.yaml",
+        "service": "elasticsearch",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit DomainEndpointOptions or set EnforceHTTPS to false in Elasticsearch domain configuration",
+          "explanation": "Without HTTPS enforcement, search communications can be intercepted in transit"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "Lambda function handling document processing tasks lacks X-Ray tracing, reducing visibility into processing workflows and potential security incidents",
+        "severity": "medium",
+        "affected_component": "document_processor",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Limited observability into document processing could delay detection of security incidents or unauthorized access attempts",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x\n            TracingConfig:\n              Mode: Active\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit TracingConfig property or set Mode to PassThrough in Lambda function configuration",
+          "explanation": "Without active tracing, security monitoring and incident response capabilities are significantly reduced"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ENABLE_AT_REST_ENCRYPTION",
+        "title": "Enable At Rest Encryption",
+        "description": "EC2 instances hosting the web application tier lack EBS volume encryption, potentially exposing application data and temporary files",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted EC2 storage could expose application logs, cached data, and temporary files containing sensitive legal information",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            BlockDeviceMappings:\n              - DeviceName: /dev/sdm\n                Ebs:\n                  Encrypted: true\n            ImageId: ami-79fd7eee\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            BlockDeviceMappings:\n              - DeviceName: /dev/sdm\n                Ebs:\n                  Encrypted: false\n            ImageId: ami-79fd7eee",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set Encrypted to false or omit encryption in EBS BlockDeviceMappings configuration",
+          "explanation": "Unencrypted EBS volumes expose application data stored on disk to unauthorized access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_LOGGING",
+        "title": "Enable Logging",
+        "description": "S3 bucket storing legal documents lacks access logging configuration, preventing audit trail generation required for legal compliance",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Missing access logs prevent tracking of document access patterns, hindering compliance audits and security incident investigation",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            LoggingConfiguration:\n              DestinationBucketName: !Ref TestLoggingBucket\n              LogFilePrefix: accesslogs/\n\n        TestLoggingBucket:\n          Type: AWS::S3::Bucket\n          Properties:\n            AccessControl: LogDeliveryWrite\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket\n          Properties: null",
+        "file_name": "enable_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit LoggingConfiguration property in S3 bucket definition",
+          "explanation": "Without access logging, there's no audit trail for document access, violating legal compliance requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-ENFORCE_GROUP_MFA",
+        "title": "Enforce Group Mfa",
+        "description": "IAM groups for attorneys and staff lack MFA enforcement policies, allowing potential unauthorized access to sensitive legal documents with just password authentication",
+        "severity": "high",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without MFA requirements, compromised passwords could lead to unauthorized access to confidential client documents and case files",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_group\" \"support\" {\n        name = \"support\"\n      }\n      resource \"aws_iam_group_policy\" \"mfa\" {\n\n        group  = aws_iam_group.support.name\n        policy = <<EOF\n      {\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [\n          {\n            \"Sid\": \"\",\n            \"Effect\": \"Allow\",\n            \"Action\": \"ec2:*\",\n            \"Resource\": \"*\",\n            \"Condition\": {\n                \"Bool\": {\n                    \"aws:MultiFactorAuthPresent\": [\"true\"]\n                }\n            }\n          }\n        ]\n      }\n      EOF\n      }\n  bad:\n    - |-\n      data \"aws_caller_identity\" \"current\" {}\n      resource \"aws_iam_group\" \"developers\" {\n        name = \"developers\"\n      }",
+        "file_name": "enforce_group_mfa.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM groups without MFA condition policies in attached permissions",
+          "explanation": "Groups without MFA enforcement allow single-factor authentication, increasing risk of unauthorized access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-BLOCK_PUBLIC_POLICY",
+        "title": "Block Public Policy",
+        "description": "S3 bucket storing confidential legal documents lacks public access block configuration, potentially allowing public bucket policies to be applied",
+        "severity": "high",
+        "affected_component": "document_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without public access blocks, misconfigured policies could accidentally expose confidential client documents to the internet",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            PublicAccessBlockConfiguration:\n              BlockPublicPolicy: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "block_public_policy.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit PublicAccessBlockConfiguration or set BlockPublicPolicy to false",
+          "explanation": "Without public access blocks, future policy changes could inadvertently expose sensitive documents"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-S3-ENABLE_BUCKET_ENCRYPTION",
+        "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "AWS-ELASTICSEARCH-ENFORCE_HTTPS",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-EC2-ENABLE_AT_REST_ENCRYPTION",
+        "AWS-S3-ENABLE_LOGGING",
+        "AWS-IAM-ENFORCE_GROUP_MFA",
+        "AWS-S3-BLOCK_PUBLIC_POLICY"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 4,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "s3",
+        "iam",
+        "ec2",
+        "elasticsearch",
+        "rds",
+        "lambda"
+      ],
+      "services_covered": [
+        "s3",
+        "iam",
+        "ec2",
+        "elasticsearch",
+        "rds",
+        "lambda"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 160,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

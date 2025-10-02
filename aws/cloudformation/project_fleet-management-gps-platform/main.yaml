@@ -1,0 +1,491 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Fleet Management GPS Tracking Platform - Complete microservices architecture for logistics company managing 500+ delivery vehicles'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - ProjectName
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnet1Cidr
+          - PublicSubnet2Cidr
+          - PrivateSubnet1Cidr
+          - PrivateSubnet2Cidr
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DatabaseUsername
+          - DatabasePassword
+          - DatabaseInstanceClass
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Environment name for resource tagging
+  
+  ProjectName:
+    Type: String
+    Default: fleet-management-gps-tracking-platform
+    Description: Project name for resource naming
+  
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC
+  
+  PublicSubnet1Cidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for public subnet 1
+  
+  PublicSubnet2Cidr:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for public subnet 2
+  
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: 10.0.10.0/24
+    Description: CIDR block for private subnet 1
+  
+  PrivateSubnet2Cidr:
+    Type: String
+    Default: 10.0.20.0/24
+    Description: CIDR block for private subnet 2
+  
+  DatabaseUsername:
+    Type: String
+    Default: fleetadmin
+    Description: Database master username
+  
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Database master password
+  
+  DatabaseInstanceClass:
+    Type: String
+    Default: db.t3.medium
+    AllowedValues: [db.t3.micro, db.t3.small, db.t3.medium, db.t3.large]
+    Description: RDS instance class
+
+Resources:
+  # VPC and Networking
+  FleetVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+        - Key: Environment
+          Value: !Ref Environment
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref FleetVPC
+
+  # Public Subnets
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FleetVPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet1Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet-1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FleetVPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet2Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet-2"
+
+  # Private Subnets - VULNERABILITY: MapPublicIpOnLaunch set to true
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FleetVPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-subnet-1"
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FleetVPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-subnet-2"
+
+  # Route Tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref FleetVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-rt"
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  # Security Groups - VULNERABILITY: Missing descriptions on rules
+  FleetApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${ProjectName}-app-sg"
+      GroupDescription: Security group for fleet application servers
+      VpcId: !Ref FleetVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-app-sg"
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${ProjectName}-db-sg"
+      GroupDescription: Security group for fleet database
+      VpcId: !Ref FleetVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref FleetApplicationSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-sg"
+
+  # S3 Bucket for tracking data storage - VULNERABILITY: No public access block
+  TrackingDataStorage:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-tracking-data-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-tracking-data"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Database Subnet Group
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub "${ProjectName}-db-subnet-group"
+      DBSubnetGroupDescription: Subnet group for fleet database
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-subnet-group"
+
+  # RDS Database - VULNERABILITY: PubliclyAccessible set to true and no encryption
+  FleetDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${ProjectName}-database"
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      Engine: mysql
+      EngineVersion: '8.0.35'
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      AllocatedStorage: 100
+      StorageType: gp2
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      PubliclyAccessible: true
+      BackupRetentionPeriod: 7
+      MultiAZ: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Kinesis Data Stream for vehicle data ingestion
+  VehicleDataIngestionStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: !Sub "${ProjectName}-vehicle-data-stream"
+      ShardCount: 5
+      RetentionPeriod: 168
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vehicle-data-stream"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # IAM Role for EC2 instances
+  FleetApplicationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-app-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub "${TrackingDataStorage}/*"
+        - PolicyName: KinesisAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:PutRecord
+                  - kinesis:PutRecords
+                  - kinesis:GetRecords
+                  - kinesis:GetShardIterator
+                  - kinesis:DescribeStream
+                Resource: !GetAtt VehicleDataIngestionStream.Arn
+
+  FleetApplicationInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${ProjectName}-app-profile"
+      Roles:
+        - !Ref FleetApplicationRole
+
+  # Launch Template for Auto Scaling Group
+  FleetApplicationLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${ProjectName}-app-template"
+      LaunchTemplateData:
+        ImageId: ami-0c02fb55956c7d316
+        InstanceType: t3.medium
+        IamInstanceProfile:
+          Arn: !GetAtt FleetApplicationInstanceProfile.Arn
+        SecurityGroupIds:
+          - !Ref FleetApplicationSecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install -y httpd
+            systemctl start httpd
+            systemctl enable httpd
+            echo "<h1>Fleet Management Application Server</h1>" > /var/www/html/index.html
+
+  # Auto Scaling Group
+  FleetApplicationAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${ProjectName}-app-asg"
+      LaunchTemplate:
+        LaunchTemplateId: !Ref FleetApplicationLaunchTemplate
+        Version: !GetAtt FleetApplicationLaunchTemplate.LatestVersionNumber
+      MinSize: 2
+      MaxSize: 6
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      TargetGroupARNs:
+        - !Ref ApplicationLoadBalancerTargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-app-instance"
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: !Ref Environment
+          PropagateAtLaunch: true
+
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${ProjectName}-alb"
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref FleetApplicationSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-alb"
+
+  ApplicationLoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${ProjectName}-tg"
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref FleetVPC
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  ApplicationLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ApplicationLoadBalancerTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  # API Gateway - VULNERABILITY: No X-Ray tracing enabled
+  FleetApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ProjectName}-api"
+      Description: Fleet Management API Gateway
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethod
+    Properties:
+      RestApiId: !Ref FleetApiGateway
+      StageName: prod
+
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref FleetApiGateway
+      ParentId: !GetAtt FleetApiGateway.RootResourceId
+      PathPart: fleet
+
+  ApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref FleetApiGateway
+      ResourceId: !Ref ApiGatewayResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: HTTP_PROXY
+        IntegrationHttpMethod: GET
+        Uri: !Sub "http://${ApplicationLoadBalancer.DNSName}/fleet"
+
+  # CloudFront Distribution - VULNERABILITY: Weak TLS policy
+  FleetWebInterface:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Fleet Management Web Interface
+        DefaultRootObject: index.html
+        Origins:
+          - Id: ApiGatewayOrigin
+            DomainName: !Sub "${FleetApiGateway}.execute-api.${AWS::Region}.amazonaws.com"
+            CustomOriginConfig:
+              HTTPPort: 443
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+        DefaultCacheBehavior:
+          TargetOriginId: ApiGatewayOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+            - PUT
+            - POST
+            - PATCH
+            - DELETE
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          ForwardedValues:
+            QueryString: true
+            Headers:
+              - Authorization
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: TLSv1.0
+        PriceClass: PriceClass_100
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-cloudfront"
+        - Key: Environment
+          Value: !Ref Environment

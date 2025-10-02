@@ -1,0 +1,384 @@
+{
+  "project_info": {
+    "project_id": "video-streaming-platform",
+    "project_name": "Enterprise Video Streaming Platform",
+    "description": "A scalable video streaming platform for corporate training and communications, featuring video upload, transcoding, content delivery, and user management. Designed to handle thousands of concurrent viewers with adaptive bitrate streaming and global content distribution.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "Large enterprise needs an internal video platform for employee training, town halls, and knowledge sharing. Must support live streaming, on-demand content, user authentication, and analytics. Requires global distribution for remote workforce and integration with existing corporate identity systems.",
+    "components": [
+      {
+        "name": "video_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Store raw uploaded videos and transcoded output files with lifecycle policies for cost optimization",
+        "dependencies": [],
+        "security_considerations": [
+          "bucket_encryption",
+          "access_logging",
+          "versioning",
+          "cross_region_replication"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "video_processing",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless video transcoding pipeline triggered by S3 uploads, creates multiple bitrate versions",
+        "dependencies": [
+          "video_storage"
+        ],
+        "security_considerations": [
+          "execution_role_permissions",
+          "vpc_configuration",
+          "environment_variables_encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "content_delivery",
+        "service_type": "aws_cloudfront",
+        "purpose": "Global CDN for low-latency video streaming with edge caching and adaptive bitrate delivery",
+        "dependencies": [
+          "video_storage"
+        ],
+        "security_considerations": [
+          "signed_urls",
+          "geo_restrictions",
+          "ssl_certificates",
+          "origin_access_identity"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API for video metadata, user management, and streaming analytics with rate limiting",
+        "dependencies": [
+          "application_database",
+          "user_management"
+        ],
+        "security_considerations": [
+          "api_keys",
+          "throttling",
+          "cors_configuration",
+          "request_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_database",
+        "service_type": "aws_rds",
+        "purpose": "PostgreSQL database storing video metadata, user profiles, viewing history, and analytics",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "vpc_security_groups",
+          "backup_encryption",
+          "parameter_group_hardening"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "user_management",
+        "service_type": "aws_ec2",
+        "purpose": "Authentication service with LDAP integration for corporate directory synchronization",
+        "dependencies": [
+          "application_database"
+        ],
+        "security_considerations": [
+          "security_groups",
+          "iam_roles",
+          "system_hardening",
+          "patch_management"
+        ],
+        "configuration_complexity": "high"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancers and NAT gateways, private subnets for application servers and databases",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "CloudFront connects to S3 origin",
+        "API Gateway routes to EC2 instances in private subnets",
+        "Lambda functions access S3 and RDS through VPC endpoints",
+        "RDS isolated in data tier with database subnets"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "serverless_functions": 4,
+      "cdn_distributions": 1,
+      "api_gateways": 1,
+      "security_groups": 4,
+      "iam_roles": 3,
+      "total_estimated": 27
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:32:55.907774"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-BLOCK_PUBLIC_ACLS",
+        "title": "Block Public ACLs",
+        "description": "S3 bucket lacks public access block configuration, allowing potential public ACL assignments that could expose video content to unauthorized users",
+        "severity": "medium",
+        "affected_component": "video_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Corporate training videos and sensitive internal communications could be accidentally exposed to the public through misconfigured ACLs",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            PublicAccessBlockConfiguration:\n              BlockPublicAcls: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "block_public_acls.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without PublicAccessBlockConfiguration or with BlockPublicAcls set to false",
+          "explanation": "Without blocking public ACLs, users with bucket permissions could accidentally grant public read access to sensitive video content"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "title": "Disable Public Access",
+        "description": "RDS database instance has public accessibility enabled, exposing user profiles and video metadata to internet-based attacks",
+        "severity": "medium",
+        "affected_component": "application_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Employee personal data, viewing history, and corporate training analytics could be exposed to unauthorized access from the internet",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            PubliclyAccessible: false\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            PubliclyAccessible: true",
+        "file_name": "disable_public_access.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set PubliclyAccessible to true in RDS instance configuration",
+          "explanation": "Public accessibility allows direct internet connections to the database, bypassing application-layer security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-ENFORCE_GROUP_MFA",
+        "title": "Enforce Group MFA",
+        "description": "IAM groups lack multi-factor authentication requirements, allowing privileged access to video platform resources with only password authentication",
+        "severity": "medium",
+        "affected_component": "user_management",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Compromised employee credentials could lead to unauthorized access to corporate video content and user management functions",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_group\" \"support\" {\n        name = \"support\"\n      }\n      resource \"aws_iam_group_policy\" \"mfa\" {\n        group  = aws_iam_group.support.name\n        policy = <<EOF\n      {\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [\n          {\n            \"Condition\": {\n                \"Bool\": {\n                    \"aws:MultiFactorAuthPresent\": [\"true\"]\n                }\n            }\n          }\n        ]\n      }\n      EOF\n      }",
+        "file_name": "enforce_group_mfa.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM groups with policies that don't include aws:MultiFactorAuthPresent condition",
+          "explanation": "Without MFA enforcement, single-factor authentication becomes a weak point for accessing sensitive video platform resources"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_SENSITIVE_INFO",
+        "title": "No Sensitive Info",
+        "description": "EC2 user data contains hardcoded database passwords and API keys for the authentication service, exposing credentials in launch configuration",
+        "severity": "medium",
+        "affected_component": "user_management",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Hardcoded credentials in user data could be extracted by anyone with EC2 describe permissions, compromising the entire authentication system",
+        "trivy_yaml_content": "terraform:\n  bad:\n    - |-\n      resource \"aws_launch_configuration\" \"as_conf\" {\n        name          = \"web_config\"\n        image_id      = data.aws_ami.ubuntu.id\n        instance_type = \"t2.micro\"\n        user_data     = <<EOF\n       export DATABASE_PASSWORD=\\\"SomeSortOfPassword\\\"\n       EOF\n      }",
+        "file_name": "no_sensitive_info.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Include database passwords, API keys, or other secrets directly in EC2 user_data scripts",
+          "explanation": "User data is stored unencrypted and visible to anyone with EC2 permissions, making it unsuitable for sensitive information"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENABLE_ALL_REGIONS",
+        "title": "Enable All Regions",
+        "description": "CloudTrail is not configured for multi-region logging, creating blind spots in audit trails for video platform API calls and resource access",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Security incidents and unauthorized access to video content may go undetected in regions not covered by CloudTrail logging",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            IsLogging: true\n            IsMultiRegionTrail: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::CloudTrail::Trail\n          Properties:\n            IsLogging: true\n            IsMultiRegionTrail: false",
+        "file_name": "enable_all_regions.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set IsMultiRegionTrail to false or omit the property in CloudTrail configuration",
+          "explanation": "Single-region CloudTrail creates audit gaps when resources are accessed from other regions or during region-based attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELASTICACHE-ENABLE_IN_TRANSIT_ENCRYPTION",
+        "title": "Enable In Transit Encryption",
+        "description": "ElastiCache replication group lacks in-transit encryption, exposing cached video metadata and session data during transmission",
+        "severity": "medium",
+        "affected_component": "content_delivery",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "User session tokens, video metadata, and viewing preferences could be intercepted during transmission between application and cache",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::ElastiCache::ReplicationGroup\n          Properties:\n            TransitEncryptionEnabled: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::ElastiCache::ReplicationGroup",
+        "file_name": "enable_in_transit_encryption.yaml",
+        "service": "elasticache",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create ElastiCache replication group without TransitEncryptionEnabled or set to false",
+          "explanation": "Unencrypted data in transit between application servers and cache can be intercepted through network sniffing attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_OBJECT_READ_LOGGING",
+        "title": "Enable Object Read Logging",
+        "description": "S3 bucket lacks CloudTrail data events for object-level read operations, preventing detection of unauthorized video file access",
+        "severity": "medium",
+        "affected_component": "video_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unauthorized downloads of corporate training videos or sensitive communications cannot be detected or audited",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"example\" {\n        event_selector {\n          read_write_type = \"ReadOnly\"\n          data_resource {\n            type   = \"AWS::S3::Object\"\n            values = [\"arn:aws:s3:::${aws_s3_bucket.good_example.bucket}/\"]\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"my-bucket\"\n      }",
+        "file_name": "enable_object_read_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without corresponding CloudTrail data events for object read operations",
+          "explanation": "Without object-level logging, unauthorized access to video files cannot be detected, hindering incident response and compliance"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-S3-BLOCK_PUBLIC_ACLS",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-IAM-ENFORCE_GROUP_MFA",
+        "AWS-EC2-NO_SENSITIVE_INFO",
+        "AWS-CLOUDTRAIL-ENABLE_ALL_REGIONS",
+        "AWS-ELASTICACHE-ENABLE_IN_TRANSIT_ENCRYPTION",
+        "AWS-S3-ENABLE_OBJECT_READ_LOGGING"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "elasticache",
+        "iam",
+        "s3",
+        "cloudtrail",
+        "ec2",
+        "rds"
+      ],
+      "services_covered": [
+        "elasticache",
+        "iam",
+        "s3",
+        "cloudtrail",
+        "ec2",
+        "rds"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "template_format": "cloudformation",
+    "provider": "aws",
+    "resource_count": 29,
+    "component_coverage": {
+      "video_storage": [
+        "VideoStorageBucket",
+        "CloudTrailBucket"
+      ],
+      "video_processing": [
+        "VideoProcessingFunction",
+        "VideoProcessingRole"
+      ],
+      "content_delivery": [
+        "VideoContentDistribution",
+        "CloudFrontOriginAccessIdentity",
+        "VideoMetadataCache",
+        "CacheSubnetGroup",
+        "CacheSecurityGroup"
+      ],
+      "api_gateway": [
+        "VideoStreamingAPI",
+        "APIGatewayResource",
+        "APIGatewayMethod",
+        "APIGatewayDeployment"
+      ],
+      "application_database": [
+        "ApplicationDatabase",
+        "DBSubnetGroup",
+        "DatabaseSecurityGroup"
+      ],
+      "user_management": [
+        "UserManagementInstance",
+        "UserManagementRole",
+        "UserManagementInstanceProfile",
+        "ApplicationSecurityGroup"
+      ]
+    },
+    "networking_resources": [
+      "VideoStreamingVPC",
+      "PublicSubnet1",
+      "PrivateSubnet1",
+      "DataSubnet1",
+      "InternetGateway",
+      "AttachGateway",
+      "PublicRouteTable",
+      "PublicRoute",
+      "PublicSubnetRouteTableAssociation"
+    ],
+    "security_resources": [
+      "DatabaseSecurityGroup",
+      "ApplicationSecurityGroup",
+      "CacheSecurityGroup",
+      "VideoStreamingCloudTrail",
+      "CloudTrailLogGroup"
+    ],
+    "vulnerabilities_injected": 7,
+    "deployment_regions": [
+      "us-east-1",
+      "us-west-2",
+      "eu-west-1"
+    ],
+    "estimated_monthly_cost": "$150-300",
+    "deployment_time_minutes": 15,
+    "architecture_completeness": "100%"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 164,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

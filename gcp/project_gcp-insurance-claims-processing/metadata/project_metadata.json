@@ -1,0 +1,386 @@
+{
+  "project_info": {
+    "project_id": "gcp-insurance-claims-processing",
+    "project_name": "Insurance Claims Processing Platform",
+    "description": "A comprehensive insurance claims processing platform that automates claim intake, document analysis, fraud detection, and approval workflows. The system handles document uploads from mobile apps and web portals, uses AI/ML for document analysis and fraud detection, manages claim data in a secure database, and provides real-time status updates to customers and adjusters. Built for a mid-size insurance company processing 10,000+ claims monthly with regulatory compliance requirements.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "event_driven_microservices",
+    "business_context": "Regional insurance company modernizing their claims processing to reduce manual review time from 5 days to 2 hours, improve fraud detection accuracy by 40%, and provide real-time claim status to policyholders through mobile and web channels",
+    "components": [
+      {
+        "name": "claims_document_storage",
+        "service_type": "google_storage_bucket",
+        "purpose": "Secure storage for claim documents, photos, and supporting evidence with lifecycle management and audit logging",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_logging",
+          "retention_policies",
+          "PII_protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "claims_processing_engine",
+        "service_type": "google_compute_engine",
+        "purpose": "Core application server running claims workflow engine, business rules, and integration APIs",
+        "dependencies": [
+          "claims_database",
+          "claims_document_storage"
+        ],
+        "security_considerations": [
+          "private_subnet_placement",
+          "service_account_permissions",
+          "network_security"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "document_analysis_function",
+        "service_type": "google_cloud_functions",
+        "purpose": "Serverless function for OCR processing, document classification, and data extraction using Vision API",
+        "dependencies": [
+          "claims_document_storage",
+          "claims_database"
+        ],
+        "security_considerations": [
+          "function_permissions",
+          "API_key_management",
+          "data_processing_compliance"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "fraud_detection_service",
+        "service_type": "google_cloud_run",
+        "purpose": "Containerized ML service for real-time fraud scoring and pattern analysis of claims data",
+        "dependencies": [
+          "claims_database"
+        ],
+        "security_considerations": [
+          "container_security",
+          "model_access_control",
+          "sensitive_data_handling"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "claims_database",
+        "service_type": "google_cloud_sql",
+        "purpose": "Primary PostgreSQL database storing claim records, customer data, policy information, and audit trails",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_in_transit",
+          "database_access_control",
+          "backup_encryption",
+          "audit_logging"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "notification_queue",
+        "service_type": "google_cloud_pubsub",
+        "purpose": "Message queue for asynchronous processing of claim status updates, notifications, and workflow triggers",
+        "dependencies": [
+          "claims_processing_engine"
+        ],
+        "security_considerations": [
+          "message_encryption",
+          "topic_access_control",
+          "dead_letter_handling"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "google_cloud_endpoints",
+        "purpose": "Managed API gateway for external integrations, mobile apps, and third-party services with rate limiting and authentication",
+        "dependencies": [
+          "claims_processing_engine"
+        ],
+        "security_considerations": [
+          "API_authentication",
+          "rate_limiting",
+          "request_validation",
+          "SSL_termination"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public subnet for API Gateway and private subnets for application servers and database. NAT Gateway enables outbound internet access for private resources.",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "API Gateway in public subnet routes to private application servers",
+        "Application servers connect to Cloud SQL in data subnet",
+        "Cloud Functions triggered by storage events",
+        "Pub/Sub enables async communication between services"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 6,
+      "security_components": 4,
+      "monitoring_components": 3,
+      "serverless_functions": 2,
+      "messaging_components": 2,
+      "api_management": 1,
+      "load_balancers": 1,
+      "iam_roles": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:23:15.695763"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "title": "No User Granted Permissions",
+        "description": "Direct user permissions granted to IAM resources instead of using service accounts or groups. This violates the principle of least privilege and makes access management difficult to audit and control in the insurance claims processing system.",
+        "severity": "medium",
+        "affected_component": "claims_processing_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Individual user accounts with direct permissions to sensitive claims data create audit trails that are difficult to manage and increase risk of unauthorized access to customer PII and financial information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://www.terraform.io/docs/providers/google/d/iam_policy.html#members\n  good:\n    - |-\n      resource \"google_project_iam_binding\" \"good_example\" {\n        members = [\n          \"group:test@example.com\",\n        ]\n      }\n    - |-\n      resource \"google_storage_bucket_iam_member\" \"good_example\" {\n        member = \"serviceAccount:test@example.com\"\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_binding\" \"bad_example\" {\n        members = [\n          \"user:test@example.com\",\n        ]\n      }\n    - |-\n      resource \"google_project_iam_member\" \"bad_example\" {\n        member = \"user:test@example.com\"\n      }",
+        "file_name": "no_user_granted_permissions.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Grant IAM permissions directly to user accounts for accessing claims processing resources",
+          "explanation": "Creates individual user-based access that's harder to audit and manage compared to service account or group-based permissions"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_DEFAULT_SERVICE_ACCOUNT",
+        "title": "No Default Service Account",
+        "description": "Compute instances using the default service account instead of custom service accounts with minimal permissions. The default service account has broad permissions that violate least privilege principles for the claims processing engine.",
+        "severity": "medium",
+        "affected_component": "claims_processing_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Default service accounts have excessive permissions that could allow lateral movement if the claims processing server is compromised, potentially exposing customer data and financial records",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#\n  good:\n    - |-\n      resource \"google_service_account\" \"default\" {\n        account_id   = \"service_account_id\"\n        display_name = \"Service Account\"\n      }\n\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        service_account {\n          # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.\n          email  = google_service_account.default.email\n          scopes = [\"cloud-platform\"]\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        service_account {\n          # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.\n          email  = \"1234567890-compute@developer.gserviceaccount.com\"\n          scopes = [\"cloud-platform\"]\n        }\n      }",
+        "file_name": "no_default_service_account.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure compute instances to use the default GCP service account instead of creating custom service accounts",
+          "explanation": "Default service accounts have overly broad permissions that violate the principle of least privilege"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-VM_DISK_ENCRYPTION_CUSTOMER_KEY",
+        "title": "VM Disk Encryption Customer Key",
+        "description": "VM disks not encrypted with customer-managed encryption keys (CMEK). For insurance claims processing, sensitive customer data and financial information require additional encryption controls beyond Google-managed keys.",
+        "severity": "medium",
+        "affected_component": "claims_processing_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Claims processing servers storing sensitive customer PII and financial data without customer-managed encryption keys may not meet regulatory compliance requirements for data protection",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#kms_key_self_link\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n          kms_key_self_link = \"something\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n      }",
+        "file_name": "vm_disk_encryption_customer_key.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create compute instances without specifying customer-managed encryption keys for boot disks",
+          "explanation": "Relies on Google-managed encryption keys instead of customer-controlled keys for sensitive data protection"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+        "title": "No Public Ingress",
+        "description": "Firewall rules allowing unrestricted public access (0.0.0.0/0) to compute resources. This creates unnecessary attack surface for the claims processing infrastructure that should be accessed through controlled entry points.",
+        "severity": "medium",
+        "affected_component": "claims_processing_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Open firewall rules expose claims processing servers to internet-wide attacks, potentially allowing unauthorized access to customer data and claims processing systems",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall#source_ranges\n    - https://www.terraform.io/docs/providers/google/r/compute_firewall.html\n  good:\n    - |-\n      resource \"google_compute_firewall\" \"good_example\" {\n        source_ranges = [\"1.2.3.4/32\"]\n        allow {\n          protocol = \"icmp\"\n        }\n      }\n    - |-\n      resource \"google_compute_firewall\" \"allow-vms-to-some-machine\" {\n        name      = \"allow-vms-to-some-machine\"\n        network   = local.network\n        priority  = 1300\n        direction = \"INGRESS\"\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"8081\"]\n        }\n        source_tags = [\"vms\"]\n        target_tags = [\"some-machine\"]\n      }\n  bad:\n    - |-\n      resource \"google_compute_firewall\" \"bad_example\" {\n        source_ranges = [\"0.0.0.0/0\"]\n        allow {\n          protocol = \"icmp\"\n        }\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create firewall rules with source_ranges set to 0.0.0.0/0 allowing unrestricted internet access",
+          "explanation": "Opens compute resources to attacks from any internet source instead of restricting access to known networks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_LOCK_WAITS",
+        "title": "PostgreSQL Log Lock Waits",
+        "description": "PostgreSQL database not configured to log lock waits, which are important for detecting potential security issues and performance problems in the claims database. Lock wait logging helps identify suspicious database activity patterns.",
+        "severity": "medium",
+        "affected_component": "claims_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without lock wait logging, the claims database cannot detect potential security incidents, performance issues, or suspicious access patterns that might indicate data breaches or system compromise",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_lock_waits\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_lock_waits\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_lock_waits.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure PostgreSQL database with log_lock_waits set to 'off' or omit the setting entirely",
+          "explanation": "Disables important security and performance monitoring capabilities that help detect suspicious database activity"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_ERRORS",
+        "title": "PostgreSQL Log Errors",
+        "description": "PostgreSQL database not configured to log errors at an appropriate level. Error logging is crucial for detecting security incidents, failed authentication attempts, and other suspicious activities in the claims database.",
+        "severity": "medium",
+        "affected_component": "claims_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Inadequate error logging prevents detection of security incidents, failed access attempts, and system compromises in the claims database containing sensitive customer and financial data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"WARNING\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"PANIC\"\n          }\n        }\n      }",
+        "file_name": "pg_log_errors.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set PostgreSQL log_min_messages to 'PANIC' or other overly restrictive level that misses important security events",
+          "explanation": "Prevents logging of important error conditions that could indicate security incidents or system compromise"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-NO_CONTAINED_DB_AUTH",
+        "title": "No Contained Database Authentication",
+        "description": "SQL Server database configured to allow contained database authentication, which can bypass server-level security controls. This creates potential security risks for the claims database by allowing database-level authentication that may not be properly audited.",
+        "severity": "medium",
+        "affected_component": "claims_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Contained database authentication can bypass centralized security controls and audit mechanisms, potentially allowing unauthorized access to sensitive claims and customer data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"SQLSERVER_2017_STANDARD\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"contained database authentication\"\n            value = \"off\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"SQLSERVER_2017_STANDARD\"\n        region           = \"us-central1\"\n      }",
+        "file_name": "no_contained_db_auth.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the 'contained database authentication' flag or set it to 'on' in SQL Server instances",
+          "explanation": "Allows database-level authentication that can bypass server-level security controls and audit mechanisms"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "SSL/TLS policies not configured with secure minimum TLS versions. The API gateway and load balancers handling insurance claims data should enforce modern TLS versions to protect data in transit.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak TLS configurations expose customer data and claims information to interception and man-in-the-middle attacks during transmission between mobile apps, web portals, and the claims processing system",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_ssl_policy#min_tls_version\n  good:\n    - |-\n      resource \"google_compute_ssl_policy\" \"good_example\" {\n        name            = \"production-ssl-policy\"\n        profile         = \"MODERN\"\n        min_tls_version = \"TLS_1_2\"\n      }\n  bad:\n    - |-\n      resource \"google_compute_ssl_policy\" \"bad_example\" {\n        name            = \"production-ssl-policy\"\n        profile         = \"MODERN\"\n        min_tls_version = \"TLS_1_1\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure SSL policies with min_tls_version set to TLS_1_1 or older versions",
+          "explanation": "Allows connections using outdated TLS versions that have known security vulnerabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "GOOGLE-COMPUTE-NO_DEFAULT_SERVICE_ACCOUNT",
+        "GOOGLE-COMPUTE-VM_DISK_ENCRYPTION_CUSTOMER_KEY",
+        "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+        "GOOGLE-SQL-PG_LOG_LOCK_WAITS",
+        "GOOGLE-SQL-PG_LOG_ERRORS",
+        "GOOGLE-SQL-NO_CONTAINED_DB_AUTH",
+        "GOOGLE-COMPUTE-USE_SECURE_TLS_POLICY"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "Insurance Claims Processing Platform",
+    "architecture_type": "event_driven_microservices",
+    "total_resources": 29,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 3,
+      "storage": 4,
+      "database": 2,
+      "serverless": 3,
+      "messaging": 2,
+      "security": 4,
+      "iam": 2,
+      "random": 1
+    },
+    "components_implemented": 7,
+    "vulnerabilities_injected": 7,
+    "estimated_monthly_cost": "$150-300",
+    "deployment_time": "15-20 minutes",
+    "terraform_version": ">=1.0",
+    "provider_versions": {
+      "google": "~>4.0"
+    },
+    "required_apis": [
+      "compute.googleapis.com",
+      "sqladmin.googleapis.com",
+      "cloudfunctions.googleapis.com",
+      "run.googleapis.com",
+      "storage.googleapis.com",
+      "pubsub.googleapis.com",
+      "vpcaccess.googleapis.com",
+      "servicenetworking.googleapis.com"
+    ],
+    "compliance_frameworks": [
+      "SOC 2",
+      "GDPR",
+      "Insurance Industry Standards"
+    ]
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 26,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

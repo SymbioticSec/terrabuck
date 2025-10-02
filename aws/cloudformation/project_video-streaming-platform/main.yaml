@@ -1,0 +1,478 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Enterprise Video Streaming Platform - Production Infrastructure'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - ProjectName
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DBUsername
+          - DBPassword
+          - DBInstanceClass
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnetCidr1
+          - PrivateSubnetCidr1
+          - DataSubnetCidr1
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Environment name
+  
+  ProjectName:
+    Type: String
+    Default: enterprise-video-streaming-platform
+    Description: Project name for resource naming
+  
+  DBUsername:
+    Type: String
+    Default: videoplatform
+    Description: Database master username
+  
+  DBPassword:
+    Type: String
+    Default: TempPassword123!
+    NoEcho: true
+    Description: Database master password
+  
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    Description: RDS instance class
+  
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: VPC CIDR block
+  
+  PublicSubnetCidr1:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: Public subnet CIDR
+  
+  PrivateSubnetCidr1:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: Private subnet CIDR
+  
+  DataSubnetCidr1:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: Data subnet CIDR
+
+Resources:
+  # VPC and Networking
+  VideoStreamingVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+        - Key: Environment
+          Value: !Ref Environment
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VideoStreamingVPC
+      CidrBlock: !Ref PublicSubnetCidr1
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet-1"
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VideoStreamingVPC
+      CidrBlock: !Ref PrivateSubnetCidr1
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-subnet-1"
+
+  DataSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VideoStreamingVPC
+      CidrBlock: !Ref DataSubnetCidr1
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-data-subnet-1"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VideoStreamingVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VideoStreamingVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-rt"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  # S3 Bucket for Video Storage (Vulnerable - Missing PublicAccessBlockConfiguration)
+  VideoStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-video-storage-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-video-storage"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # CloudFront Distribution for Content Delivery
+  VideoContentDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt VideoStorageBucket.DomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}"
+        Enabled: true
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-cdn"
+
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "OAI for ${ProjectName}"
+
+  # RDS Database (Vulnerable - PubliclyAccessible: true)
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for video platform database
+      SubnetIds:
+        - !Ref DataSubnet1
+        - !Ref PrivateSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-subnet-group"
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS database
+      VpcId: !Ref VideoStreamingVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ApplicationSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-sg"
+
+  ApplicationDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${ProjectName}-database"
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: postgres
+      EngineVersion: '13.7'
+      AllocatedStorage: 20
+      StorageType: gp2
+      StorageEncrypted: true
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: true
+      BackupRetentionPeriod: 7
+      MultiAZ: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # EC2 Instance for User Management (Vulnerable - Hardcoded credentials in UserData)
+  ApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for application servers
+      VpcId: !Ref VideoStreamingVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-app-sg"
+
+  UserManagementRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-user-management-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-user-management-role"
+
+  UserManagementInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref UserManagementRole
+
+  UserManagementInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0c02fb55956c7d316
+      InstanceType: t3.micro
+      SubnetId: !Ref PrivateSubnet1
+      SecurityGroupIds:
+        - !Ref ApplicationSecurityGroup
+      IamInstanceProfile: !Ref UserManagementInstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          export DATABASE_PASSWORD="SuperSecretPassword123!"
+          export LDAP_ADMIN_PASSWORD="AnotherHardcodedPassword456!"
+          export API_SECRET_KEY="hardcoded-api-key-12345"
+          yum update -y
+          yum install -y docker
+          systemctl start docker
+          systemctl enable docker
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-user-management"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Lambda Function for Video Processing
+  VideoProcessingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-video-processing-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub "${VideoStorageBucket}/*"
+
+  VideoProcessingFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-video-processing"
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt VideoProcessingRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          def lambda_handler(event, context):
+              print("Processing video upload...")
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Video processing initiated')
+              }
+      Timeout: 300
+      MemorySize: 512
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-video-processing"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # API Gateway
+  VideoStreamingAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ProjectName}-api"
+      Description: API for video streaming platform
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  APIGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref VideoStreamingAPI
+      ParentId: !GetAtt VideoStreamingAPI.RootResourceId
+      PathPart: videos
+
+  APIGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref VideoStreamingAPI
+      ResourceId: !Ref APIGatewayResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VideoProcessingFunction.Arn}/invocations"
+
+  APIGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: APIGatewayMethod
+    Properties:
+      RestApiId: !Ref VideoStreamingAPI
+      StageName: prod
+
+  # CloudTrail (Vulnerable - Single region only)
+  CloudTrailLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/cloudtrail/${ProjectName}"
+      RetentionInDays: 30
+
+  VideoStreamingCloudTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: !Sub "${ProjectName}-cloudtrail"
+      S3BucketName: !Ref CloudTrailBucket
+      IsLogging: true
+      IsMultiRegionTrail: false
+      IncludeGlobalServiceEvents: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-cloudtrail"
+
+  CloudTrailBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-cloudtrail-${AWS::AccountId}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # ElastiCache for Content Delivery Caching (Vulnerable - No transit encryption)
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnet group for ElastiCache
+      SubnetIds:
+        - !Ref PrivateSubnet1
+
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ElastiCache
+      VpcId: !Ref VideoStreamingVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref ApplicationSecurityGroup
+
+  VideoMetadataCache:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupId: !Sub "${ProjectName}-cache"
+      Description: Cache for video metadata and sessions
+      NumCacheClusters: 2
+      Engine: redis
+      CacheNodeType: cache.t3.micro
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      SecurityGroupIds:
+        - !Ref CacheSecurityGroup
+      AtRestEncryptionEnabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-cache"

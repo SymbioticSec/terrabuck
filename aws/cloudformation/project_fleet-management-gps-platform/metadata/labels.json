@@ -1,0 +1,397 @@
+{
+  "project_labels": {
+    "project_id": "fleet-management-gps-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 1,
+        "high": 2,
+        "medium": 4
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "network": 1,
+        "observability": 1
+      },
+      "by_trivy_service": {
+        "s3": 1,
+        "rds": 2,
+        "ec2": 2,
+        "apigateway": 1,
+        "cloudfront": 1
+      }
+    },
+    "complexity_score": 7,
+    "realism_score": 9,
+    "educational_value": 8,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-S3-NO_PUBLIC_BUCKETS",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+        "AWS-APIGATEWAY-ENABLE_TRACING",
+        "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "AWS-EC2-NO_PUBLIC_IP_SUBNET"
+      ],
+      "services_covered": [
+        "storage",
+        "database",
+        "compute",
+        "networking",
+        "cdn"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-S3-NO_PUBLIC_BUCKETS",
+      "trivy_rule_info": {
+        "original_file": "no_public_buckets.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/s3/no_public_buckets.yaml"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "bucket_enumeration"
+      ],
+      "mitigation_strategies": [
+        "enable_public_access_block",
+        "bucket_policy_restrictions",
+        "iam_access_controls"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::S3::Bucket without PublicAccessBlockConfiguration",
+        "secure_pattern": "AWS::S3::Bucket with PublicAccessBlockConfiguration.RestrictPublicBuckets: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "disable_public_access.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/rds/disable_public_access.yaml"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "database_credentials"
+      ],
+      "mitigation_strategies": [
+        "disable_public_accessibility",
+        "vpc_security_groups",
+        "network_acls"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::RDS::DBInstance with PubliclyAccessible: true",
+        "secure_pattern": "AWS::RDS::DBInstance with PubliclyAccessible: false"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 9.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP_RULE",
+      "trivy_rule_info": {
+        "original_file": "add_description_to_security_group_rule.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/ec2/add_description_to_security_group_rule.yaml"
+      },
+      "vulnerability_class": "configuration_management",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 4,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "adjacent",
+      "prerequisites": [
+        "configuration_access",
+        "security_audit_gaps"
+      ],
+      "mitigation_strategies": [
+        "add_rule_descriptions",
+        "documentation_standards",
+        "automated_compliance_checks"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "SecurityGroupIngress/Egress rules without Description field",
+        "secure_pattern": "SecurityGroupIngress/Egress rules with meaningful Description field"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "configuration_management",
+        "severity_numeric": 4.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-APIGATEWAY-ENABLE_TRACING",
+      "trivy_rule_info": {
+        "original_file": "enable_tracing.yaml",
+        "service_category": "networking",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/apigateway/enable_tracing.yaml"
+      },
+      "vulnerability_class": "observability",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "api_access",
+        "monitoring_gaps"
+      ],
+      "mitigation_strategies": [
+        "enable_xray_tracing",
+        "cloudwatch_logging",
+        "api_monitoring"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_api_gateway_stage with xray_tracing_enabled: false or omitted",
+        "secure_pattern": "aws_api_gateway_stage with xray_tracing_enabled: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "observability",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "networking",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/cloudfront/use_secure_tls_policy.yaml"
+      },
+      "vulnerability_class": "encryption",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_interception",
+        "tls_downgrade_attack"
+      ],
+      "mitigation_strategies": [
+        "update_tls_policy",
+        "enforce_modern_protocols",
+        "security_headers"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "MinimumProtocolVersion: TLSv1.0 or older versions",
+        "secure_pattern": "MinimumProtocolVersion: TLSv1.2_2021 or newer"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+      "trivy_rule_info": {
+        "original_file": "encrypt_cluster_storage_data.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/rds/encrypt_cluster_storage_data.yaml"
+      },
+      "vulnerability_class": "encryption",
+      "detection_difficulty": "easy",
+      "remediation_effort": "high",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "PCI-DSS",
+        "HIPAA",
+        "SOC2"
+      ],
+      "attack_vector": "physical",
+      "prerequisites": [
+        "storage_access",
+        "data_breach"
+      ],
+      "mitigation_strategies": [
+        "enable_storage_encryption",
+        "customer_managed_keys",
+        "encryption_at_rest"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::RDS::DBCluster with StorageEncrypted: false or missing KmsKeyId",
+        "secure_pattern": "AWS::RDS::DBCluster with StorageEncrypted: true and KmsKeyId specified"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+      "trivy_rule_info": {
+        "original_file": "no_public_ip_subnet.yaml",
+        "service_category": "networking",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/ec2/no_public_ip_subnet.yaml"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_access",
+        "service_enumeration"
+      ],
+      "mitigation_strategies": [
+        "disable_auto_public_ip",
+        "nat_gateway_configuration",
+        "private_subnet_design"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::EC2::Subnet with MapPublicIpOnLaunch: true in private subnets",
+        "secure_pattern": "AWS::EC2::Subnet with MapPublicIpOnLaunch: false or omitted for private subnets"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_checking",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,CRITICAL ./cloudformation/",
+      "expected_trivy_output": "7 vulnerabilities detected across S3, RDS, EC2, API Gateway, and CloudFront services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand common AWS security misconfigurations in fleet management systems",
+      "Learn how Trivy detects infrastructure security issues",
+      "Practice identifying access control vulnerabilities",
+      "Master encryption and network security best practices",
+      "Develop skills in automated security scanning integration"
+    ],
+    "prerequisite_knowledge": [
+      "AWS CloudFormation basics",
+      "Infrastructure security fundamentals",
+      "Fleet management system architecture",
+      "Trivy security scanner concepts"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Public access controls are critical for sensitive fleet data",
+      "Database encryption is mandatory for compliance",
+      "Network segmentation prevents lateral movement",
+      "Observability enables security incident detection",
+      "Trivy provides comprehensive infrastructure security scanning"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": true,
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "apigateway",
+      "cloudfront",
+      "s3",
+      "ec2",
+      "rds"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "fleet-management-gps-platform",
+    "generation_timestamp": "2025-08-08T16:19:19.003576",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "original_components": [
+    {
+      "name": "api_gateway_cluster",
+      "service_type": "aws_api_gateway",
+      "purpose": "Primary API gateway handling all incoming requests with throttling, authentication, and routing to backend services",
+      "dependencies": [
+        "authentication_service",
+        "backend_services",
+        "analytics_storage"
+      ],
+      "security_considerations": [
+        "API key management",
+        "OAuth 2.0 integration",
+        "rate limiting",
+        "DDoS protection"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "authentication_service",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless authentication and authorization service handling JWT tokens, API keys, and enterprise SSO integration",
+      "dependencies": [
+        "user_database",
+        "api_gateway_cluster"
+      ],
+      "security_considerations": [
+        "JWT token validation",
+        "credential encryption",
+        "session management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "backend_services",
+      "service_type": "aws_ecs",
+      "purpose": "Containerized backend microservices running business logic and data processing behind the API gateway",
+      "dependencies": [
+        "application_database",
+        "api_gateway_cluster"
+      ],
+      "security_considerations": [
+        "container security",
+        "service-to-service authentication",
+        "network isolation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "application_database",
+      "service_type": "aws_rds",
+      "purpose": "Primary PostgreSQL database storing application data, API configurations, and business records",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption at rest",
+        "backup security",
+        "access control",
+        "audit logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "user_database",
+      "service_type": "aws_dynamodb",
+      "purpose": "NoSQL database storing user profiles, API keys, authentication tokens, and session data for fast lookups",
+      "dependencies": [],
+      "security_considerations": [
+        "data encryption",
+        "fine-grained access control",
+        "audit trails"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "analytics_storage",
+      "service_type": "aws_s3",
+      "purpose": "Data lake storing API usage logs, performance metrics, and analytics data for reporting and monitoring",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket policies",
+        "data lifecycle management",
+        "access logging"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "developer_portal",
+      "service_type": "aws_cloudfront",
+      "purpose": "CDN-hosted developer portal providing API documentation, testing tools, and self-service API key management",
+      "dependencies": [
+        "analytics_storage",
+        "authentication_service"
+      ],
+      "security_considerations": [
+        "SSL/TLS termination",
+        "origin access control",
+        "geographic restrictions"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "api_gateway_cluster",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "authentication_service",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backend_services",
+      "service_type": "aws_ecs",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_database",
+      "service_type": "aws_rds",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "user_database",
+      "service_type": "aws_dynamodb",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "analytics_storage",
+      "service_type": "aws_s3",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "developer_portal",
+      "service_type": "aws_cloudfront",
+      "implementation_confidence": 0.9999999999999999
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 692,
+      "resource_count": 202,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 82,
+      "resource_count": 12,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 75,
+      "resource_count": 16,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 53,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,346 @@
+{
+  "project_info": {
+    "project_id": "gcp_ecommerce_analytics_platform",
+    "project_name": "E-commerce Real-time Analytics Platform",
+    "description": "A real-time analytics platform for a mid-sized e-commerce company that processes customer behavior data, product interactions, and sales metrics. The system ingests clickstream data from web applications, processes it in real-time, and provides business intelligence dashboards for marketing teams and executives. Includes customer segmentation, product recommendation engines, and fraud detection capabilities.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "event_driven_analytics",
+    "business_context": "An e-commerce company with 500K+ monthly active users needs real-time insights into customer behavior, sales performance, and inventory optimization. Marketing teams require immediate access to conversion metrics, while the fraud detection system must process transactions within seconds to prevent losses.",
+    "components": [
+      {
+        "name": "data_ingestion_gateway",
+        "service_type": "google_cloud_run_service",
+        "purpose": "Receives and validates incoming clickstream data, user events, and transaction data from web/mobile applications",
+        "dependencies": [],
+        "security_considerations": [
+          "API authentication",
+          "rate limiting",
+          "input validation",
+          "DDoS protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "event_streaming_pipeline",
+        "service_type": "google_pubsub_topic",
+        "purpose": "Manages real-time event streaming and message queuing for high-throughput data processing",
+        "dependencies": [
+          "data_ingestion_gateway"
+        ],
+        "security_considerations": [
+          "message encryption",
+          "access control",
+          "dead letter queues"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "analytics_processor",
+        "service_type": "google_cloud_functions",
+        "purpose": "Processes streaming data for real-time analytics, customer segmentation, and fraud detection algorithms",
+        "dependencies": [
+          "event_streaming_pipeline"
+        ],
+        "security_considerations": [
+          "function permissions",
+          "environment variables",
+          "VPC connector security"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "analytics_database",
+        "service_type": "google_sql_database_instance",
+        "purpose": "Stores processed analytics data, customer profiles, and business metrics for dashboard queries",
+        "dependencies": [
+          "analytics_processor"
+        ],
+        "security_considerations": [
+          "database encryption",
+          "backup security",
+          "connection SSL",
+          "user access control"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "data_warehouse",
+        "service_type": "google_bigquery_dataset",
+        "purpose": "Long-term storage and complex analytical queries for historical data analysis and reporting",
+        "dependencies": [
+          "analytics_processor"
+        ],
+        "security_considerations": [
+          "dataset permissions",
+          "column-level security",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "dashboard_application",
+        "service_type": "google_compute_instance",
+        "purpose": "Hosts the business intelligence dashboard application for marketing teams and executives",
+        "dependencies": [
+          "analytics_database",
+          "data_warehouse"
+        ],
+        "security_considerations": [
+          "instance hardening",
+          "firewall rules",
+          "SSH key management",
+          "application security"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public subnet for ingestion gateway and private subnets for processing components and databases",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet \u2192 Cloud Run (public)",
+        "Cloud Run \u2192 Pub/Sub \u2192 Cloud Functions (private)",
+        "Functions \u2192 Cloud SQL/BigQuery (data zone)",
+        "Dashboard VM in private subnet with Cloud NAT"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "serverless_functions": 4,
+      "messaging_services": 3,
+      "security_resources": 6
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T14:46:18.969696"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-SQL-NO_PUBLIC_ACCESS",
+        "title": "No Public Access",
+        "description": "The Cloud SQL database instance allows public access through authorized networks containing 0.0.0.0/0, exposing sensitive analytics data to the internet. This misconfiguration violates the principle of least privilege and creates a significant attack vector for data breaches.",
+        "severity": "high",
+        "affected_component": "analytics_database",
+        "injection_strategy": "Configure authorized_networks with 0.0.0.0/0 in ip_configuration block",
+        "business_impact": "Customer analytics data, transaction records, and business intelligence metrics could be exposed to unauthorized access, leading to data breaches, compliance violations, and competitive intelligence theft",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"10.0.0.1/24\"\n              name  = \"internal\"\n            }\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n\n            authorized_networks {\n              value = \"0.0.0.0/0\"\n              name  = \"internet\"\n            }\n          }\n        }\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add authorized_networks block with value = \"0.0.0.0/0\" in the Cloud SQL instance ip_configuration",
+          "explanation": "This configuration allows any IP address on the internet to attempt connections to the database, bypassing network-level security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_OSLOGIN_OVERRIDE",
+        "title": "No Oslogin Override",
+        "description": "The dashboard compute instance has OS Login disabled through metadata configuration, preventing centralized SSH key management and audit logging. This creates security gaps in access control and compliance monitoring for the business intelligence dashboard server.",
+        "severity": "medium",
+        "affected_component": "dashboard_application",
+        "injection_strategy": "Set enable-oslogin = false in the compute instance metadata block",
+        "business_impact": "Reduced visibility into dashboard server access, difficulty in managing SSH keys at scale, and potential compliance violations for systems handling sensitive business analytics",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#\n  good:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          enable-oslogin = false\n        }\n      }",
+        "file_name": "no_oslogin_override.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add metadata block with enable-oslogin = false to the google_compute_instance resource",
+          "explanation": "Disabling OS Login prevents centralized SSH key management and audit logging, making it harder to track who accessed the dashboard server"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_VPC_FLOW_LOGS",
+        "title": "Enable Vpc Flow Logs",
+        "description": "VPC subnets lack flow logging configuration, preventing network traffic monitoring and security analysis. This is critical for an e-commerce analytics platform that needs to detect suspicious data access patterns and potential data exfiltration attempts.",
+        "severity": "medium",
+        "affected_component": "network_topology",
+        "injection_strategy": "Omit log_config block from google_compute_subnetwork resources",
+        "business_impact": "Limited visibility into network traffic patterns, difficulty detecting data exfiltration attempts, and reduced forensic capabilities during security incidents involving customer data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork#enable_flow_logs\n  good:\n    - |-\n      resource \"google_compute_subnetwork\" \"good_example\" {\n        name          = \"test-subnetwork\"\n        ip_cidr_range = \"10.2.0.0/16\"\n        region        = \"us-central1\"\n        network       = google_compute_network.custom-test.id\n        log_config {\n          aggregation_interval = \"INTERVAL_10_MIN\"\n          flow_sampling        = 0.5\n          metadata             = \"INCLUDE_ALL_METADATA\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_subnetwork\" \"bad_example\" {\n        name          = \"test-subnetwork\"\n        ip_cidr_range = \"10.2.0.0/16\"\n        region        = \"us-central1\"\n        network       = google_compute_network.custom-test.id\n      }",
+        "file_name": "enable_vpc_flow_logs.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create google_compute_subnetwork resources without the log_config block",
+          "explanation": "Missing flow logs prevent monitoring of network traffic, making it difficult to detect suspicious data access or exfiltration attempts"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_CONNECTIONS",
+        "title": "Pg Log Connections",
+        "description": "PostgreSQL database instance has connection logging disabled, preventing audit trails of database access. For an analytics platform handling sensitive customer data, this creates compliance gaps and reduces incident response capabilities.",
+        "severity": "medium",
+        "affected_component": "analytics_database",
+        "injection_strategy": "Set log_connections database flag to 'off' in Cloud SQL settings",
+        "business_impact": "Reduced audit capabilities for database access, difficulty in compliance reporting, and limited forensic information during security incidents involving customer analytics data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_connections\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_connections\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_connections.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add database_flags block with log_connections set to 'off' in the Cloud SQL instance settings",
+          "explanation": "Disabling connection logging prevents tracking of who accessed the database and when, reducing audit capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_SERIAL_PORT",
+        "title": "No Serial Port",
+        "description": "The dashboard compute instance has serial port access enabled, creating an additional attack vector that bypasses normal authentication mechanisms. This is particularly concerning for a server hosting business intelligence dashboards with sensitive analytics data.",
+        "severity": "medium",
+        "affected_component": "dashboard_application",
+        "injection_strategy": "Set serial-port-enable = true in the compute instance metadata",
+        "business_impact": "Additional attack surface for unauthorized access to the dashboard server, potential bypass of normal authentication controls, and increased risk of data exposure",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#\n  good:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          serial-port-enable = false\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          serial-port-enable = true\n        }\n      }",
+        "file_name": "no_serial_port.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add metadata block with serial-port-enable = true to the google_compute_instance resource",
+          "explanation": "Enabling serial port access provides an additional way to access the instance that may bypass normal security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_PROJECT_LEVEL_DEFAULT_SERVICE_ACCOUNT_ASSIGNMENT",
+        "title": "No Project Level Default Service Account Assignment",
+        "description": "Cloud Functions and other services are using default service accounts with excessive permissions instead of dedicated service accounts with minimal required permissions. This violates the principle of least privilege in the analytics processing pipeline.",
+        "severity": "medium",
+        "affected_component": "analytics_processor",
+        "injection_strategy": "Use default compute or App Engine service accounts in IAM bindings",
+        "business_impact": "Over-privileged service accounts increase the blast radius of potential compromises, allowing attackers to access more resources than necessary if the analytics processor is compromised",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/google_project_iam\n  good:\n    - |-\n      resource \"google_service_account\" \"test\" {\n        account_id   = \"account123\"\n        display_name = \"account123\"\n      }\n\n      resource \"google_project_iam_member\" \"project-123\" {\n        project = \"project-123\"\n        role    = \"roles/whatever\"\n        member  = \"serviceAccount:${google_service_account.test.email}\"\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_member\" \"project-123\" {\n        project = \"project-123\"\n        role    = \"roles/whatever\"\n        member  = \"123-compute@developer.gserviceaccount.com\"\n      }",
+        "file_name": "no_project_level_default_service_account_assignment.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Use default service account emails like 'project-compute@developer.gserviceaccount.com' in IAM member assignments",
+          "explanation": "Default service accounts have broad permissions that violate the principle of least privilege, increasing security risks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_IM",
+        "title": "Enable Shielded Vm Im",
+        "description": "The dashboard compute instance lacks integrity monitoring through Shielded VM features, reducing protection against rootkits and boot-level attacks. This is critical for a server hosting business intelligence dashboards that executives and marketing teams rely on.",
+        "severity": "medium",
+        "affected_component": "dashboard_application",
+        "injection_strategy": "Set enable_integrity_monitoring = false in shielded_instance_config",
+        "business_impact": "Reduced protection against advanced persistent threats, rootkits, and boot-level attacks that could compromise the integrity of business intelligence data and dashboards",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#enable_vtpm\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_integrity_monitoring = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_integrity_monitoring = false\n        }\n      }",
+        "file_name": "enable_shielded_vm_im.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add shielded_instance_config block with enable_integrity_monitoring = false",
+          "explanation": "Disabling integrity monitoring removes protection against boot-level attacks and reduces the security posture of the instance"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "GOOGLE-SQL-NO_PUBLIC_ACCESS",
+        "GOOGLE-COMPUTE-NO_OSLOGIN_OVERRIDE",
+        "GOOGLE-COMPUTE-ENABLE_VPC_FLOW_LOGS",
+        "GOOGLE-SQL-PG_LOG_CONNECTIONS",
+        "GOOGLE-COMPUTE-NO_SERIAL_PORT",
+        "GOOGLE-IAM-NO_PROJECT_LEVEL_DEFAULT_SERVICE_ACCOUNT_ASSIGNMENT",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_IM"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 1,
+        "medium": 6,
+        "low": 0
+      },
+      "service_categories": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "template_name": "E-commerce Real-time Analytics Platform",
+    "cloud_provider": "gcp",
+    "total_resources": 25,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 3,
+      "storage": 3,
+      "database": 3,
+      "serverless": 4,
+      "iam": 2,
+      "monitoring": 0,
+      "security": 2
+    },
+    "estimated_monthly_cost_usd": 450,
+    "deployment_time_minutes": 15,
+    "complexity_level": "high",
+    "architecture_components_implemented": 6,
+    "vulnerabilities_injected": 7,
+    "terraform_version_required": ">=1.0",
+    "provider_versions": {
+      "google": "~>4.0"
+    },
+    "required_apis": [
+      "compute.googleapis.com",
+      "run.googleapis.com",
+      "cloudfunctions.googleapis.com",
+      "sqladmin.googleapis.com",
+      "bigquery.googleapis.com",
+      "pubsub.googleapis.com",
+      "vpcaccess.googleapis.com"
+    ],
+    "deployment_regions": [
+      "us-central1"
+    ],
+    "business_use_case": "Real-time e-commerce analytics platform with customer behavior tracking, fraud detection, and business intelligence dashboards"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 24,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

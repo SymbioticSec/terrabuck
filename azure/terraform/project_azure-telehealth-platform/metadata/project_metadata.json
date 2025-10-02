@@ -1,0 +1,334 @@
+{
+  "project_info": {
+    "project_id": "azure-telehealth-platform",
+    "project_name": "Telehealth Video Consultation Platform",
+    "description": "A HIPAA-compliant telehealth platform enabling secure video consultations between healthcare providers and patients. The platform handles patient scheduling, secure video streaming, medical record storage, and real-time chat functionality. Designed for a mid-size healthcare network serving 50,000+ patients with 200+ healthcare providers.",
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "Healthcare organization transitioning to hybrid care model post-COVID, requiring secure, scalable telehealth capabilities with strict compliance requirements for patient data protection and audit trails",
+    "components": [
+      {
+        "name": "web_application_gateway",
+        "service_type": "azure_application_gateway",
+        "purpose": "Load balancing, SSL termination, and WAF protection for web traffic routing to consultation portal",
+        "dependencies": [],
+        "security_considerations": [
+          "SSL/TLS encryption",
+          "WAF rules for OWASP protection",
+          "DDoS protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "consultation_web_app",
+        "service_type": "azure_app_service",
+        "purpose": "Main web application hosting patient and provider portals for scheduling and accessing video consultations",
+        "dependencies": [
+          "web_application_gateway",
+          "consultation_database"
+        ],
+        "security_considerations": [
+          "Authentication integration",
+          "HTTPS enforcement",
+          "HIPAA compliance logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "video_streaming_service",
+        "service_type": "azure_media_services",
+        "purpose": "Real-time video streaming and recording for telehealth consultations with end-to-end encryption",
+        "dependencies": [
+          "consultation_web_app"
+        ],
+        "security_considerations": [
+          "End-to-end encryption",
+          "Access token validation",
+          "Stream recording encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "consultation_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores patient appointments, provider schedules, consultation metadata, and audit logs",
+        "dependencies": [],
+        "security_considerations": [
+          "Transparent Data Encryption",
+          "Always Encrypted for PHI",
+          "Audit logging",
+          "Private endpoints"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "medical_records_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Secure blob storage for consultation recordings, medical documents, and patient files with HIPAA compliance",
+        "dependencies": [
+          "consultation_database"
+        ],
+        "security_considerations": [
+          "Encryption at rest",
+          "Private endpoints",
+          "Access policies",
+          "Audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "notification_service",
+        "service_type": "azure_functions",
+        "purpose": "Serverless functions for sending appointment reminders, consultation notifications, and system alerts",
+        "dependencies": [
+          "consultation_database"
+        ],
+        "security_considerations": [
+          "Managed identity authentication",
+          "Secure API endpoints",
+          "PHI data handling"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with three subnets: public subnet for Application Gateway, private subnet for App Services and Functions, and data subnet for SQL Database with private endpoints",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Application Gateway in public subnet routes traffic to App Service in private subnet",
+        "App Service connects to SQL Database via private endpoint in data subnet",
+        "Media Services accessible only from App Service subnet",
+        "Storage Account accessible via private endpoints from private subnet",
+        "Azure Functions in private subnet with VNet integration"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3,
+      "total_estimated": 24
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:25:28.829685"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "title": "SQL Database Public Network Access Enabled",
+        "description": "The Azure SQL Database has public network access enabled, allowing connections from the internet. This violates HIPAA compliance requirements for PHI protection and creates unnecessary attack surface for the telehealth platform's patient data.",
+        "severity": "high",
+        "affected_component": "consultation_database",
+        "injection_strategy": "Configure azurerm_mssql_server with public_network_access_enabled = true",
+        "business_impact": "Potential unauthorized access to patient health information, HIPAA violations, regulatory fines, and loss of patient trust in telehealth services",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mariadb_server#public_network_access_enabled\n  good:\n    - |-\n      resource \"azurerm_postgresql_server\" \"good_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_postgresql_server\" \"bad_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = true\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set public_network_access_enabled = true in the SQL server configuration",
+          "explanation": "This allows direct internet access to the database containing patient health records, bypassing private endpoint security"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-ENFORCE_HTTPS",
+        "title": "Medical Records Storage Account HTTPS Not Enforced",
+        "description": "The storage account containing medical records and consultation recordings does not enforce HTTPS-only traffic, allowing potential man-in-the-middle attacks on sensitive healthcare data transmission.",
+        "severity": "high",
+        "affected_component": "medical_records_storage",
+        "injection_strategy": "Configure azurerm_storage_account with enable_https_traffic_only = false",
+        "business_impact": "PHI data could be intercepted during transmission, leading to HIPAA violations, patient privacy breaches, and potential medical identity theft",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#enable_https_traffic_only\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = false\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit or set enable_https_traffic_only = false in storage account configuration",
+          "explanation": "This allows unencrypted HTTP connections to the storage containing patient medical records and consultation videos"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "title": "Notification Service Functions Not HTTPS-Only",
+        "description": "The Azure Functions app handling patient notifications and appointment reminders does not enforce HTTPS-only connections, potentially exposing patient communication data.",
+        "severity": "medium",
+        "affected_component": "notification_service",
+        "injection_strategy": "Configure azurerm_function_app without https_only = true",
+        "business_impact": "Patient notification data and appointment information could be intercepted, compromising patient privacy and potentially violating HIPAA requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/function_app#https_only\n  good:\n    - |-\n      resource \"azurerm_function_app\" \"good_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n        https_only                 = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_function_app\" \"bad_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit https_only parameter or set it to false in the function app configuration",
+          "explanation": "This allows HTTP connections to the notification service that handles sensitive patient appointment and health reminders"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "SQL Database Auditing Not Configured",
+        "description": "The consultation database lacks proper auditing configuration, preventing compliance with HIPAA audit trail requirements for tracking access to patient health information.",
+        "severity": "high",
+        "affected_component": "consultation_database",
+        "injection_strategy": "Deploy azurerm_mssql_server without corresponding azurerm_mssql_server_extended_auditing_policy",
+        "business_impact": "Inability to track database access for compliance reporting, forensic analysis difficulties, and potential HIPAA violations due to missing audit trails",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy SQL server without configuring extended auditing policy resource",
+          "explanation": "This prevents tracking of database access patterns required for HIPAA compliance and security monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-THREAT_ALERT_EMAIL_SET",
+        "title": "Database Threat Detection Email Alerts Not Configured",
+        "description": "The SQL database security alert policy lacks email notification configuration, preventing timely response to potential security threats against patient data.",
+        "severity": "medium",
+        "affected_component": "consultation_database",
+        "injection_strategy": "Configure azurerm_mssql_server_security_alert_policy with empty email_addresses array",
+        "business_impact": "Delayed response to database security incidents, potential undetected data breaches, and compromised patient data protection",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#email_addresses\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        email_addresses = [\"db-security@acme.org\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        email_addresses = []\n      }",
+        "file_name": "threat_alert_email_set.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set email_addresses = [] in the security alert policy configuration",
+          "explanation": "This prevents security teams from receiving immediate notifications about database threats targeting patient data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Storage Account Using Insecure TLS Version",
+        "description": "The medical records storage account allows connections using TLS 1.0/1.1, which are deprecated and vulnerable to cryptographic attacks, compromising the security of patient health information.",
+        "severity": "medium",
+        "affected_component": "medical_records_storage",
+        "injection_strategy": "Configure azurerm_storage_account with min_tls_version = \"TLS1_0\"",
+        "business_impact": "Vulnerable encryption protocols could be exploited to decrypt patient medical records and consultation videos, leading to HIPAA violations and patient privacy breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version to \"TLS1_0\" or \"TLS1_1\" in storage account configuration",
+          "explanation": "This allows clients to connect using weak TLS versions that can be compromised, exposing patient data during transmission"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+        "title": "Network Security Group Allows SSH from Internet",
+        "description": "Network security rules allow SSH access from any internet source (0.0.0.0/0), creating unnecessary attack surface for the telehealth platform infrastructure.",
+        "severity": "medium",
+        "affected_component": "web_application_gateway",
+        "injection_strategy": "Configure azurerm_network_security_rule with source_address_prefix = \"*\" for SSH port 22",
+        "business_impact": "Increased risk of brute force attacks and unauthorized access to infrastructure components, potentially compromising the entire telehealth platform",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/network_security_group#security_rule\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule#source_port_ranges\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        name                       = \"good_example_security_rule\"\n        direction                  = \"Inbound\"\n        access                     = \"Allow\"\n        protocol                   = \"TCP\"\n        source_port_range          = \"*\"\n        destination_port_range     = \"22\"\n        source_address_prefix      = \"82.102.23.23\" # specific address\n        destination_address_prefix = \"*\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        name                       = \"bad_example_security_rule\"\n        direction                  = \"Inbound\"\n        access                     = \"Allow\"\n        protocol                   = \"TCP\"\n        source_port_range          = \"*\"\n        destination_port_range     = \"22\"\n        source_address_prefix      = \"*\"\n        destination_address_prefix = \"*\"\n      }",
+        "file_name": "ssh_blocked_from_internet.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create network security rule with source_address_prefix = \"*\" for SSH port 22",
+          "explanation": "This allows SSH connections from any internet address, exposing management interfaces to potential attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES",
+        "title": "Activity Log Profile Missing Critical Categories",
+        "description": "The Azure Monitor log profile does not capture all required activity categories (Action, Delete, Write), limiting audit trail completeness for HIPAA compliance requirements.",
+        "severity": "medium",
+        "affected_component": "consultation_database",
+        "injection_strategy": "Configure azurerm_monitor_log_profile with incomplete categories array",
+        "business_impact": "Incomplete audit trails for compliance reporting, reduced forensic capabilities, and potential HIPAA violations due to insufficient activity monitoring",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_log_profile#categories\n  good:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"good_example\" {\n        name = \"good_example\"\n\n        categories = [\n          \"Action\",\n          \"Delete\",\n          \"Write\",\n        ]\n\n        retention_policy {\n          enabled = true\n          days    = 365\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"bad_example\" {\n        name = \"bad_example\"\n\n        categories = []\n\n        retention_policy {\n          enabled = true\n          days    = 7\n        }\n      }",
+        "file_name": "capture_all_activities.yaml",
+        "service": "monitor",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set categories = [] or omit critical categories in monitor log profile",
+          "explanation": "This creates gaps in activity logging that are required for healthcare compliance and security monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "AZURE-STORAGE-ENFORCE_HTTPS",
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-DATABASE-THREAT_ALERT_EMAIL_SET",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+        "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 3,
+        "medium": 5,
+        "low": 0
+      },
+      "service_categories": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "monitor"
+      ],
+      "services_covered": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "monitor"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 29,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

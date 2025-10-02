@@ -1,0 +1,358 @@
+{
+  "project_info": {
+    "project_id": "corporate-intranet-platform",
+    "project_name": "Corporate Intranet with Document Management",
+    "description": "A comprehensive corporate intranet platform featuring Active Directory integration, secure document management, employee directory, and internal communication tools. The system provides role-based access control, document versioning, and audit logging for compliance. Designed for a mid-size enterprise with 500-2000 employees requiring secure internal collaboration and document sharing capabilities.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "multi-tier",
+    "business_context": "Enterprise client needs to modernize their legacy intranet system to support remote work, improve document collaboration, and maintain security compliance. The solution must integrate with existing Active Directory infrastructure and provide seamless single sign-on experience for employees.",
+    "components": [
+      {
+        "name": "intranet_web_app",
+        "service_type": "azure_app_service",
+        "purpose": "Hosts the main intranet web application with employee portal, news, and communication features",
+        "dependencies": [
+          "sql_database",
+          "storage_account",
+          "active_directory"
+        ],
+        "security_considerations": [
+          "authentication_integration",
+          "ssl_termination",
+          "input_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "document_api",
+        "service_type": "azure_function_app",
+        "purpose": "Serverless API for document operations including upload, download, versioning, and search",
+        "dependencies": [
+          "storage_account",
+          "sql_database",
+          "search_service"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "file_type_validation",
+          "access_control"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "sql_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores user profiles, document metadata, permissions, and audit logs",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "network_isolation",
+          "backup_security"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "storage_account",
+        "service_type": "azure_storage_account",
+        "purpose": "Secure blob storage for documents, images, and file attachments with versioning",
+        "dependencies": [],
+        "security_considerations": [
+          "access_policies",
+          "encryption",
+          "audit_logging"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "search_service",
+        "service_type": "azure_cognitive_search",
+        "purpose": "Provides full-text search capabilities across documents and intranet content",
+        "dependencies": [
+          "storage_account",
+          "sql_database"
+        ],
+        "security_considerations": [
+          "search_index_security",
+          "query_filtering"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "active_directory",
+        "service_type": "azure_active_directory",
+        "purpose": "Handles authentication, authorization, and user management with SSO integration",
+        "dependencies": [],
+        "security_considerations": [
+          "conditional_access",
+          "mfa_enforcement",
+          "privileged_access"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "application_gateway",
+        "service_type": "azure_application_gateway",
+        "purpose": "Load balancer with WAF protection and SSL termination for web traffic",
+        "dependencies": [
+          "intranet_web_app"
+        ],
+        "security_considerations": [
+          "waf_rules",
+          "ssl_certificates",
+          "ddos_protection"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with multiple subnets: public subnet for Application Gateway, private subnet for App Services and Functions, data subnet for SQL Database",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Application Gateway routes to App Service",
+        "App Service connects to SQL Database via private endpoint",
+        "Function App accesses Storage Account via service endpoint",
+        "All components integrate with Azure AD for authentication"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T17:18:41.625312"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "SQL Database Missing Extended Auditing Policy",
+        "description": "The Azure SQL Database lacks proper extended auditing configuration, which is critical for compliance and security monitoring in corporate environments. Without auditing, database access and modifications cannot be tracked for forensic analysis.",
+        "severity": "medium",
+        "affected_component": "sql_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Compliance violations, inability to detect data breaches, lack of audit trail for sensitive corporate documents and user data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy Azure SQL Server without configuring azurerm_mssql_server_extended_auditing_policy resource",
+          "explanation": "Creates a database that cannot track access patterns, data modifications, or security events, leaving the corporate intranet vulnerable to undetected data breaches"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "title": "App Service Missing Managed Identity Configuration",
+        "description": "The intranet web application lacks proper managed identity configuration, forcing it to rely on connection strings and stored credentials for accessing other Azure services like SQL Database and Storage Account.",
+        "severity": "medium",
+        "affected_component": "intranet_web_app",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Increased risk of credential theft, difficulty in credential rotation, potential for privilege escalation if connection strings are compromised",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#identity\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        identity {\n          type         = \"UserAssigned\"\n          identity_ids = \"webapp1\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "account_identity_registered.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without the identity block configuration",
+          "explanation": "Forces the application to use stored connection strings or service principal credentials, creating additional attack vectors and credential management overhead"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-NO_PUBLIC_ACCESS",
+        "title": "Storage Container Allows Public Access",
+        "description": "The document storage containers are configured with public access, potentially exposing sensitive corporate documents and employee data to unauthorized internet access.",
+        "severity": "medium",
+        "affected_component": "storage_account",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Data breach risk, exposure of confidential corporate documents, potential regulatory violations, unauthorized access to employee information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://www.terraform.io/docs/providers/azure/r/storage_container.html#properties\n  good:\n    - |-\n      resource \"azurerm_storage_container\" \"good_example\" {\n        name                  = \"terraform-container-storage\"\n        container_access_type = \"private\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_container\" \"bad_example\" {\n        name                  = \"terraform-container-storage\"\n        container_access_type = \"blob\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set container_access_type to 'blob' or 'container' instead of 'private'",
+          "explanation": "Allows direct internet access to stored documents without authentication, bypassing the intranet's access controls and Active Directory integration"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Storage Account Uses Insecure TLS Version",
+        "description": "The storage account is configured to accept older TLS versions (1.0/1.1), making document transfers vulnerable to man-in-the-middle attacks and not meeting modern security standards.",
+        "severity": "medium",
+        "affected_component": "storage_account",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Vulnerable to protocol downgrade attacks, non-compliance with security standards, potential interception of document uploads and downloads",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version to 'TLS1_0' or omit the property entirely",
+          "explanation": "Allows clients to connect using deprecated TLS versions that have known vulnerabilities, compromising the security of document transfers"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "title": "App Service Uses Insecure TLS Configuration",
+        "description": "The intranet web application is configured to accept connections using older TLS versions, making employee authentication and document access vulnerable to interception.",
+        "severity": "medium",
+        "affected_component": "intranet_web_app",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Employee credentials and session tokens vulnerable to interception, non-compliance with corporate security policies, potential for session hijacking",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.2\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure site_config with min_tls_version set to '1.0' or '1.1'",
+          "explanation": "Allows browsers and API clients to connect using vulnerable TLS versions, compromising the security of employee authentication and document access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+        "title": "Network Security Rule Allows Unrestricted Outbound Traffic",
+        "description": "Network security rules are configured to allow outbound traffic to any destination (0.0.0.0/0), potentially enabling data exfiltration and communication with malicious external services.",
+        "severity": "medium",
+        "affected_component": "application_gateway",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Risk of data exfiltration, potential for malware communication, difficulty in monitoring and controlling network traffic, compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Outbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction                  = \"Outbound\"\n        destination_address_prefix = \"0.0.0.0/0\"\n        access                     = \"Allow\"\n      }",
+        "file_name": "no_public_egress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create network security rule with destination_address_prefix set to '0.0.0.0/0' for outbound traffic",
+          "explanation": "Allows any component in the network to communicate with any external service, creating opportunities for data theft and malware communication"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "title": "SQL Database Threat Detection Alerts Disabled",
+        "description": "Critical threat detection alerts are disabled for the SQL database, preventing the system from detecting SQL injection attempts, data exfiltration, and other database-specific attacks targeting corporate data.",
+        "severity": "medium",
+        "affected_component": "sql_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Inability to detect SQL injection attacks, missed data exfiltration attempts, delayed incident response, potential for undetected database compromises",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#disabled_alerts\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts            = []\n        retention_days             = 20\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        retention_days = 20\n      }",
+        "file_name": "all_threat_alerts_enabled.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure disabled_alerts to include critical alert types like 'Sql_Injection' and 'Data_Exfiltration'",
+          "explanation": "Disables detection of the most common and dangerous database attacks, leaving the corporate intranet's data layer vulnerable to undetected breaches"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "AZURE-STORAGE-NO_PUBLIC_ACCESS",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+        "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "storage",
+        "network",
+        "appservice",
+        "database"
+      ],
+      "services_covered": [
+        "storage",
+        "network",
+        "appservice",
+        "database"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "template_info": {
+      "template_type": "arm_template",
+      "schema_version": "2019-04-01",
+      "deployment_scope": "resource_group"
+    },
+    "resource_summary": {
+      "total_resources": 17,
+      "resource_breakdown": {
+        "Microsoft.Network/virtualNetworks": 1,
+        "Microsoft.Network/networkSecurityGroups": 1,
+        "Microsoft.Storage/storageAccounts": 1,
+        "Microsoft.Storage/storageAccounts/blobServices": 1,
+        "Microsoft.Storage/storageAccounts/blobServices/containers": 2,
+        "Microsoft.Sql/servers": 1,
+        "Microsoft.Sql/servers/databases": 1,
+        "Microsoft.Sql/servers/securityAlertPolicies": 1,
+        "Microsoft.Web/serverfarms": 1,
+        "Microsoft.Web/sites": 2,
+        "Microsoft.Search/searchServices": 1,
+        "Microsoft.Network/publicIPAddresses": 1,
+        "Microsoft.Network/applicationGateways": 1,
+        "Microsoft.OperationalInsights/workspaces": 1
+      }
+    },
+    "architecture_coverage": {
+      "intranet_web_app": "Microsoft.Web/sites (webapp)",
+      "document_api": "Microsoft.Web/sites (functionapp)",
+      "sql_database": "Microsoft.Sql/servers + Microsoft.Sql/servers/databases",
+      "storage_account": "Microsoft.Storage/storageAccounts + containers",
+      "search_service": "Microsoft.Search/searchServices",
+      "active_directory": "Configured via post-deployment scripts",
+      "application_gateway": "Microsoft.Network/applicationGateways"
+    },
+    "security_vulnerabilities_injected": 7,
+    "deployment_complexity": "medium",
+    "estimated_deployment_time": "15-20 minutes"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 16,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

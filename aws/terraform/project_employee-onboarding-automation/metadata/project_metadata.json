@@ -1,0 +1,336 @@
+{
+  "project_info": {
+    "project_id": "employee-onboarding-automation",
+    "project_name": "Automated Employee Onboarding Platform",
+    "description": "A comprehensive employee onboarding automation platform that streamlines the hiring process from offer acceptance to first-day setup. The system handles document collection and verification, automated account provisioning, compliance training tracking, and IT asset assignment. Features include secure document upload with automated processing, integration with HR systems, and workflow automation for multi-department coordination.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "event-driven",
+    "business_context": "Mid-size companies (500-2000 employees) looking to automate their manual onboarding processes, reduce time-to-productivity for new hires, ensure compliance documentation, and provide consistent onboarding experiences across departments.",
+    "components": [
+      {
+        "name": "document_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Secure storage for employee documents, forms, and compliance materials with lifecycle management",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_logging",
+          "versioning",
+          "retention_policies"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "onboarding_api",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless API handling onboarding workflows, document processing, and system integrations",
+        "dependencies": [
+          "document_storage",
+          "employee_database"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "input_validation",
+          "secrets_management"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "employee_database",
+        "service_type": "aws_rds",
+        "purpose": "Stores employee records, onboarding status, task assignments, and audit trails",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "network_isolation",
+          "backup_security",
+          "access_controls"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "web_application",
+        "service_type": "aws_ec2",
+        "purpose": "React-based web interface for HR staff and new employees to manage onboarding tasks",
+        "dependencies": [
+          "onboarding_api",
+          "load_balancer"
+        ],
+        "security_considerations": [
+          "ssl_termination",
+          "session_management",
+          "input_sanitization"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "aws_alb",
+        "purpose": "Distributes traffic to web application instances with health checks and SSL termination",
+        "dependencies": [
+          "web_application"
+        ],
+        "security_considerations": [
+          "ssl_certificates",
+          "security_headers",
+          "ddos_protection"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "task_queue",
+        "service_type": "aws_sqs",
+        "purpose": "Manages asynchronous processing of onboarding tasks, notifications, and system integrations",
+        "dependencies": [
+          "onboarding_api"
+        ],
+        "security_considerations": [
+          "message_encryption",
+          "dead_letter_queues",
+          "access_policies"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two availability zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "ALB in public subnet routes to EC2 in private subnet",
+        "Lambda functions access RDS through VPC endpoints",
+        "S3 access via VPC gateway endpoint"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3,
+      "queue_components": 2,
+      "lambda_functions": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:08:11.848923"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-SPECIFY_PUBLIC_ACCESS_BLOCK",
+        "title": "Specify Public Access Block",
+        "description": "S3 bucket lacks proper public access block configuration, potentially allowing unintended public access to employee documents and sensitive onboarding materials",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Employee documents, compliance materials, and sensitive onboarding data could be exposed publicly, leading to privacy violations and regulatory compliance issues",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block#bucket\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"example\"\n        acl    = \"private-read\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"example\" {\n        bucket              = aws_s3_bucket.example.id\n        block_public_acls   = true\n        block_public_policy = true\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"example\"\n        acl    = \"private-read\"\n      }",
+        "file_name": "specify_public_access_block.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without aws_s3_bucket_public_access_block resource",
+          "explanation": "Without explicit public access block configuration, S3 buckets may allow public access through ACLs or bucket policies"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-SQS-QUEUE_ENCRYPTION_WITH_CMK",
+        "title": "Queue Encryption With CMK",
+        "description": "SQS queue uses default AWS managed encryption instead of customer-managed KMS key, reducing control over encryption keys for sensitive onboarding task messages",
+        "severity": "medium",
+        "affected_component": "task_queue",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Reduced control over encryption keys for sensitive employee data in transit, potential compliance issues with data sovereignty requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue#server-side-encryption-sse\n  good:\n    - |-\n      resource \"aws_sqs_queue\" \"good_example\" {\n        kms_master_key_id = \"/blah\"\n      }\n  bad:\n    - |-\n      resource \"aws_sqs_queue\" \"bad_example\" {\n        kms_master_key_id = \"alias/aws/sqs\"\n      }",
+        "file_name": "queue_encryption_with_cmk.yaml",
+        "service": "sqs",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set kms_master_key_id to 'alias/aws/sqs' instead of customer-managed key",
+          "explanation": "Using AWS managed keys reduces organizational control over key rotation, access policies, and audit trails"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "title": "Performance Insights Encryption Customer Key",
+        "description": "RDS Performance Insights enabled without customer-managed KMS key encryption, potentially exposing database performance metrics containing sensitive patterns",
+        "severity": "medium",
+        "affected_component": "employee_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Database performance metrics could reveal sensitive access patterns and query information without proper encryption controls",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#performance_insights_kms_key_id\n  good:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"good_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab\"\n      }\n  bad:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"bad_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"\"\n      }",
+        "file_name": "performance_insights_encryption_customer_key.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Enable performance_insights_enabled without specifying performance_insights_kms_key_id",
+          "explanation": "Performance insights data contains query patterns and database metrics that should be encrypted with customer-controlled keys"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP",
+        "title": "Add Description To Security Group",
+        "description": "Security groups lack proper descriptions, making it difficult to understand their purpose and maintain proper access controls for the web application infrastructure",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Poor security group documentation leads to misconfigurations, difficulty in security audits, and potential over-permissive access rules",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group\n  good:\n    - |-\n      resource \"aws_security_group\" \"good_example\" {\n        name        = \"http\"\n        description = \"Allow inbound HTTP traffic\"\n\n        ingress {\n          description = \"HTTP from VPC\"\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_security_group\" \"bad_example\" {\n        name        = \"http\"\n        description = \"\"\n\n        ingress {\n          description = \"HTTP from VPC\"\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }",
+        "file_name": "add_description_to_security_group.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create security group with empty or missing description field",
+          "explanation": "Missing descriptions make it difficult to understand the purpose and scope of security rules, leading to maintenance issues"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELB-DROP_INVALID_HEADERS",
+        "title": "Drop Invalid Headers",
+        "description": "Application Load Balancer not configured to drop invalid HTTP headers, potentially allowing header injection attacks against the onboarding web application",
+        "severity": "medium",
+        "affected_component": "load_balancer",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "HTTP header injection attacks could bypass security controls, potentially leading to session hijacking or data manipulation in the onboarding process",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb#drop_invalid_header_fields\n  good:\n    - |-\n      resource \"aws_alb\" \"good_example\" {\n        drop_invalid_header_fields = true\n      }\n  bad:\n    - |-\n      resource \"aws_alb\" \"bad_example\" {\n        drop_invalid_header_fields = false\n      }",
+        "file_name": "drop_invalid_headers.yaml",
+        "service": "elb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set drop_invalid_header_fields to false or omit the configuration",
+          "explanation": "Invalid headers can be used for injection attacks and should be dropped at the load balancer level"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_SENSITIVE_INFO",
+        "title": "No Sensitive Info",
+        "description": "EC2 launch configuration contains sensitive information in user data, potentially exposing credentials or secrets during instance initialization",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Hardcoded credentials in user data could be exposed through instance metadata, logs, or snapshots, compromising the entire onboarding system",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/launch_configuration#user_data,user_data_base64\n  good:\n    - |-\n      resource \"aws_launch_configuration\" \"as_conf\" {\n        name          = \"web_config\"\n        image_id      = data.aws_ami.ubuntu.id\n        instance_type = \"t2.micro\"\n        user_data     = <<EOF\n       export GREETING=\"Hello there\"\n       EOF\n      }\n  bad:\n    - |-\n      resource \"aws_launch_configuration\" \"as_conf\" {\n        name          = \"web_config\"\n        image_id      = data.aws_ami.ubuntu.id\n        instance_type = \"t2.micro\"\n        user_data     = <<EOF\n       export DATABASE_PASSWORD=\\\"SomeSortOfPassword\\\"\n       EOF\n      }",
+        "file_name": "no_sensitive_info.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Include passwords, API keys, or other secrets directly in user_data scripts",
+          "explanation": "User data is accessible through instance metadata and can be logged, making it an insecure place for sensitive information"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_OBJECT_WRITE_LOGGING",
+        "title": "Enable Object Write Logging",
+        "description": "S3 bucket lacks CloudTrail logging for write operations, missing audit trail for document uploads and modifications in the employee onboarding system",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "No audit trail for document modifications could hinder compliance reporting, incident investigation, and detection of unauthorized changes to employee records",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket#versioning\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        bucket = \"my-bucket\"\n      }\n\n      resource \"aws_cloudtrail\" \"example\" {\n        event_selector {\n          read_write_type = \"WriteOnly\"\n          data_resource {\n            type   = \"AWS::S3::Object\"\n            values = [\"arn:aws:s3:::${aws_s3_bucket.good_example.bucket}/\"]\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"my-bucket\"\n      }",
+        "file_name": "enable_object_write_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without corresponding CloudTrail data events for write operations",
+          "explanation": "Without CloudTrail data events, there's no audit trail for object-level operations like uploads, modifications, or deletions"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-KMS-AUTO_ROTATE_KEYS",
+        "title": "Auto Rotate Keys",
+        "description": "KMS keys used for encryption lack automatic key rotation, reducing cryptographic security over time for long-term storage of employee documents",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Static encryption keys increase risk over time, potentially compromising long-term security of stored employee documents and compliance materials",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key#enable_key_rotation\n  good:\n    - |-\n      resource \"aws_kms_key\" \"good_example\" {\n        enable_key_rotation = true\n      }\n  bad:\n    - |-\n      resource \"aws_kms_key\" \"bad_example\" {\n        enable_key_rotation = false\n      }",
+        "file_name": "auto_rotate_keys.yaml",
+        "service": "kms",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_key_rotation to false or omit the configuration",
+          "explanation": "Without key rotation, the same cryptographic key is used indefinitely, increasing risk if the key is compromised"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-S3-SPECIFY_PUBLIC_ACCESS_BLOCK",
+        "AWS-SQS-QUEUE_ENCRYPTION_WITH_CMK",
+        "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP",
+        "AWS-ELB-DROP_INVALID_HEADERS",
+        "AWS-EC2-NO_SENSITIVE_INFO",
+        "AWS-S3-ENABLE_OBJECT_WRITE_LOGGING",
+        "AWS-KMS-AUTO_ROTATE_KEYS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "s3",
+        "ec2",
+        "sqs",
+        "rds",
+        "kms",
+        "elb"
+      ],
+      "services_covered": [
+        "s3",
+        "ec2",
+        "sqs",
+        "rds",
+        "kms",
+        "elb"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 31,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

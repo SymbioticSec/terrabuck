@@ -1,0 +1,334 @@
+{
+  "project_info": {
+    "project_id": "corporate-backup-disaster-recovery",
+    "project_name": "Corporate Backup and Disaster Recovery System",
+    "description": "A comprehensive enterprise backup and disaster recovery solution for a mid-sized corporation with 500+ employees. The system provides automated daily backups of critical business data, cross-region replication for disaster recovery, and secure restore capabilities with audit logging. Designed to meet RPO of 4 hours and RTO of 2 hours for business continuity requirements.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "data_pipeline",
+    "business_context": "Enterprise client needs reliable backup and disaster recovery for critical business systems including file servers, databases, and application data. Must comply with corporate governance requirements for data retention, encryption, and audit trails. System serves IT operations team and supports business continuity planning.",
+    "components": [
+      {
+        "name": "primary_backup_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Primary backup storage with versioning and lifecycle policies for daily automated backups",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_logging",
+          "versioning_protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "disaster_recovery_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Cross-region replicated storage for disaster recovery with long-term retention",
+        "dependencies": [
+          "primary_backup_storage"
+        ],
+        "security_considerations": [
+          "cross_region_replication",
+          "encryption_in_transit",
+          "immutable_backups"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "backup_orchestration",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless functions to orchestrate backup jobs, monitor status, and handle notifications",
+        "dependencies": [
+          "primary_backup_storage",
+          "backup_metadata_db"
+        ],
+        "security_considerations": [
+          "iam_role_permissions",
+          "vpc_execution",
+          "secrets_management"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "backup_metadata_db",
+        "service_type": "aws_rds",
+        "purpose": "Database storing backup metadata, job status, and restore point information",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "backup_retention",
+          "access_control"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "backup_gateway",
+        "service_type": "aws_ec2",
+        "purpose": "Secure gateway server for on-premises backup agents and restore operations",
+        "dependencies": [
+          "primary_backup_storage",
+          "backup_orchestration"
+        ],
+        "security_considerations": [
+          "security_groups",
+          "key_management",
+          "network_isolation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "monitoring_dashboard",
+        "service_type": "aws_cloudwatch",
+        "purpose": "Centralized monitoring and alerting for backup job status and system health",
+        "dependencies": [
+          "backup_orchestration",
+          "backup_metadata_db"
+        ],
+        "security_considerations": [
+          "log_encryption",
+          "access_control",
+          "alert_notifications"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public subnet for backup gateway and private subnets for RDS and Lambda execution",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "On-premises to backup gateway via VPN",
+        "Lambda functions in private subnets",
+        "RDS in isolated data subnet",
+        "S3 access via VPC endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 6,
+      "databases": 3,
+      "networking_components": 8,
+      "security_components": 5,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:02:32.547092"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-IGNORE_PUBLIC_ACLS",
+        "title": "S3 Bucket Missing Public Access Block Configuration",
+        "description": "The primary backup storage bucket lacks proper public access block configuration, specifically missing the 'ignore_public_acls' setting. This creates a risk where accidentally applied public ACLs could expose backup data containing sensitive corporate information.",
+        "severity": "medium",
+        "affected_component": "primary_backup_storage",
+        "injection_strategy": "Configure S3 bucket without proper public access block settings, omitting the ignore_public_acls parameter",
+        "business_impact": "Potential exposure of corporate backup data if public ACLs are accidentally applied, violating data privacy regulations and corporate governance requirements",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"good_example\" {\n        bucket = aws_s3_bucket.example.id\n\n        ignore_public_acls = true\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"bad_example\" {\n        bucket = aws_s3_bucket.example.id\n\n        ignore_public_acls = false\n      }",
+        "file_name": "ignore_public_acls.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket public access block resource with ignore_public_acls set to false or omitted entirely",
+          "explanation": "Without ignore_public_acls enabled, any public ACL applied to the bucket could override intended private access controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_VERSIONING",
+        "title": "S3 Backup Storage Missing Versioning",
+        "description": "The disaster recovery storage bucket lacks versioning configuration, which is critical for backup integrity and recovery from accidental deletions or corruptions. This violates backup best practices for enterprise disaster recovery systems.",
+        "severity": "medium",
+        "affected_component": "disaster_recovery_storage",
+        "injection_strategy": "Configure S3 bucket without versioning enabled or with versioning explicitly disabled",
+        "business_impact": "Risk of permanent data loss during backup operations, inability to recover from accidental deletions, and failure to meet RPO/RTO requirements for business continuity",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        versioning {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        versioning {\n          enabled = false\n        }\n      }",
+        "file_name": "enable_versioning.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket resource without versioning block or with versioning enabled set to false",
+          "explanation": "Without versioning, overwritten or deleted backup files cannot be recovered, compromising disaster recovery capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Lambda Backup Orchestration Missing X-Ray Tracing",
+        "description": "The backup orchestration Lambda functions lack X-Ray tracing configuration, reducing visibility into backup job execution and making it difficult to troubleshoot failed backup operations or performance issues in the disaster recovery system.",
+        "severity": "medium",
+        "affected_component": "backup_orchestration",
+        "injection_strategy": "Configure Lambda function without tracing_config block or with mode set to PassThrough",
+        "business_impact": "Reduced operational visibility into backup processes, difficulty troubleshooting backup failures, and potential delays in meeting RTO requirements during disaster recovery scenarios",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_lambda_function\" \"good_example\" {\n        tracing_config {\n          mode = \"Active\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_lambda_function\" \"bad_example\" {\n        tracing_config {\n          mode = \"PassThrough\"\n        }\n      }",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Lambda function without tracing_config block or set mode to PassThrough instead of Active",
+          "explanation": "Without active tracing, detailed execution information is not captured, making backup job monitoring and troubleshooting difficult"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "title": "RDS Backup Metadata Database Publicly Accessible",
+        "description": "The backup metadata database is configured with public accessibility enabled, exposing sensitive backup job information, restore point data, and system metadata to potential internet-based attacks. This violates enterprise security policies for data isolation.",
+        "severity": "medium",
+        "affected_component": "backup_metadata_db",
+        "injection_strategy": "Configure RDS instance with publicly_accessible set to true",
+        "business_impact": "Exposure of backup metadata and job status information to unauthorized access, potential data breach of corporate backup schedules and system information, violation of compliance requirements",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_db_instance\" \"good_example\" {\n        publicly_accessible = false\n      }\n  bad:\n    - |-\n      resource \"aws_db_instance\" \"bad_example\" {\n        publicly_accessible = true\n      }",
+        "file_name": "disable_public_access.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set publicly_accessible parameter to true in RDS instance configuration",
+          "explanation": "Public accessibility allows direct internet access to the database, bypassing VPC security controls and exposing backup metadata"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_EXCESSIVE_PORT_ACCESS",
+        "title": "Backup Gateway Excessive Network Access",
+        "description": "The backup gateway EC2 instance has overly permissive network ACL rules allowing access to all protocols and ports, creating unnecessary attack surface for the critical backup infrastructure component that handles on-premises backup agent communications.",
+        "severity": "medium",
+        "affected_component": "backup_gateway",
+        "injection_strategy": "Configure network ACL rule with protocol set to 'all' or '-1' instead of specific protocols",
+        "business_impact": "Increased attack surface for backup gateway, potential unauthorized access to backup infrastructure, risk of backup data interception or manipulation during transfer from on-premises systems",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_network_acl_rule\" \"good_example\" {\n        egress      = false\n        protocol    = \"tcp\"\n        from_port   = 22\n        to_port     = 22\n        rule_action = \"allow\"\n        cidr_block  = \"0.0.0.0/0\"\n      }\n  bad:\n    - |-\n      resource \"aws_network_acl_rule\" \"bad_example\" {\n        egress      = false\n        protocol    = \"all\"\n        rule_action = \"allow\"\n        cidr_block  = \"0.0.0.0/0\"\n      }",
+        "file_name": "no_excessive_port_access.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create network ACL rule with protocol set to 'all' instead of specific protocols like 'tcp'",
+          "explanation": "Using 'all' protocols opens unnecessary network access paths that could be exploited by attackers to compromise the backup gateway"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENCRYPTION_CUSTOMER_KEY",
+        "title": "CloudWatch Monitoring Missing Customer-Managed Encryption",
+        "description": "The monitoring dashboard's CloudTrail logging lacks customer-managed KMS key encryption, using only AWS-managed keys. This reduces control over audit log encryption and may not meet corporate governance requirements for key management in backup systems.",
+        "severity": "medium",
+        "affected_component": "monitoring_dashboard",
+        "injection_strategy": "Configure CloudTrail without kms_key_id parameter, relying on default AWS-managed encryption",
+        "business_impact": "Reduced control over audit log encryption keys, potential compliance violations for backup system monitoring, inability to implement key rotation policies required by corporate governance",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_kms_key\" \"trail\" {\n        enable_key_rotation = true\n      }\n      resource \"aws_cloudtrail\" \"good_example\" {\n        kms_key_id = aws_kms_alias.trail.arn\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n      }",
+        "file_name": "encryption_customer_key.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudTrail resource without specifying kms_key_id parameter",
+          "explanation": "Without customer-managed KMS keys, organizations lose control over encryption key lifecycle and rotation policies for audit logs"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "title": "CloudTrail Log File Validation Disabled",
+        "description": "The monitoring system's CloudTrail configuration lacks log file validation, which is essential for ensuring the integrity of audit logs in a backup and disaster recovery system. This creates risk of undetected tampering with backup operation logs.",
+        "severity": "medium",
+        "affected_component": "monitoring_dashboard",
+        "injection_strategy": "Configure CloudTrail without enable_log_file_validation parameter or set to false",
+        "business_impact": "Inability to detect tampering with backup operation audit logs, potential compliance violations, reduced forensic capabilities during security incidents involving backup systems",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"good_example\" {\n        enable_log_file_validation = true\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n      }",
+        "file_name": "enable_log_validation.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudTrail resource without enable_log_file_validation parameter",
+          "explanation": "Without log file validation, there's no cryptographic proof of log integrity, making it impossible to detect if audit logs have been tampered with"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-NO_PASSWORD_REUSE",
+        "title": "Weak IAM Password Policy for Backup System Access",
+        "description": "The IAM password policy allows password reuse with insufficient prevention settings, creating risk for backup system administrator accounts. This violates enterprise security standards for privileged access to critical backup infrastructure.",
+        "severity": "medium",
+        "affected_component": "backup_orchestration",
+        "injection_strategy": "Configure IAM password policy with password_reuse_prevention set to a low value (1-4) instead of recommended minimum of 5",
+        "business_impact": "Increased risk of credential compromise for backup system administrators, potential unauthorized access to backup operations, violation of corporate password policies for privileged accounts",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        password_reuse_prevention = 5\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        password_reuse_prevention = 1\n      }",
+        "file_name": "no_password_reuse.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set password_reuse_prevention to 1 instead of the recommended minimum of 5",
+          "explanation": "Low password reuse prevention allows users to quickly cycle back to previously used passwords, reducing the effectiveness of password rotation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-S3-IGNORE_PUBLIC_ACLS",
+        "AWS-S3-ENABLE_VERSIONING",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-EC2-NO_EXCESSIVE_PORT_ACCESS",
+        "AWS-CLOUDTRAIL-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "AWS-IAM-NO_PASSWORD_REUSE"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "lambda",
+        "cloudtrail",
+        "s3",
+        "ec2",
+        "iam",
+        "rds"
+      ],
+      "services_covered": [
+        "lambda",
+        "cloudtrail",
+        "s3",
+        "ec2",
+        "iam",
+        "rds"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 30,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

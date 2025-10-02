@@ -1,0 +1,218 @@
+{
+  "original_components": [
+    {
+      "name": "web_application_gateway",
+      "service_type": "azure_application_gateway",
+      "purpose": "SSL termination, WAF protection, and load balancing for web traffic with DDoS protection",
+      "dependencies": [],
+      "security_considerations": [
+        "SSL/TLS encryption",
+        "Web Application Firewall",
+        "DDoS protection",
+        "IP whitelisting"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "patient_portal_webapp",
+      "service_type": "azure_app_service",
+      "purpose": "React-based patient portal for appointment booking, medical history access, and video consultation interface",
+      "dependencies": [
+        "web_application_gateway",
+        "patient_database"
+      ],
+      "security_considerations": [
+        "Authentication integration",
+        "HTTPS enforcement",
+        "Session management",
+        "Input validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "video_consultation_service",
+      "service_type": "azure_communication_services",
+      "purpose": "Handles real-time video/audio streaming, chat, and screen sharing for medical consultations",
+      "dependencies": [
+        "consultation_api",
+        "audit_storage"
+      ],
+      "security_considerations": [
+        "End-to-end encryption",
+        "Session recording encryption",
+        "Access token management",
+        "HIPAA compliance"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "consultation_api",
+      "service_type": "azure_container_instances",
+      "purpose": "Microservices API handling appointment management, patient records, and consultation orchestration",
+      "dependencies": [
+        "patient_database",
+        "audit_storage"
+      ],
+      "security_considerations": [
+        "API authentication",
+        "Data encryption in transit",
+        "Role-based access control",
+        "Audit logging"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "patient_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores encrypted patient records, appointment data, and medical history with backup and disaster recovery",
+      "dependencies": [],
+      "security_considerations": [
+        "Transparent Data Encryption",
+        "Always Encrypted columns",
+        "Database firewall",
+        "Backup encryption",
+        "Access auditing"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "audit_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Immutable storage for HIPAA audit logs, consultation recordings, and compliance documentation",
+      "dependencies": [],
+      "security_considerations": [
+        "Immutable blob storage",
+        "Access logging",
+        "Encryption at rest",
+        "Retention policies",
+        "Secure access keys"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application_gateway",
+      "service_type": "azure_application_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "patient_portal_webapp",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "video_consultation_service",
+      "service_type": "azure_communication_services",
+      "implementation_confidence": 0.7
+    },
+    {
+      "name": "consultation_api",
+      "service_type": "azure_container_instances",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "patient_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "audit_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 634,
+      "resource_count": 17,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/publicIPAddresses"
+        },
+        {
+          "type": "Microsoft.Network/applicationGateways"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/firewallRules"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Sql/servers/securityAlertPolicies"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.ContainerInstance/containerGroups"
+        },
+        {
+          "type": "Microsoft.Communication/communicationServices"
+        },
+        {
+          "type": "Microsoft.Network/privateEndpoints"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 21,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 22,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 202,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

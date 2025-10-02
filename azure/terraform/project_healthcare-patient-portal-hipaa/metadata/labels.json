@@ -1,0 +1,455 @@
+{
+  "project_labels": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "overall_security_posture": "critical",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 3,
+        "medium": 5
+      },
+      "by_type": {
+        "access_control": 2,
+        "encryption": 3,
+        "network": 2,
+        "monitoring": 1
+      },
+      "by_trivy_service": {
+        "database": 3,
+        "storage": 1,
+        "appservice": 1,
+        "network": 1,
+        "container": 1,
+        "keyvault": 1
+      }
+    },
+    "complexity_score": 9,
+    "realism_score": 10,
+    "educational_value": 10,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-KEYVAULT-ENSURE_SECRET_EXPIRY",
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "AZURE-CONTAINER-LOGGING"
+      ],
+      "services_covered": [
+        "database",
+        "storage",
+        "appservice",
+        "network",
+        "container",
+        "keyvault"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_access.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/no_public_access.yaml"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 10,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity",
+        "database_credentials"
+      ],
+      "mitigation_strategies": [
+        "Set public_network_access_enabled = false",
+        "Use private endpoints",
+        "Implement VNet service endpoints",
+        "Configure firewall rules for specific IP ranges"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "public_network_access_enabled = true",
+        "secure_pattern": "public_network_access_enabled = false"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+      "trivy_rule_info": {
+        "original_file": "enable_ssl_enforcement.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/enable_ssl_enforcement.yaml"
+      },
+      "vulnerability_class": "encryption_in_transit",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "HIPAA",
+        "PCI-DSS",
+        "GDPR",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "packet_capture_capability"
+      ],
+      "mitigation_strategies": [
+        "Set ssl_enforcement_enabled = true",
+        "Configure ssl_minimal_tls_version_enforced = \"TLS1_2\"",
+        "Update connection strings to require SSL",
+        "Test application connectivity with SSL"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "ssl_enforcement_enabled = false",
+        "secure_pattern": "ssl_enforcement_enabled = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption_in_transit",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/storage/use_secure_tls_policy.yaml"
+      },
+      "vulnerability_class": "weak_cryptography",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "HIPAA",
+        "PCI-DSS",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "man_in_the_middle_position",
+        "tls_downgrade_capability"
+      ],
+      "mitigation_strategies": [
+        "Set min_tls_version = \"TLS1_2\"",
+        "Update client applications to use TLS 1.2+",
+        "Monitor for TLS version usage",
+        "Implement HSTS headers"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "min_tls_version = \"TLS1_0\"",
+        "secure_pattern": "min_tls_version = \"TLS1_2\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "weak_cryptography",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-KEYVAULT-ENSURE_SECRET_EXPIRY",
+      "trivy_rule_info": {
+        "original_file": "ensure_secret_expiry.yaml",
+        "service_category": "keyvault",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/keyvault/ensure_secret_expiry.yaml"
+      },
+      "vulnerability_class": "credential_management",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "compromised_secret",
+        "long_term_access"
+      ],
+      "mitigation_strategies": [
+        "Add expiration_date parameter to secrets",
+        "Implement automated secret rotation",
+        "Set up expiration monitoring alerts",
+        "Create secret lifecycle management process"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "azurerm_key_vault_secret without expiration_date",
+        "secure_pattern": "expiration_date = \"2024-12-31T00:00:00Z\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "credential_management",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "appservice",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/appservice/use_secure_tls_policy.yaml"
+      },
+      "vulnerability_class": "weak_cryptography",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "HIPAA",
+        "PCI-DSS",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_interception",
+        "tls_downgrade_attack"
+      ],
+      "mitigation_strategies": [
+        "Set min_tls_version = \"1.2\" in site_config",
+        "Configure HSTS headers",
+        "Update load balancer TLS policies",
+        "Test client compatibility"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "min_tls_version = \"1.0\"",
+        "secure_pattern": "min_tls_version = \"1.2\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "weak_cryptography",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_ingress.yaml",
+        "service_category": "network",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/network/no_public_ingress.yaml"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity",
+        "port_scanning_tools"
+      ],
+      "mitigation_strategies": [
+        "Replace 0.0.0.0/0 with specific IP ranges",
+        "Use application gateway for public access",
+        "Implement network segmentation",
+        "Configure private endpoints"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "source_address_prefix = \"0.0.0.0/0\"",
+        "secure_pattern": "source_address_prefix = \"10.0.0.0/16\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+      "trivy_rule_info": {
+        "original_file": "all_threat_alerts_enabled.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/all_threat_alerts_enabled.yaml"
+      },
+      "vulnerability_class": "monitoring_detection",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "database_access",
+        "malicious_queries"
+      ],
+      "mitigation_strategies": [
+        "Remove items from disabled_alerts array",
+        "Configure alert recipients",
+        "Set up automated response workflows",
+        "Enable all threat detection categories"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "disabled_alerts = [\"Sql_Injection\", \"Data_Exfiltration\"]",
+        "secure_pattern": "disabled_alerts = []"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "monitoring_detection",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-CONTAINER-LOGGING",
+      "trivy_rule_info": {
+        "original_file": "logging.yaml",
+        "service_category": "container",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/container/logging.yaml"
+      },
+      "vulnerability_class": "audit_logging",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "container_access",
+        "privilege_escalation"
+      ],
+      "mitigation_strategies": [
+        "Configure log analytics workspace",
+        "Enable OMS agent in addon_profile",
+        "Set up log forwarding",
+        "Implement log retention policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "addon_profile {} # missing oms_agent",
+        "secure_pattern": "oms_agent { enabled = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "audit_logging",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_assessment",
+      "security_posture_scoring"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,MEDIUM .",
+      "expected_trivy_output": "8 vulnerabilities across database, storage, network, and container services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand HIPAA compliance requirements for healthcare infrastructure",
+      "Learn how Trivy detects common Azure security misconfigurations",
+      "Master secure configuration patterns for multi-tier applications",
+      "Recognize the impact of network exposure in healthcare environments",
+      "Understand the importance of encryption in transit for PHI",
+      "Learn credential lifecycle management best practices"
+    ],
+    "prerequisite_knowledge": [
+      "Basic Azure services understanding",
+      "Terraform syntax and resource configuration",
+      "HIPAA compliance fundamentals",
+      "Network security concepts",
+      "TLS/SSL encryption principles"
+    ],
+    "difficulty_level": "advanced",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Public database access is a critical vulnerability in healthcare",
+      "Encryption in transit is mandatory for PHI protection",
+      "Network segmentation prevents lateral movement",
+      "Comprehensive logging is essential for HIPAA audit trails",
+      "Automated security scanning with Trivy catches common misconfigurations",
+      "Secret rotation policies reduce long-term credential exposure"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "storage",
+      "appservice",
+      "network",
+      "database",
+      "keyvault",
+      "container"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "generation_timestamp": "2025-08-06T22:02:23.357803",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

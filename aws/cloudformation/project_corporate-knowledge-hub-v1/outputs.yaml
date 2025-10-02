@@ -1,0 +1,133 @@
+# CloudFormation Outputs
+# These outputs provide important resource information for integration and management
+
+Outputs:
+  VPCId:
+    Description: ID of the VPC created for the Corporate Knowledge Management Hub
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC-ID
+      
+  VPCCidr:
+    Description: CIDR block of the VPC
+    Value: !Ref VpcCidr
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC-CIDR
+      
+  PublicSubnet1Id:
+    Description: ID of the first public subnet
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1-ID
+      
+  PublicSubnet2Id:
+    Description: ID of the second public subnet
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2-ID
+      
+  PrivateSubnet1Id:
+    Description: ID of the first private subnet
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1-ID
+      
+  PrivateSubnet2Id:
+    Description: ID of the second private subnet
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2-ID
+      
+  DocumentStorageBucketName:
+    Description: Name of the S3 bucket for document storage
+    Value: !Ref DocumentStorageBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-DocumentBucket
+      
+  DocumentStorageBucketArn:
+    Description: ARN of the S3 bucket for document storage
+    Value: !GetAtt DocumentStorageBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-DocumentBucket-ARN
+      
+  DatabaseEndpoint:
+    Description: RDS database endpoint for application connections
+    Value: !GetAtt UserDatabase.Endpoint.Address
+    Export:
+      Name: !Sub ${AWS::StackName}-DB-Endpoint
+      
+  DatabasePort:
+    Description: RDS database port
+    Value: !GetAtt UserDatabase.Endpoint.Port
+    Export:
+      Name: !Sub ${AWS::StackName}-DB-Port
+      
+  DatabaseName:
+    Description: RDS database identifier
+    Value: !Ref UserDatabase
+    Export:
+      Name: !Sub ${AWS::StackName}-DB-Name
+      
+  SearchEngineEndpoint:
+    Description: Elasticsearch domain endpoint for search functionality
+    Value: !GetAtt SearchEngine.DomainEndpoint
+    Export:
+      Name: !Sub ${AWS::StackName}-ES-Endpoint
+      
+  SearchEngineArn:
+    Description: Elasticsearch domain ARN
+    Value: !GetAtt SearchEngine.DomainArn
+    Export:
+      Name: !Sub ${AWS::StackName}-ES-ARN
+      
+  LoadBalancerDNS:
+    Description: Application Load Balancer DNS name for web access
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-ALB-DNS
+      
+  LoadBalancerArn:
+    Description: Application Load Balancer ARN
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub ${AWS::StackName}-ALB-ARN
+      
+  LoadBalancerHostedZoneId:
+    Description: Application Load Balancer hosted zone ID for Route53 alias records
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+    Export:
+      Name: !Sub ${AWS::StackName}-ALB-HostedZoneId
+      
+  LambdaFunctionArn:
+    Description: Document processor Lambda function ARN
+    Value: !GetAtt DocumentProcessor.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-Lambda-ARN
+      
+  LambdaFunctionName:
+    Description: Document processor Lambda function name
+    Value: !Ref DocumentProcessor
+    Export:
+      Name: !Sub ${AWS::StackName}-Lambda-Name
+      
+  WebAppSecurityGroupId:
+    Description: Security group ID for web application tier
+    Value: !Ref WebAppSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-WebApp-SG-ID
+      
+  LoadBalancerSecurityGroupId:
+    Description: Security group ID for application load balancer
+    Value: !Ref LoadBalancerSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-ALB-SG-ID
+      
+  DatabaseSecurityGroupId:
+    Description: Security group ID for RDS database
+    Value: !Ref DatabaseSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-DB-SG-ID
+      
+  AutoScalingGroupName:
+    Description: Name of the Auto Scaling Group for web application instances
+    Value: !Ref WebApp

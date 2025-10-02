@@ -1,0 +1,339 @@
+{
+  "project_info": {
+    "project_id": "smart_parking_mgmt_system",
+    "project_name": "Smart City Parking Management System",
+    "description": "A comprehensive IoT-enabled parking management system for municipal governments to monitor real-time parking availability, process payments, and optimize traffic flow. The system integrates with IoT sensors deployed across city parking spaces, mobile applications for citizens, and administrative dashboards for city planners. Features include real-time occupancy tracking, dynamic pricing based on demand, automated violation detection, and revenue analytics.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "iot_data_pipeline",
+    "business_context": "Municipal government seeking to modernize parking infrastructure, reduce traffic congestion, and increase parking revenue through smart city initiatives. Typical deployment for cities with 50,000+ population managing 5,000-15,000 parking spaces across downtown and commercial districts.",
+    "components": [
+      {
+        "name": "iot_data_ingestion",
+        "service_type": "aws_iot_core",
+        "purpose": "Receives real-time data from parking sensors including occupancy status, payment confirmations, and violation alerts",
+        "dependencies": [],
+        "security_considerations": [
+          "device_authentication",
+          "encrypted_mqtt_communication",
+          "certificate_management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "sensor_data_processing",
+        "service_type": "aws_lambda",
+        "purpose": "Processes incoming sensor data, validates readings, triggers alerts for violations, and updates parking space status",
+        "dependencies": [
+          "iot_data_ingestion",
+          "parking_database"
+        ],
+        "security_considerations": [
+          "function_permissions",
+          "vpc_isolation",
+          "input_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "parking_database",
+        "service_type": "aws_rds_postgresql",
+        "purpose": "Stores parking space inventory, real-time occupancy data, payment transactions, and historical analytics",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "network_isolation",
+          "backup_encryption",
+          "access_controls"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "citizen_mobile_api",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API serving mobile applications for citizens to find parking, make payments, and extend parking time",
+        "dependencies": [
+          "parking_database",
+          "payment_processing"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "rate_limiting",
+          "input_sanitization"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "payment_processing",
+        "service_type": "aws_lambda",
+        "purpose": "Handles payment transactions, integrates with payment gateways, manages parking session billing and receipts",
+        "dependencies": [
+          "parking_database"
+        ],
+        "security_considerations": [
+          "pci_compliance",
+          "encrypted_payment_data",
+          "secure_api_calls"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "admin_dashboard_hosting",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Hosts static web dashboard for city administrators to monitor parking utilization, revenue, and system health",
+        "dependencies": [
+          "citizen_mobile_api"
+        ],
+        "security_considerations": [
+          "access_logging",
+          "secure_content_delivery",
+          "admin_authentication"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two availability zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "IoT devices connect via internet to IoT Core",
+        "Lambda functions in private subnets access RDS",
+        "API Gateway provides public endpoint",
+        "S3 serves static content via CloudFront"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 0,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 6,
+      "serverless_functions": 4,
+      "iot_components": 3,
+      "api_components": 2,
+      "security_components": 4,
+      "monitoring_components": 2
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:39:35.604118"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "title": "Performance Insights Encryption Customer Key",
+        "description": "RDS Performance Insights is enabled without customer-managed KMS key encryption, using default AWS-managed keys instead of customer-controlled encryption keys for enhanced security",
+        "severity": "medium",
+        "affected_component": "parking_database",
+        "injection_strategy": "Enable Performance Insights on RDS PostgreSQL instance without specifying performance_insights_kms_key_id parameter",
+        "business_impact": "Sensitive parking and payment data insights could be encrypted with AWS-managed keys, reducing municipal control over encryption keys and potentially impacting compliance requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_instance#performance_insights_kms_key_id\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#performance_insights_kms_key_id\n  good:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"good_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab\"\n      }\n  bad:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"bad_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"\"\n      }",
+        "file_name": "performance_insights_encryption_customer_key.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Enable performance_insights_enabled = true on RDS instance without setting performance_insights_kms_key_id",
+          "explanation": "This creates a vulnerability where database performance metrics are encrypted with AWS-managed keys instead of customer-managed keys, reducing encryption control"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "title": "Enable Access Logging",
+        "description": "API Gateway stage is configured without access logging, preventing security monitoring and audit trail generation for citizen mobile API requests",
+        "severity": "medium",
+        "affected_component": "citizen_mobile_api",
+        "injection_strategy": "Create API Gateway stage without access_log_settings configuration block",
+        "business_impact": "Municipal administrators cannot monitor API usage patterns, detect potential attacks, or maintain audit trails for parking payment transactions and citizen interactions",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_stage#access_log_settings\n  good:\n    - |-\n      resource \"aws_apigatewayv2_stage\" \"good_example\" {\n        api_id = aws_apigatewayv2_api.example.id\n        name   = \"example-stage\"\n\n        access_log_settings {\n          destination_arn = \"arn:aws:logs:region:0123456789:log-group:access_logging\"\n          format          = \"json\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_apigatewayv2_stage\" \"bad_example\" {\n        api_id = aws_apigatewayv2_api.example.id\n        name   = \"example-stage\"\n      }",
+        "file_name": "enable_access_logging.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy API Gateway stage resource without access_log_settings block",
+          "explanation": "This prevents logging of API requests, making it impossible to detect suspicious activity or maintain compliance audit trails"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-BLOCK_PUBLIC_POLICY",
+        "title": "Block Public Policy",
+        "description": "S3 bucket hosting the admin dashboard lacks public access block configuration, potentially allowing unintended public access to administrative interfaces",
+        "severity": "medium",
+        "affected_component": "admin_dashboard_hosting",
+        "injection_strategy": "Create S3 bucket without aws_s3_bucket_public_access_block resource or with block_public_policy = false",
+        "business_impact": "City administrative dashboard could become publicly accessible, exposing sensitive parking revenue data, citizen information, and system controls to unauthorized users",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block#block_public_policy\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"mybucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"good_example\" {\n        bucket              = aws_s3_bucket.example.id\n        block_public_policy = true\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"mybucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"bad_example\" {\n        bucket = aws_s3_bucket.example.id\n      }",
+        "file_name": "block_public_policy.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without public access block configuration or with block_public_policy omitted/false",
+          "explanation": "This allows potential public bucket policies to be applied, risking exposure of administrative dashboard content"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "title": "Log Group Customer Key",
+        "description": "CloudWatch log groups for Lambda functions are not encrypted with customer-managed KMS keys, using default AWS encryption instead",
+        "severity": "medium",
+        "affected_component": "sensor_data_processing",
+        "injection_strategy": "Create CloudWatch log group without kms_key_id parameter for Lambda function logs",
+        "business_impact": "IoT sensor data processing logs containing potentially sensitive parking information are encrypted with AWS-managed keys, reducing municipal control over log encryption",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group#kms_key_id\n  good:\n    - |-\n      resource \"aws_kms_key\" \"cloudwatch\" {\n        enable_key_rotation = true\n      }\n\n      resource \"aws_kms_alias\" \"cloudwatch\" {\n        name          = \"alias/cloudwatch\"\n        target_key_id = aws_kms_key.cloudwatch.key_id\n      }\n      resource \"aws_cloudwatch_log_group\" \"good_example\" {\n        name = \"good_example\"\n\n        kms_key_id = aws_kms_alias.cloudwatch.arn\n      }\n  bad:\n    - |-\n      resource \"aws_cloudwatch_log_group\" \"bad_example\" {\n        name = \"bad_example\"\n\n      }",
+        "file_name": "log_group_customer_key.yaml",
+        "service": "cloudwatch",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudWatch log group resource without kms_key_id attribute",
+          "explanation": "This results in logs being encrypted with AWS-managed keys instead of customer-controlled encryption keys"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENCRYPTION_CUSTOMER_KEY",
+        "title": "Encryption Customer Key",
+        "description": "CloudTrail is configured without customer-managed KMS key encryption, potentially exposing audit logs of parking system API calls and administrative actions",
+        "severity": "medium",
+        "affected_component": "iot_data_ingestion",
+        "injection_strategy": "Create CloudTrail resource without kms_key_id parameter",
+        "business_impact": "Audit trails of IoT device connections, payment processing, and administrative actions are encrypted with AWS-managed keys, reducing municipal control over sensitive audit data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudtrail#kms_key_id\n  good:\n    - |-\n      resource \"aws_kms_key\" \"trail\" {\n        enable_key_rotation = true\n      }\n      resource \"aws_kms_alias\" \"trail\" {\n        name          = \"alias/trail\"\n        target_key_id = aws_kms_key.trail.key_id\n      }\n\n      resource \"aws_cloudtrail\" \"good_example\" {\n        kms_key_id = aws_kms_alias.trail.arn\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n      }",
+        "file_name": "encryption_customer_key.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy CloudTrail without kms_key_id attribute",
+          "explanation": "This leaves audit logs encrypted with AWS-managed keys instead of customer-controlled encryption"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure Tls Policy",
+        "description": "CloudFront distribution serving the admin dashboard uses outdated TLS policy, potentially allowing insecure connections to administrative interfaces",
+        "severity": "medium",
+        "affected_component": "admin_dashboard_hosting",
+        "injection_strategy": "Configure CloudFront distribution with minimum_protocol_version set to TLSv1.0 or omitted when using custom certificates",
+        "business_impact": "Municipal administrators and staff could connect to the parking management dashboard using weak TLS protocols, exposing sensitive data to man-in-the-middle attacks",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#minimum_protocol_version\n  good:\n    - |-\n      resource \"aws_cloudfront_distribution\" \"good_example\" {\n        viewer_certificate {\n          cloudfront_default_certificate = false\n          minimum_protocol_version       = \"TLSv1.2_2021\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_cloudfront_distribution\" \"bad_example\" {\n        viewer_certificate {\n          cloudfront_default_certificate = false\n          minimum_protocol_version       = \"TLSv1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "cloudfront",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set minimum_protocol_version to TLSv1.0 or omit it when cloudfront_default_certificate = false",
+          "explanation": "This allows connections using weak TLS protocols that are vulnerable to cryptographic attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "title": "Require Symbols In Passwords",
+        "description": "IAM password policy does not require symbols, allowing weak passwords for municipal staff accessing the parking management system",
+        "severity": "medium",
+        "affected_component": "admin_dashboard_hosting",
+        "injection_strategy": "Create IAM password policy without require_symbols = true or omit the setting entirely",
+        "business_impact": "Municipal staff and administrators could use weak passwords without special characters, increasing risk of credential compromise and unauthorized access to parking revenue and citizen data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        # ...\n        require_symbols = true\n        # ...\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # require_symbols not set\n        # ...\n      }",
+        "file_name": "require_symbols_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM password policy resource without require_symbols attribute or set to false",
+          "explanation": "This allows users to create passwords without special characters, making them easier to crack through brute force attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_CACHE_ENCRYPTION",
+        "title": "Enable Cache Encryption",
+        "description": "API Gateway method settings enable caching but do not encrypt cached data, potentially exposing sensitive parking and payment information in cache",
+        "severity": "medium",
+        "affected_component": "citizen_mobile_api",
+        "injection_strategy": "Configure API Gateway method settings with caching_enabled = true but cache_data_encrypted = false or omitted",
+        "business_impact": "Cached parking availability data, payment information, and citizen details could be stored unencrypted in API Gateway cache, exposing sensitive information if cache is compromised",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method_settings#cache_data_encrypted\n  good:\n    - |-\n      resource \"aws_api_gateway_method_settings\" \"good_example\" {\n        rest_api_id = aws_api_gateway_rest_api.example.id\n        stage_name  = aws_api_gateway_stage.example.stage_name\n        method_path = \"path1/GET\"\n\n        settings {\n          caching_enabled      = true\n          cache_data_encrypted = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_method_settings\" \"bad_example\" {\n        rest_api_id = aws_api_gateway_rest_api.example.id\n        stage_name  = aws_api_gateway_stage.example.stage_name\n        method_path = \"path1/GET\"\n\n        settings {\n          caching_enabled      = true\n          cache_data_encrypted = false\n        }\n      }",
+        "file_name": "enable_cache_encryption.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Enable API Gateway caching with cache_data_encrypted = false or omitted",
+          "explanation": "This stores cached API responses in plaintext, potentially exposing sensitive parking and payment data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "AWS-S3-BLOCK_PUBLIC_POLICY",
+        "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "AWS-CLOUDTRAIL-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "AWS-APIGATEWAY-ENABLE_CACHE_ENCRYPTION"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "cloudwatch",
+        "cloudtrail",
+        "s3",
+        "iam",
+        "cloudfront",
+        "rds"
+      ],
+      "services_covered": [
+        "apigateway",
+        "cloudwatch",
+        "cloudtrail",
+        "s3",
+        "iam",
+        "cloudfront",
+        "rds"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 34,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

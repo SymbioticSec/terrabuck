@@ -1,0 +1,20 @@
+{
+  "applicationGatewayPublicIP": {
+    "description": "Public IP address of the Application Gateway for external access to the POS system"
+  },
+  "webAppUrl": {
+    "description": "URL of the POS web application for restaurant staff and management access"
+  },
+  "apiAppUrl": {
+    "description": "URL of the API backend for integration with POS terminals and mobile apps"
+  },
+  "sqlServerFqdn": {
+    "description": "Fully qualified domain name of the SQL Server hosting the POS database"
+  },
+  "inventoryStorageEndpoint": {
+    "description": "Blob storage endpoint for inventory images and menu photos"
+  },
+  "transactionStorageEndpoint": {
+    "description": "Secure blob storage endpoint for payment transaction logs and audit trails"
+  }
+}

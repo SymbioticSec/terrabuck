@@ -1,0 +1,515 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Social Media Analytics Platform - Complete data pipeline infrastructure'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - ProjectName
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnet1Cidr
+          - PublicSubnet2Cidr
+          - PrivateSubnet1Cidr
+          - PrivateSubnet2Cidr
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DatabaseUsername
+          - DatabasePassword
+          - DatabaseInstanceClass
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Environment name for resource tagging
+  
+  ProjectName:
+    Type: String
+    Default: social-media-analytics-platform
+    Description: Project name for resource naming
+  
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC
+  
+  PublicSubnet1Cidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for public subnet 1
+  
+  PublicSubnet2Cidr:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for public subnet 2
+  
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: 10.0.10.0/24
+    Description: CIDR block for private subnet 1
+  
+  PrivateSubnet2Cidr:
+    Type: String
+    Default: 10.0.20.0/24
+    Description: CIDR block for private subnet 2
+  
+  DatabaseUsername:
+    Type: String
+    Default: analytics_admin
+    Description: Master username for RDS instance
+  
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Master password for RDS instance
+  
+  DatabaseInstanceClass:
+    Type: String
+    Default: db.t3.medium
+    AllowedValues: [db.t3.micro, db.t3.small, db.t3.medium, db.t3.large]
+    Description: RDS instance class
+  
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.small, t3.medium, t3.large]
+    Description: EC2 instance type for dashboard application
+
+Resources:
+  # VPC and Networking
+  SocialMediaVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+        - Key: Environment
+          Value: !Ref Environment
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SocialMediaVPC
+      CidrBlock: !Ref PublicSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet-1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SocialMediaVPC
+      CidrBlock: !Ref PublicSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet-2"
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SocialMediaVPC
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-subnet-1"
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SocialMediaVPC
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-subnet-2"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref SocialMediaVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SocialMediaVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-rt"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # Security Groups
+  APIGatewaySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for API Gateway VPC Link
+      VpcId: !Ref SocialMediaVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-api-gateway-sg"
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Lambda functions
+      VpcId: !Ref SocialMediaVPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-lambda-sg"
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS database
+      VpcId: !Ref SocialMediaVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref DashboardSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database-sg"
+
+  DashboardSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for dashboard EC2 instances
+      VpcId: !Ref SocialMediaVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-dashboard-sg"
+
+  # S3 Bucket for Raw Data Storage
+  RawDataStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-raw-data-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+        MfaDelete: Disabled
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-raw-data-storage"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Kinesis Stream for Data Processing
+  SocialMediaDataStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: !Sub "${ProjectName}-data-stream"
+      ShardCount: 2
+      StreamEncryption:
+        EncryptionType: KMS
+        KeyId: alias/aws/kinesis
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-stream-processing-engine"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-lambda-execution-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: KinesisAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:DescribeStream
+                  - kinesis:GetRecords
+                  - kinesis:GetShardIterator
+                  - kinesis:ListStreams
+                Resource: !GetAtt SocialMediaDataStream.Arn
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub "${RawDataStorageBucket}/*"
+
+  # Lambda Function for Analytics Processing
+  AnalyticsProcessorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-analytics-processor"
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          def handler(event, context):
+              # Sentiment analysis and data processing logic
+              return {'statusCode': 200, 'body': json.dumps('Analytics processed')}
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+      Environment:
+        Variables:
+          DATABASE_HOST: !GetAtt MetricsDatabase.Endpoint.Address
+          S3_BUCKET: !Ref RawDataStorageBucket
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-analytics-processor"
+
+  # RDS Subnet Group
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for social media analytics database
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-subnet-group"
+
+  # RDS Database Instance
+  MetricsDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${ProjectName}-metrics-db"
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      Engine: postgres
+      EngineVersion: '13.7'
+      AllocatedStorage: 100
+      StorageType: gp2
+      StorageEncrypted: true
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      BackupRetentionPeriod: 7
+      MultiAZ: false
+      PubliclyAccessible: false
+      EnablePerformanceInsights: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-metrics-database"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # API Gateway
+  DataIngestionAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ProjectName}-data-ingestion-api"
+      Description: RESTful API for social media data ingestion
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-data-ingestion-api"
+
+  APIGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref DataIngestionAPI
+      StageName: prod
+      CacheClusterEnabled: true
+      CacheClusterSize: '0.5'
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          CachingEnabled: true
+          CacheDataEncrypted: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-api-stage"
+
+  # EC2 Instance for Dashboard Application
+  DashboardInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0abcdef1234567890
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref DashboardSecurityGroup
+      IamInstanceProfile: !Ref DashboardInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            Encrypted: false
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y docker
+          service docker start
+          usermod -a -G docker ec2-user
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-dashboard-application"
+        - Key: Environment
+          Value: !Ref Environment
+
+  # IAM Role for EC2 Dashboard Instance
+  DashboardInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-dashboard-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt RawDataStorageBucket.Arn
+                  - !Sub "${RawDataStorageBucket}/*"
+
+  DashboardInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${ProjectName}-dashboard-profile"
+      Roles:
+        - !Ref DashboardInstanceRole
+
+Outputs:
+  VPCId:
+    Description: VPC ID for the social media analytics platform
+    Value: !Ref SocialMediaVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+
+  DatabaseEndpoint:
+    Description: RDS database endpoint
+    Value: !GetAtt MetricsDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-DB-Endpoint"
+
+  S3BucketName:
+    Description: S3 bucket for raw data storage
+    Value: !Ref RawDataStorageBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-S3-Bucket"
+
+  KinesisStreamName:
+    Description: Kinesis stream for data processing
+    Value: !Ref SocialMediaDataStream
+    Export:
+      Name: !Sub "${AWS::StackName}-Kinesis-Stream"
+
+  APIGatewayURL:
+    Description: API Gateway URL for data ingestion
+    Value: !Sub "https://${DataIngestionAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Export:
+      Name: !Sub "${AWS::StackName}-API-URL"
+
+  DashboardInstanceId:
+    Description: EC2 instance ID for dashboard application
+    Value: !Ref DashboardInstance
+    Export:
+      Name: !Sub "${AWS::StackName}-Dashboard-Instance"
+
+  LambdaFunctionName:
+    Description: Lambda function name for analytics processing
+    Value: !Ref AnalyticsProcessorFunction
+    Export:
+      Name: !Sub "${AWS::StackName}-Lambda-Function"

@@ -1,0 +1,272 @@
+{
+  "original_components": [
+    {
+      "name": "iot_data_ingestion",
+      "service_type": "aws_iot_core",
+      "purpose": "Secure MQTT endpoint for sensor data collection with device authentication and message routing",
+      "dependencies": [],
+      "security_considerations": [
+        "device_certificates",
+        "iot_policies",
+        "encrypted_transport"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "stream_processing",
+      "service_type": "aws_kinesis_data_streams",
+      "purpose": "Real-time data streaming and buffering for high-throughput sensor data processing",
+      "dependencies": [
+        "iot_data_ingestion"
+      ],
+      "security_considerations": [
+        "encryption_at_rest",
+        "iam_access_control"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "anomaly_detection",
+      "service_type": "aws_lambda",
+      "purpose": "Real-time processing functions for anomaly detection and threshold alerting using statistical analysis",
+      "dependencies": [
+        "stream_processing"
+      ],
+      "security_considerations": [
+        "execution_role_permissions",
+        "vpc_isolation",
+        "environment_variables_encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "time_series_database",
+      "service_type": "aws_timestream",
+      "purpose": "Optimized storage for time-series sensor data with automatic data lifecycle management",
+      "dependencies": [
+        "anomaly_detection"
+      ],
+      "security_considerations": [
+        "encryption_at_rest",
+        "vpc_endpoints",
+        "fine_grained_access_control"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "analytics_api",
+      "service_type": "aws_api_gateway",
+      "purpose": "RESTful API for dashboard queries and historical data retrieval with rate limiting",
+      "dependencies": [
+        "time_series_database"
+      ],
+      "security_considerations": [
+        "api_keys",
+        "throttling",
+        "cors_configuration"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "compliance_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Long-term archival storage for regulatory compliance with immutable data retention",
+      "dependencies": [
+        "time_series_database"
+      ],
+      "security_considerations": [
+        "object_lock",
+        "bucket_encryption",
+        "access_logging",
+        "lifecycle_policies"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "iot_data_ingestion",
+      "service_type": "aws_iot_core",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "stream_processing",
+      "service_type": "aws_kinesis_data_streams",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "anomaly_detection",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "time_series_database",
+      "service_type": "aws_timestream",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "analytics_api",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "compliance_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 404,
+      "resource_count": 28,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "main"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "main"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "lambda"
+        },
+        {
+          "type": "aws_iot_thing_type",
+          "name": "sensor"
+        },
+        {
+          "type": "aws_iot_policy",
+          "name": "sensor_policy"
+        },
+        {
+          "type": "aws_iot_topic_rule",
+          "name": "sensor_data"
+        },
+        {
+          "type": "aws_kinesis_stream",
+          "name": "sensor_data"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "anomaly_detection"
+        },
+        {
+          "type": "aws_lambda_event_source_mapping",
+          "name": "kinesis_trigger"
+        },
+        {
+          "type": "aws_timestreamwrite_database",
+          "name": "sensor_data"
+        },
+        {
+          "type": "aws_timestreamwrite_table",
+          "name": "sensor_readings"
+        },
+        {
+          "type": "aws_api_gateway_rest_api",
+          "name": "analytics_api"
+        },
+        {
+          "type": "aws_api_gateway_deployment",
+          "name": "analytics_api"
+        },
+        {
+          "type": "aws_api_gateway_resource",
+          "name": "analytics_resource"
+        },
+        {
+          "type": "aws_api_gateway_method",
+          "name": "analytics_method"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "compliance_storage"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "cloudtrail_logs"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_cloudtrail",
+          "name": "main"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_execution_role"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "iot_kinesis_role"
+        },
+        {
+          "type": "aws_iam_group",
+          "name": "developers"
+        },
+        {
+          "type": "aws_iam_role_policy",
+          "name": "lambda_timestream_policy"
+        },
+        {
+          "type": "aws_iam_role_policy",
+          "name": "iot_kinesis_policy"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 29,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 59,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 290,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

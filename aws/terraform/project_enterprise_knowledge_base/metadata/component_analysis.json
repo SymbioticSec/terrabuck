@@ -1,0 +1,313 @@
+{
+  "original_components": [
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Primary storage for all document types with versioning and lifecycle management",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_logging",
+        "bucket_policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "search_cluster",
+      "service_type": "aws_elasticsearch_domain",
+      "purpose": "Elasticsearch cluster for full-text search and document indexing",
+      "dependencies": [
+        "document_storage"
+      ],
+      "security_considerations": [
+        "vpc_endpoints",
+        "encryption_in_transit",
+        "fine_grained_access"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "document_processor",
+      "service_type": "aws_lambda",
+      "purpose": "Processes uploaded documents, extracts text, and indexes content for search",
+      "dependencies": [
+        "document_storage",
+        "search_cluster"
+      ],
+      "security_considerations": [
+        "iam_roles",
+        "vpc_configuration",
+        "environment_variables"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "web_application",
+      "service_type": "aws_ecs_fargate",
+      "purpose": "Main web interface for document upload, search, and management",
+      "dependencies": [
+        "document_storage",
+        "search_cluster",
+        "user_database"
+      ],
+      "security_considerations": [
+        "container_security",
+        "secrets_management",
+        "network_isolation"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "user_database",
+      "service_type": "aws_rds_postgresql",
+      "purpose": "Stores user profiles, permissions, and document metadata",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "backup_encryption",
+        "parameter_groups"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Distributes traffic to web application instances with SSL termination",
+      "dependencies": [
+        "web_application"
+      ],
+      "security_considerations": [
+        "ssl_certificates",
+        "security_groups",
+        "waf_integration"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "search_cluster",
+      "service_type": "aws_elasticsearch_domain",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "document_processor",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "web_application",
+      "service_type": "aws_ecs_fargate",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "user_database",
+      "service_type": "aws_rds_postgresql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 707,
+      "resource_count": 38,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "main"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "main"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "data"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "document_storage"
+        },
+        {
+          "type": "aws_s3_bucket_public_access_block",
+          "name": "document_storage"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "document_storage"
+        },
+        {
+          "type": "random_string",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "user_database"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "rds"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "user_database"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "elasticsearch"
+        },
+        {
+          "type": "aws_elasticsearch_domain",
+          "name": "search_cluster"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "lambda"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_role"
+        },
+        {
+          "type": "aws_iam_policy",
+          "name": "lambda_policy"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_policy"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "lambda_vpc_execution"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "document_processor"
+        },
+        {
+          "type": "aws_ecs_cluster",
+          "name": "main"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "ecs"
+        },
+        {
+          "type": "aws_secretsmanager_secret",
+          "name": "app_secrets"
+        },
+        {
+          "type": "aws_secretsmanager_secret_version",
+          "name": "app_secrets"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "ecs_task_role"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "ecs_execution_role"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "ecs_execution_role_policy"
+        },
+        {
+          "type": "aws_ecs_task_definition",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "ecs"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "alb"
+        },
+        {
+          "type": "aws_lb",
+          "name": "main"
+        },
+        {
+          "type": "aws_lb_target_group",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_lb_listener",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_ecs_service",
+          "name": "web_app"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "cloudtrail_logs"
+        },
+        {
+          "type": "aws_cloudtrail",
+          "name": "main"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 48,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 40,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 122,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

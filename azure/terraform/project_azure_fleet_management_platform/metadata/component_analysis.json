@@ -1,0 +1,248 @@
+{
+  "original_components": [
+    {
+      "name": "vehicle_telemetry_ingestion",
+      "service_type": "azure_event_hubs",
+      "purpose": "Ingests high-frequency GPS coordinates, speed, fuel level, and diagnostic data from vehicle telematics devices",
+      "dependencies": [],
+      "security_considerations": [
+        "device_authentication",
+        "data_encryption_in_transit",
+        "rate_limiting"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "telemetry_processor",
+      "service_type": "azure_functions",
+      "purpose": "Processes incoming telemetry data, calculates derived metrics like fuel efficiency, detects geofence violations, and triggers alerts",
+      "dependencies": [
+        "vehicle_telemetry_ingestion",
+        "fleet_database"
+      ],
+      "security_considerations": [
+        "function_authentication",
+        "secure_database_connections"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "fleet_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores vehicle profiles, driver information, historical tracking data, and calculated analytics with optimized indexing for location queries",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "connection_string_protection",
+        "backup_security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "fleet_management_webapp",
+      "service_type": "azure_app_service",
+      "purpose": "Web application providing real-time fleet dashboard, route planning tools, driver management, and compliance reporting interface",
+      "dependencies": [
+        "fleet_database",
+        "map_tile_storage"
+      ],
+      "security_considerations": [
+        "user_authentication",
+        "role_based_access",
+        "session_management"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "map_tile_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Stores cached map tiles, route overlays, and static assets for the web application with CDN integration for performance",
+      "dependencies": [],
+      "security_considerations": [
+        "blob_access_policies",
+        "cdn_security_headers"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "purpose": "Provides SSL termination, web application firewall protection, and load balancing for the fleet management web application",
+      "dependencies": [
+        "fleet_management_webapp"
+      ],
+      "security_considerations": [
+        "ssl_certificate_management",
+        "waf_rules",
+        "ddos_protection"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "vehicle_telemetry_ingestion",
+      "service_type": "azure_event_hubs",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "telemetry_processor",
+      "service_type": "azure_functions",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "fleet_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "fleet_management_webapp",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "map_tile_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 318,
+      "resource_count": 23,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "fleet_management"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "fleet_vnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "public_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "private_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "private_nsg"
+        },
+        {
+          "type": "azurerm_network_security_rule",
+          "name": "allow_all_outbound"
+        },
+        {
+          "type": "azurerm_subnet_network_security_group_association",
+          "name": "private_nsg_association"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "map_tile_storage"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "map_tiles"
+        },
+        {
+          "type": "azurerm_eventhub_namespace",
+          "name": "vehicle_telemetry"
+        },
+        {
+          "type": "azurerm_eventhub",
+          "name": "telemetry_ingestion"
+        },
+        {
+          "type": "azurerm_mssql_server",
+          "name": "fleet_database_server"
+        },
+        {
+          "type": "azurerm_mssql_firewall_rule",
+          "name": "allow_all_ips"
+        },
+        {
+          "type": "azurerm_mssql_database",
+          "name": "fleet_database"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "fleet_app_plan"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "fleet_management_webapp"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "function_storage"
+        },
+        {
+          "type": "azurerm_linux_function_app",
+          "name": "telemetry_processor"
+        },
+        {
+          "type": "azurerm_public_ip",
+          "name": "app_gateway_pip"
+        },
+        {
+          "type": "azurerm_application_gateway",
+          "name": "fleet_app_gateway"
+        },
+        {
+          "type": "azurerm_cdn_profile",
+          "name": "map_cdn"
+        },
+        {
+          "type": "azurerm_cdn_endpoint",
+          "name": "map_tiles_endpoint"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 41,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 50,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 166,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

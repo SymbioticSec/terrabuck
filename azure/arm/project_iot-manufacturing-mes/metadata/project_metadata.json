@@ -1,0 +1,310 @@
+{
+  "project_info": {
+    "project_id": "iot-manufacturing-mes",
+    "project_name": "Smart Manufacturing Execution System (MES)",
+    "description": "A cloud-based Manufacturing Execution System for a mid-sized automotive parts manufacturer. The system collects real-time data from production line sensors, tracks work orders, monitors equipment performance, and provides dashboards for plant managers. Integrates with existing ERP systems and supports multiple production lines across different facilities.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "event_driven_iot",
+    "business_context": "Automotive parts manufacturer with 3 production facilities needs to modernize their manufacturing operations with real-time visibility, predictive maintenance capabilities, and integration with their SAP ERP system. System must handle 10,000+ sensor readings per minute and provide sub-second alerting for critical production issues.",
+    "components": [
+      {
+        "name": "iot_hub",
+        "service_type": "azure_iot_hub",
+        "purpose": "Ingests telemetry data from production line sensors, PLCs, and SCADA systems with device authentication and message routing",
+        "dependencies": [],
+        "security_considerations": [
+          "device_authentication",
+          "message_encryption",
+          "certificate_management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "stream_analytics",
+        "service_type": "azure_stream_analytics",
+        "purpose": "Real-time processing of sensor data for anomaly detection, KPI calculations, and alert generation with configurable thresholds",
+        "dependencies": [
+          "iot_hub",
+          "sql_database"
+        ],
+        "security_considerations": [
+          "data_transformation_security",
+          "output_authentication"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "web_application",
+        "service_type": "azure_app_service",
+        "purpose": "MES dashboard web application for production managers with work order tracking, equipment status, and real-time analytics",
+        "dependencies": [
+          "sql_database",
+          "storage_account"
+        ],
+        "security_considerations": [
+          "authentication",
+          "role_based_access",
+          "data_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "sql_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores work orders, equipment master data, production schedules, historical sensor data, and user management information",
+        "dependencies": [],
+        "security_considerations": [
+          "data_encryption",
+          "backup_security",
+          "access_controls",
+          "audit_logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "storage_account",
+        "service_type": "azure_storage_account",
+        "purpose": "Blob storage for production reports, equipment manuals, configuration files, and long-term archival of sensor data",
+        "dependencies": [],
+        "security_considerations": [
+          "blob_encryption",
+          "access_policies",
+          "network_restrictions"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "function_app",
+        "service_type": "azure_functions",
+        "purpose": "Serverless functions for ERP integration, email notifications, data validation, and scheduled maintenance workflows",
+        "dependencies": [
+          "sql_database",
+          "storage_account"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "secrets_management",
+          "network_isolation"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with three subnets: public subnet for App Service and Application Gateway, private subnet for SQL Database and Function App, and IoT subnet for IoT Hub with restricted access",
+      "security_zones": [
+        "public",
+        "private",
+        "iot"
+      ],
+      "connectivity_patterns": [
+        "IoT Hub receives data from factory floor",
+        "Stream Analytics processes data in real-time",
+        "Web app connects to SQL Database through private endpoint",
+        "Function App integrates with external ERP via secure API calls"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 5,
+      "iot_components": 4,
+      "security_components": 3,
+      "monitoring_components": 2
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T17:13:25.403465"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-DATABASE-NO_PUBLIC_FIREWALL_ACCESS",
+        "title": "SQL Database Allows Public Access",
+        "description": "The Azure SQL Database has firewall rules configured to allow access from all public IP addresses (0.0.0.0 to 255.255.255.255), exposing sensitive manufacturing data to potential unauthorized access from the internet.",
+        "severity": "high",
+        "affected_component": "sql_database",
+        "injection_strategy": "Configure SQL firewall rule with overly permissive IP range allowing all internet traffic",
+        "business_impact": "Unauthorized access to critical manufacturing data including work orders, production schedules, equipment configurations, and historical sensor data could lead to industrial espionage, production disruption, or compliance violations in automotive manufacturing.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/sql_firewall_rule#end_ip_address\n  good:\n    - |-\n      resource \"azurerm_sql_firewall_rule\" \"good_example\" {\n        name                = \"good_rule\"\n        resource_group_name = azurerm_resource_group.example.name\n        server_name         = azurerm_sql_server.example.name\n        start_ip_address    = \"0.0.0.0\"\n        end_ip_address      = \"0.0.0.0\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_firewall_rule\" \"bad_example\" {\n        name                = \"bad_rule\"\n        resource_group_name = azurerm_resource_group.example.name\n        server_name         = azurerm_sql_server.example.name\n        start_ip_address    = \"0.0.0.0\"\n        end_ip_address      = \"255.255.255.255\"\n      }",
+        "file_name": "no_public_firewall_access.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set SQL firewall rule with start_ip_address = '0.0.0.0' and end_ip_address = '255.255.255.255'",
+          "explanation": "This configuration allows any IP address on the internet to attempt connections to the SQL database, bypassing network-level security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-NO_PUBLIC_ACCESS",
+        "title": "Storage Container Allows Public Blob Access",
+        "description": "The Azure Storage Account container storing production reports, equipment manuals, and sensor data archives is configured with public blob access, allowing anonymous users to read sensitive manufacturing documentation.",
+        "severity": "medium",
+        "affected_component": "storage_account",
+        "injection_strategy": "Configure storage container with container_access_type set to 'blob' instead of 'private'",
+        "business_impact": "Exposure of proprietary manufacturing processes, equipment specifications, production reports, and historical sensor data could lead to competitive disadvantage, intellectual property theft, or regulatory compliance issues.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://www.terraform.io/docs/providers/azure/r/storage_container.html#properties\n  good:\n    - |-\n      resource \"azurerm_storage_container\" \"good_example\" {\n        name                  = \"terraform-container-storage\"\n        container_access_type = \"private\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_container\" \"bad_example\" {\n        name                  = \"terraform-container-storage\"\n        container_access_type = \"blob\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set container_access_type = 'blob' on storage containers containing sensitive manufacturing data",
+          "explanation": "This allows anonymous internet users to directly access and download blob contents without authentication"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "title": "App Service Uses Weak TLS Configuration",
+        "description": "The MES dashboard web application is configured to accept TLS 1.0 connections, which uses weak cryptographic algorithms that could be exploited to intercept sensitive manufacturing data in transit.",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "Configure App Service site_config with min_tls_version set to '1.0' instead of '1.2'",
+        "business_impact": "Weak encryption could allow attackers to intercept communications between plant managers and the MES system, potentially exposing real-time production data, work order information, and equipment status updates.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.2\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = '1.0' in the App Service site_config block",
+          "explanation": "TLS 1.0 has known cryptographic weaknesses and is deprecated, making encrypted communications vulnerable to interception"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "title": "Network Security Rule Allows Unrestricted Inbound Access",
+        "description": "Network security rules are configured to allow inbound traffic from any source (0.0.0.0/0) to critical manufacturing systems, potentially exposing IoT Hub and other services to internet-based attacks.",
+        "severity": "high",
+        "affected_component": "iot_hub",
+        "injection_strategy": "Configure network security rule with source_address_prefix set to '0.0.0.0/0' and access set to 'Allow'",
+        "business_impact": "Unrestricted network access could allow attackers to directly target IoT devices, disrupt sensor communications, inject malicious data into production systems, or launch denial-of-service attacks against critical manufacturing infrastructure.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Inbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction             = \"Inbound\"\n        source_address_prefix = \"0.0.0.0/0\"\n        access                = \"Allow\"\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set source_address_prefix = '0.0.0.0/0' with access = 'Allow' and direction = 'Inbound'",
+          "explanation": "This allows any IP address on the internet to send traffic to the protected resources, bypassing network segmentation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "title": "SQL Database Threat Detection Alerts Disabled",
+        "description": "The Azure SQL Database has specific threat detection alerts disabled, including SQL injection and data exfiltration detection, reducing the system's ability to detect attacks against manufacturing data.",
+        "severity": "medium",
+        "affected_component": "sql_database",
+        "injection_strategy": "Configure SQL server security alert policy with disabled_alerts including 'Sql_Injection' and 'Data_Exfiltration'",
+        "business_impact": "Disabled threat detection reduces visibility into potential attacks against manufacturing data, delaying incident response and potentially allowing data breaches or production system compromises to go undetected.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#disabled_alerts\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts            = []\n        retention_days             = 20\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        retention_days = 20\n      }",
+        "file_name": "all_threat_alerts_enabled.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add 'Sql_Injection' and 'Data_Exfiltration' to the disabled_alerts list in mssql_server_security_alert_policy",
+          "explanation": "This disables critical security monitoring capabilities that could detect attacks against the manufacturing database"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "title": "Storage Account Network Rules Allow All Traffic",
+        "description": "The Azure Storage Account network rules are configured with default_action set to 'Allow', permitting unrestricted access to manufacturing data archives and configuration files stored in blob storage.",
+        "severity": "medium",
+        "affected_component": "storage_account",
+        "injection_strategy": "Configure storage account network rules with default_action set to 'Allow' instead of 'Deny'",
+        "business_impact": "Unrestricted storage access could allow unauthorized users to access or modify critical manufacturing configuration files, production reports, equipment manuals, and historical sensor data, potentially disrupting operations or exposing intellectual property.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account_network_rules#default_action\n  good:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"good_example\" {\n\n        default_action             = \"Deny\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"bad_example\" {\n\n        default_action             = \"Allow\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }",
+        "file_name": "default_action_deny.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set default_action = 'Allow' in azurerm_storage_account_network_rules",
+          "explanation": "This allows access from any source that isn't explicitly denied, weakening the principle of least privilege"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET",
+        "title": "Activity Log Retention Period Too Short",
+        "description": "Azure Monitor activity log retention is configured for only 7 days, which is insufficient for forensic analysis and compliance requirements in manufacturing environments where audit trails must be maintained for extended periods.",
+        "severity": "medium",
+        "affected_component": "stream_analytics",
+        "injection_strategy": "Configure monitor log profile retention policy with days set to 7 instead of 365 or higher",
+        "business_impact": "Short log retention periods limit the ability to investigate security incidents, perform forensic analysis, meet regulatory compliance requirements, and maintain proper audit trails for manufacturing operations and quality control processes.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_log_profile#retention_policy\n  good:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"good_example\" {\n        name = \"good_example\"\n\n        retention_policy {\n          enabled = true\n          days    = 365\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"bad_example\" {\n        name = \"bad_example\"\n\n        retention_policy {\n          enabled = true\n          days    = 7\n        }\n      }",
+        "file_name": "activity_log_retention_set.yaml",
+        "service": "monitor",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set retention_policy days = 7 in azurerm_monitor_log_profile",
+          "explanation": "Short retention periods prevent long-term security analysis and may violate compliance requirements for manufacturing audit trails"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AZURE-DATABASE-NO_PUBLIC_FIREWALL_ACCESS",
+        "AZURE-STORAGE-NO_PUBLIC_ACCESS",
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 0
+      },
+      "service_categories": [
+        "database",
+        "monitor",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "services_covered": [
+        "database",
+        "monitor",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 19,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

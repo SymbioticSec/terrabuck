@@ -1,0 +1,375 @@
+{
+  "project_info": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "project_name": "Healthcare Patient Portal with HIPAA Compliance",
+    "description": "A secure patient portal for a regional healthcare provider allowing patients to view medical records, schedule appointments, communicate with providers, and access test results. The system must comply with HIPAA regulations and handle PHI (Protected Health Information) with appropriate encryption, access controls, and audit logging.",
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "architecture_type": "multi-tier_web_application",
+    "business_context": "Regional healthcare network with 50,000+ patients needs a secure digital platform to reduce administrative overhead, improve patient engagement, and meet regulatory compliance requirements. The portal integrates with existing EHR systems and supports telehealth consultations.",
+    "components": [
+      {
+        "name": "web_frontend",
+        "service_type": "azure_app_service",
+        "purpose": "Hosts the patient-facing web application with secure authentication and responsive UI for accessing medical records and scheduling",
+        "dependencies": [
+          "api_gateway",
+          "cdn"
+        ],
+        "security_considerations": [
+          "SSL/TLS termination",
+          "WAF protection",
+          "session management",
+          "input validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "azure_api_management",
+        "purpose": "Centralized API gateway for authentication, rate limiting, and routing requests to backend services with comprehensive logging",
+        "dependencies": [
+          "backend_services",
+          "key_vault"
+        ],
+        "security_considerations": [
+          "API authentication",
+          "rate limiting",
+          "request/response logging",
+          "IP whitelisting"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "backend_services",
+        "service_type": "azure_container_instances",
+        "purpose": "Containerized microservices handling patient data, appointments, messaging, and EHR integration with auto-scaling capabilities",
+        "dependencies": [
+          "patient_database",
+          "file_storage",
+          "service_bus"
+        ],
+        "security_considerations": [
+          "container security",
+          "network isolation",
+          "secrets management",
+          "least privilege access"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "patient_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Encrypted SQL database storing patient records, appointments, and audit logs with automated backups and point-in-time recovery",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption at rest",
+          "encryption in transit",
+          "access controls",
+          "audit logging",
+          "backup encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "file_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Secure blob storage for medical documents, test results, and images with lifecycle management and compliance retention",
+        "dependencies": [],
+        "security_considerations": [
+          "blob encryption",
+          "access policies",
+          "immutable storage",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "key_vault",
+        "service_type": "azure_key_vault",
+        "purpose": "Centralized secrets management for database connections, API keys, and encryption keys with HSM backing",
+        "dependencies": [],
+        "security_considerations": [
+          "HSM protection",
+          "access policies",
+          "key rotation",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Hub-spoke VNet architecture with dedicated subnets for web tier, application tier, and data tier with NSG rules enforcing traffic flow",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet -> Application Gateway -> Web Apps",
+        "Web Apps -> Private Endpoints -> Backend Services",
+        "Backend Services -> Private Endpoints -> SQL Database",
+        "Cross-zone communication through Azure Private Link"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_accounts": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3,
+      "total_estimated": 24
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:02:23.357803"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "title": "No Public Access",
+        "description": "Azure SQL Database allows public network access, exposing patient health information (PHI) to potential unauthorized access from the internet. This violates HIPAA requirements for protecting sensitive medical data.",
+        "severity": "high",
+        "affected_component": "patient_database",
+        "injection_strategy": "Configure azurerm_sql_database with public_network_access_enabled = true",
+        "business_impact": "Direct exposure of 50,000+ patient medical records to internet-based attacks, potential HIPAA violations with fines up to $1.5M per incident, loss of patient trust and regulatory sanctions",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mariadb_server#public_network_access_enabled\n  good:\n    - |-\n      resource \"azurerm_postgresql_server\" \"good_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_postgresql_server\" \"bad_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = true\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set public_network_access_enabled = true on the patient database server resource",
+          "explanation": "This allows direct internet access to the database containing sensitive patient health information, bypassing network security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+        "title": "Enable SSL Enforcement",
+        "description": "Patient database connections are not enforcing SSL/TLS encryption, allowing PHI to be transmitted in plaintext over the network. This creates a significant data breach risk for medical records in transit.",
+        "severity": "high",
+        "affected_component": "patient_database",
+        "injection_strategy": "Configure database server with ssl_enforcement_enabled = false",
+        "business_impact": "Patient medical data transmitted in plaintext can be intercepted, leading to HIPAA violations, identity theft, and medical fraud affecting thousands of patients",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#ssl_enforcement_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#ssl_enforcement_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mariadb_server#ssl_enforcement_enabled\n  good:\n    - |-\n      resource \"azurerm_postgresql_server\" \"good_example\" {\n        name = \"good_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = true\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_postgresql_server\" \"bad_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }",
+        "file_name": "enable_ssl_enforcement.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set ssl_enforcement_enabled = false on the azurerm_sql_server resource",
+          "explanation": "This disables mandatory SSL/TLS encryption for database connections, allowing sensitive patient data to be transmitted unencrypted"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "File storage containing medical documents and test results accepts weak TLS 1.0 connections, making patient data vulnerable to cryptographic attacks and failing to meet healthcare security standards.",
+        "severity": "medium",
+        "affected_component": "file_storage",
+        "injection_strategy": "Set min_tls_version = \"TLS1_0\" on storage account",
+        "business_impact": "Medical documents and test results vulnerable to man-in-the-middle attacks, potential exposure of diagnostic images and lab results, regulatory compliance failures",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure the storage account with min_tls_version = \"TLS1_0\"",
+          "explanation": "This allows connections using outdated TLS 1.0 protocol which has known cryptographic vulnerabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-KEYVAULT-ENSURE_SECRET_EXPIRY",
+        "title": "Ensure Secret Expiry",
+        "description": "Key Vault secrets for database connections and API keys lack expiration dates, creating long-term security risks if credentials are compromised. This violates healthcare security best practices for credential rotation.",
+        "severity": "medium",
+        "affected_component": "key_vault",
+        "injection_strategy": "Create key vault secrets without expiration_date parameter",
+        "business_impact": "Compromised credentials remain valid indefinitely, increasing risk of unauthorized access to patient data systems and prolonged security breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/key_vault_secret#expiration_date\n  good:\n    - |-\n      resource \"azurerm_key_vault_secret\" \"good_example\" {\n        name            = \"secret-sauce\"\n        value           = \"szechuan\"\n        key_vault_id    = azurerm_key_vault.example.id\n        expiration_date = \"1982-12-31T00:00:00Z\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_key_vault_secret\" \"bad_example\" {\n        name         = \"secret-sauce\"\n        value        = \"szechuan\"\n        key_vault_id = azurerm_key_vault.example.id\n      }",
+        "file_name": "ensure_secret_expiry.yaml",
+        "service": "keyvault",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create azurerm_key_vault_secret resources without the expiration_date parameter",
+          "explanation": "This creates secrets that never expire, violating security best practices for credential lifecycle management"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "Patient portal web frontend accepts weak TLS 1.0 connections, exposing patient login sessions and personal health information to cryptographic attacks during transmission.",
+        "severity": "medium",
+        "affected_component": "web_frontend",
+        "injection_strategy": "Configure App Service with min_tls_version = \"1.0\"",
+        "business_impact": "Patient authentication sessions and PHI vulnerable to interception, potential account takeovers and unauthorized access to medical records",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.2\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = \"1.0\" in the App Service site_config block",
+          "explanation": "This allows the web application to accept connections using the deprecated and vulnerable TLS 1.0 protocol"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "title": "No Public Ingress",
+        "description": "Network Security Group rules allow unrestricted inbound access (0.0.0.0/0) to backend services handling patient data, bypassing the intended hub-spoke network architecture security controls.",
+        "severity": "high",
+        "affected_component": "backend_services",
+        "injection_strategy": "Create NSG rules with source_address_prefix = \"0.0.0.0/0\" and access = \"Allow\"",
+        "business_impact": "Direct internet access to backend microservices containing patient data, bypassing API gateway security controls and exposing EHR integration endpoints",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Inbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction             = \"Inbound\"\n        source_address_prefix = \"0.0.0.0/0\"\n        access                = \"Allow\"\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create network security rules with source_address_prefix = \"0.0.0.0/0\" for inbound traffic",
+          "explanation": "This allows unrestricted internet access to internal services, bypassing the intended network segmentation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "title": "All Threat Alerts Enabled",
+        "description": "Critical database threat detection alerts for SQL injection and data exfiltration are disabled, preventing early detection of attacks against patient medical records and HIPAA audit trail violations.",
+        "severity": "medium",
+        "affected_component": "patient_database",
+        "injection_strategy": "Configure security alert policy with disabled_alerts including critical threats",
+        "business_impact": "Undetected SQL injection attacks and data exfiltration of patient records, delayed incident response, and failure to meet HIPAA audit requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#disabled_alerts\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts            = []\n        retention_days             = 20\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        retention_days = 20\n      }",
+        "file_name": "all_threat_alerts_enabled.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set disabled_alerts to include \"Sql_Injection\" and \"Data_Exfiltration\" in the security alert policy",
+          "explanation": "This disables critical threat detection capabilities that are essential for protecting patient data from common attack vectors"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-CONTAINER-LOGGING",
+        "title": "Logging",
+        "description": "Container instances running patient data microservices lack proper logging configuration, preventing audit trail generation required for HIPAA compliance and security incident investigation.",
+        "severity": "medium",
+        "affected_component": "backend_services",
+        "injection_strategy": "Deploy container instances without OMS agent or log analytics workspace configuration",
+        "business_impact": "Inability to track access to patient data, failure to meet HIPAA audit requirements, and limited forensic capabilities during security incidents",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kubernetes_cluster#oms_agent\n  good:\n    - |-\n      resource \"azurerm_kubernetes_cluster\" \"good_example\" {\n        addon_profile {\n          oms_agent {\n            enabled = true\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_kubernetes_cluster\" \"bad_example\" {\n        addon_profile {}\n      }",
+        "file_name": "logging.yaml",
+        "service": "container",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy container instances without configuring log analytics workspace integration",
+          "explanation": "This prevents comprehensive logging of container activities, making it impossible to track access to patient data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "AZURE-DATABASE-ENABLE_SSL_ENFORCEMENT",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-KEYVAULT-ENSURE_SECRET_EXPIRY",
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "AZURE-CONTAINER-LOGGING"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 3,
+        "medium": 5,
+        "low": 0
+      },
+      "service_categories": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "keyvault",
+        "container"
+      ],
+      "services_covered": [
+        "storage",
+        "appservice",
+        "network",
+        "database",
+        "keyvault",
+        "container"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "healthcare-patient-portal-hipaa",
+    "architecture_type": "multi-tier_web_application",
+    "cloud_provider": "azure",
+    "iac_tool": "terraform",
+    "total_resources": 24,
+    "resource_breakdown": {
+      "compute": 4,
+      "storage": 2,
+      "database": 3,
+      "networking": 6,
+      "security": 6,
+      "monitoring": 1,
+      "management": 2
+    },
+    "components_implemented": [
+      "web_frontend",
+      "api_gateway",
+      "backend_services",
+      "patient_database",
+      "file_storage",
+      "key_vault"
+    ],
+    "vulnerabilities_injected": 9,
+    "estimated_deployment_time": "15-20 minutes",
+    "estimated_monthly_cost": "$800-1200 USD",
+    "compliance_frameworks": [
+      "HIPAA"
+    ],
+    "security_zones": [
+      "public",
+      "private",
+      "data"
+    ],
+    "deployment_complexity": "high"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 21,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "original_components": [
+    {
+      "name": "intranet_web_app",
+      "service_type": "azure_app_service",
+      "purpose": "Hosts the main intranet web application with employee portal, news, and communication features",
+      "dependencies": [
+        "sql_database",
+        "storage_account",
+        "active_directory"
+      ],
+      "security_considerations": [
+        "authentication_integration",
+        "ssl_termination",
+        "input_validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "document_api",
+      "service_type": "azure_function_app",
+      "purpose": "Serverless API for document operations including upload, download, versioning, and search",
+      "dependencies": [
+        "storage_account",
+        "sql_database",
+        "search_service"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "file_type_validation",
+        "access_control"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "sql_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores user profiles, document metadata, permissions, and audit logs",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "network_isolation",
+        "backup_security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "storage_account",
+      "service_type": "azure_storage_account",
+      "purpose": "Secure blob storage for documents, images, and file attachments with versioning",
+      "dependencies": [],
+      "security_considerations": [
+        "access_policies",
+        "encryption",
+        "audit_logging"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "search_service",
+      "service_type": "azure_cognitive_search",
+      "purpose": "Provides full-text search capabilities across documents and intranet content",
+      "dependencies": [
+        "storage_account",
+        "sql_database"
+      ],
+      "security_considerations": [
+        "search_index_security",
+        "query_filtering"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "active_directory",
+      "service_type": "azure_active_directory",
+      "purpose": "Handles authentication, authorization, and user management with SSO integration",
+      "dependencies": [],
+      "security_considerations": [
+        "conditional_access",
+        "mfa_enforcement",
+        "privileged_access"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "purpose": "Load balancer with WAF protection and SSL termination for web traffic",
+      "dependencies": [
+        "intranet_web_app"
+      ],
+      "security_considerations": [
+        "waf_rules",
+        "ssl_certificates",
+        "ddos_protection"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "intranet_web_app",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 0.8999999999999999
+    },
+    {
+      "name": "document_api",
+      "service_type": "azure_function_app",
+      "implementation_confidence": 0.7
+    },
+    {
+      "name": "sql_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "storage_account",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "search_service",
+      "service_type": "azure_cognitive_search",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "active_directory",
+      "service_type": "azure_active_directory",
+      "implementation_confidence": 0.8999999999999999
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "implementation_confidence": 0.5
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 477,
+      "resource_count": 16,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Sql/servers/securityAlertPolicies"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Search/searchServices"
+        },
+        {
+          "type": "Microsoft.Network/publicIPAddresses"
+        },
+        {
+          "type": "Microsoft.Network/applicationGateways"
+        },
+        {
+          "type": "Microsoft.OperationalInsights/workspaces"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 24,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 37,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 180,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

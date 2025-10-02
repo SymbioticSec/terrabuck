@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "East US 2"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "sqlAdminUsername": {
+      "value": "scadaadmin"
+    },
+    "sqlAdminPassword": {
+      "value": "ComplexP@ssw0rd123!"
+    },
+    "appServicePlanSku": {
+      "value": "S1"
+    }
+  }
+}

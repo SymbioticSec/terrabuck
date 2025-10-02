@@ -1,0 +1,105 @@
+# CloudFormation Outputs
+# These outputs provide important resource information for integration and monitoring
+
+Outputs:
+  VPCId:
+    Description: VPC ID for the Fleet Management Platform
+    Value: !Ref FleetVPC
+    Export:
+      Name: !Sub "${ProjectName}-vpc-id"
+
+  PublicSubnet1Id:
+    Description: Public Subnet 1 ID
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${ProjectName}-public-subnet-1-id"
+
+  PublicSubnet2Id:
+    Description: Public Subnet 2 ID
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${ProjectName}-public-subnet-2-id"
+
+  PrivateSubnet1Id:
+    Description: Private Subnet 1 ID
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${ProjectName}-private-subnet-1-id"
+
+  PrivateSubnet2Id:
+    Description: Private Subnet 2 ID
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${ProjectName}-private-subnet-2-id"
+
+  DatabaseEndpoint:
+    Description: RDS Database Endpoint
+    Value: !GetAtt FleetDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${ProjectName}-database-endpoint"
+
+  DatabasePort:
+    Description: RDS Database Port
+    Value: !GetAtt FleetDatabase.Endpoint.Port
+    Export:
+      Name: !Sub "${ProjectName}-database-port"
+
+  S3BucketName:
+    Description: S3 Bucket for tracking data storage
+    Value: !Ref TrackingDataStorage
+    Export:
+      Name: !Sub "${ProjectName}-s3-bucket-name"
+
+  KinesisStreamName:
+    Description: Kinesis Stream for vehicle data ingestion
+    Value: !Ref VehicleDataIngestionStream
+    Export:
+      Name: !Sub "${ProjectName}-kinesis-stream-name"
+
+  KinesisStreamArn:
+    Description: Kinesis Stream ARN
+    Value: !GetAtt VehicleDataIngestionStream.Arn
+    Export:
+      Name: !Sub "${ProjectName}-kinesis-stream-arn"
+
+  LoadBalancerDNSName:
+    Description: Application Load Balancer DNS Name
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${ProjectName}-alb-dns-name"
+
+  LoadBalancerHostedZoneID:
+    Description: Application Load Balancer Hosted Zone ID
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+    Export:
+      Name: !Sub "${ProjectName}-alb-hosted-zone-id"
+
+  ApiGatewayId:
+    Description: API Gateway REST API ID
+    Value: !Ref FleetApiGateway
+    Export:
+      Name: !Sub "${ProjectName}-api-gateway-id"
+
+  ApiGatewayUrl:
+    Description: API Gateway URL
+    Value: !Sub "https://${FleetApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Export:
+      Name: !Sub "${ProjectName}-api-gateway-url"
+
+  CloudFrontDistributionId:
+    Description: CloudFront Distribution ID
+    Value: !Ref FleetWebInterface
+    Export:
+      Name: !Sub "${ProjectName}-cloudfront-distribution-id"
+
+  CloudFrontDomainName:
+    Description: CloudFront Distribution Domain Name
+    Value: !GetAtt FleetWebInterface.DomainName
+    Export:
+      Name: !Sub "${ProjectName}-cloudfront-domain-name"
+
+  AutoScalingGroupName:
+    Description: Auto Scaling Group Name
+    Value: !Ref FleetApplicationAutoScalingGroup
+    Export:
+      Name: !Sub "${ProjectName}-asg-name"

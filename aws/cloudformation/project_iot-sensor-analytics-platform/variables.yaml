@@ -1,0 +1,91 @@
+# CloudFormation Parameters Configuration
+# This file contains all configurable parameters for the Smart Manufacturing IoT Analytics Platform
+
+Parameters:
+  Environment:
+    Description: "Deployment environment (development, staging, production)"
+    Type: String
+    Default: "production"
+    AllowedValues:
+      - "development"
+      - "staging" 
+      - "production"
+    
+  ProjectName:
+    Description: "Project name used for resource naming convention"
+    Type: String
+    Default: "smart-manufacturing-iot-analytics-platform"
+    MinLength: 3
+    MaxLength: 50
+    
+  VpcCidr:
+    Description: "CIDR block for the VPC network"
+    Type: String
+    Default: "10.0.0.0/16"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    
+  PublicSubnet1Cidr:
+    Description: "CIDR block for public subnet in first availability zone"
+    Type: String
+    Default: "10.0.1.0/24"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    
+  PublicSubnet2Cidr:
+    Description: "CIDR block for public subnet in second availability zone"
+    Type: String
+    Default: "10.0.2.0/24"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    
+  PrivateSubnet1Cidr:
+    Description: "CIDR block for private subnet in first availability zone"
+    Type: String
+    Default: "10.0.3.0/24"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    
+  PrivateSubnet2Cidr:
+    Description: "CIDR block for private subnet in second availability zone"
+    Type: String
+    Default: "10.0.4.0/24"
+    AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+    
+  InstanceType:
+    Description: "EC2 instance type for Grafana dashboard servers"
+    Type: String
+    Default: "t3.medium"
+    AllowedValues:
+      - "t3.small"
+      - "t3.medium"
+      - "t3.large"
+      - "t3.xlarge"
+    
+  KeyPairName:
+    Description: "Name of existing EC2 KeyPair for SSH access to dashboard instances"
+    Type: "AWS::EC2::KeyPair::KeyName"
+    ConstraintDescription: "Must be the name of an existing EC2 KeyPair"
+
+# Mapping for AMI IDs by region (for dashboard instances)
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: "ami-0c02fb55956c7d316"
+    us-west-2:
+      AMI: "ami-0841edc20334f9287"
+    eu-west-1:
+      AMI: "ami-08ca3fed11864d6bb"
+    ap-southeast-1:
+      AMI: "ami-0d728fd4e52be968f"
+
+# Environment-specific configurations
+EnvironmentConfig:
+  development:
+    InstanceCount: 1
+    KinesisShards: 1
+    RetentionDays: 30
+  staging:
+    InstanceCount: 2
+    KinesisShards: 2
+    RetentionDays: 90
+  production:
+    InstanceCount: 3
+    KinesisShards: 4
+    RetentionDays: 365

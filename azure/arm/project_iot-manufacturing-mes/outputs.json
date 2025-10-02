@@ -1,0 +1,26 @@
+{
+  "iotHubConnectionString": {
+    "description": "IoT Hub connection string for device connectivity",
+    "sensitive": true
+  },
+  "webApplicationUrl": {
+    "description": "URL of the MES dashboard web application",
+    "sensitive": false
+  },
+  "sqlDatabaseConnectionString": {
+    "description": "SQL Database connection string for application configuration",
+    "sensitive": true
+  },
+  "storageAccountEndpoint": {
+    "description": "Storage account primary blob endpoint for file uploads",
+    "sensitive": false
+  },
+  "functionAppUrl": {
+    "description": "Function App URL for ERP integration endpoints",
+    "sensitive": false
+  },
+  "streamAnalyticsJobName": {
+    "description": "Stream Analytics job name for monitoring and management",
+    "sensitive": false
+  }
+}

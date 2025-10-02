@@ -1,0 +1,22 @@
+{
+  "applicationGatewayPublicIP": {
+    "description": "Public IP address of the Application Gateway for DNS configuration",
+    "sensitive": false
+  },
+  "webAppUrl": {
+    "description": "URL of the patient portal web application",
+    "sensitive": false
+  },
+  "sqlServerFqdn": {
+    "description": "Fully qualified domain name of the SQL Server for application configuration",
+    "sensitive": false
+  },
+  "storageAccountName": {
+    "description": "Name of the storage account for audit logs and recordings",
+    "sensitive": false
+  },
+  "communicationServiceName": {
+    "description": "Name of the Azure Communication Services resource for video consultations",
+    "sensitive": false
+  }
+}

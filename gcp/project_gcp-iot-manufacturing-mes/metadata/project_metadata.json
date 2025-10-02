@@ -1,0 +1,341 @@
+{
+  "project_info": {
+    "project_id": "gcp-iot-manufacturing-mes",
+    "project_name": "Smart Manufacturing Execution System (MES)",
+    "description": "A cloud-based Manufacturing Execution System for a mid-size automotive parts manufacturer that collects real-time data from production line sensors, tracks work orders, manages quality control, and provides operational dashboards. The system handles sensor telemetry from 50+ production machines, processes quality inspection data, and generates compliance reports for ISO 9001 certification.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "iot_data_pipeline",
+    "business_context": "Automotive parts manufacturer needs to modernize their production monitoring, implement predictive maintenance, track OEE (Overall Equipment Effectiveness), and maintain quality traceability for regulatory compliance. The system serves 200+ factory workers, 15 quality inspectors, and 5 production managers across two manufacturing facilities.",
+    "components": [
+      {
+        "name": "sensor_data_ingestion",
+        "service_type": "google_pubsub_topic",
+        "purpose": "Ingests high-frequency sensor data from production line equipment including temperature, pressure, vibration, and cycle counts",
+        "dependencies": [],
+        "security_considerations": [
+          "device_authentication",
+          "message_encryption",
+          "rate_limiting"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "data_processing_pipeline",
+        "service_type": "google_cloud_functions",
+        "purpose": "Processes incoming sensor data, performs real-time anomaly detection, calculates OEE metrics, and triggers maintenance alerts",
+        "dependencies": [
+          "sensor_data_ingestion"
+        ],
+        "security_considerations": [
+          "function_permissions",
+          "environment_variables",
+          "vpc_connector"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "production_database",
+        "service_type": "google_sql_database_instance",
+        "purpose": "Stores work orders, production schedules, quality inspection records, and processed manufacturing metrics",
+        "dependencies": [
+          "data_processing_pipeline"
+        ],
+        "security_considerations": [
+          "database_encryption",
+          "private_ip",
+          "authorized_networks",
+          "backup_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "time_series_storage",
+        "service_type": "google_storage_bucket",
+        "purpose": "Archives raw sensor data and historical production metrics for trend analysis and compliance reporting",
+        "dependencies": [
+          "data_processing_pipeline"
+        ],
+        "security_considerations": [
+          "bucket_encryption",
+          "lifecycle_policies",
+          "access_controls"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "mes_application",
+        "service_type": "google_compute_instance",
+        "purpose": "Hosts the main MES web application for production monitoring, work order management, and quality control interfaces",
+        "dependencies": [
+          "production_database",
+          "time_series_storage"
+        ],
+        "security_considerations": [
+          "os_hardening",
+          "application_firewall",
+          "ssl_certificates"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "reporting_service",
+        "service_type": "google_cloud_functions",
+        "purpose": "Generates automated production reports, quality compliance documents, and maintenance schedules",
+        "dependencies": [
+          "production_database",
+          "time_series_storage"
+        ],
+        "security_considerations": [
+          "report_access_controls",
+          "data_anonymization"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with three subnets: public subnet for load balancer, private subnet for application servers, and isolated subnet for database with Cloud SQL proxy",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "IoT devices connect via Cloud IoT Core to Pub/Sub",
+        "Functions process data and write to Cloud SQL",
+        "Web application serves dashboards from private subnet",
+        "All database access through private IP and Cloud SQL proxy"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "pubsub_topics": 2,
+      "cloud_functions": 4,
+      "iam_resources": 6,
+      "monitoring_resources": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T14:55:33.407673"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-SQL-NO_PUBLIC_ACCESS",
+        "title": "No Public Access",
+        "description": "The production database instance allows public access through authorized networks containing 0.0.0.0/0, exposing sensitive manufacturing data including work orders, quality inspection records, and production metrics to the internet.",
+        "severity": "high",
+        "affected_component": "production_database",
+        "injection_strategy": "Configure authorized_networks with 0.0.0.0/0 CIDR block in google_sql_database_instance",
+        "business_impact": "Unauthorized access to manufacturing execution system data could lead to industrial espionage, production disruption, quality control tampering, and regulatory compliance violations for ISO 9001 certification.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"10.0.0.1/24\"\n              name  = \"internal\"\n            }\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n\n            authorized_networks {\n              value = \"0.0.0.0/0\"\n              name  = \"internet\"\n            }\n          }\n        }\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add authorized_networks block with value = \"0.0.0.0/0\" in the ip_configuration section",
+          "explanation": "This configuration allows any IP address on the internet to attempt connections to the Cloud SQL instance, bypassing network-level security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-RESTRICT_SSH_ACCESS",
+        "title": "Restrict SSH Access",
+        "description": "The MES application compute instance allows SSH access from any IP address (0.0.0.0/0) through firewall rules, creating an attack vector for unauthorized system access to the manufacturing control systems.",
+        "severity": "high",
+        "affected_component": "mes_application",
+        "injection_strategy": "Create google_compute_firewall resource with source_ranges containing 0.0.0.0/0 for SSH port 22",
+        "business_impact": "Unrestricted SSH access could allow attackers to compromise the MES application server, potentially disrupting production operations, accessing sensitive manufacturing data, or launching attacks against connected IoT devices and production equipment.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall\n  good:\n    - |-\n      resource \"google_compute_firewall\" \"good_example\" {\n        name    = \"allow-ssh-from-specific-ip\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"22\"]\n        }\n\n        source_ranges = [\"192.168.1.0/24\"]\n        target_tags   = [\"ssh-allowed\"]\n      }\n  bad:\n    - |-\n      resource \"google_compute_firewall\" \"bad_example\" {\n        name    = \"allow-ssh-from-anywhere\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"22\"]\n        }\n\n        source_ranges = [\"0.0.0.0/0\"]\n        target_tags   = [\"ssh-allowed\"]\n      }",
+        "file_name": "restrict_ssh_access.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set source_ranges = [\"0.0.0.0/0\"] in the firewall rule allowing TCP port 22",
+          "explanation": "This allows SSH connections from any internet IP address, removing network-based access controls that should restrict administrative access to trusted networks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_DISCONNECTIONS",
+        "title": "PostgreSQL Log Disconnections Disabled",
+        "description": "The production database has PostgreSQL log_disconnections flag set to 'off', preventing audit trails of database session terminations which is critical for manufacturing compliance and security monitoring.",
+        "severity": "medium",
+        "affected_component": "production_database",
+        "injection_strategy": "Set database_flags with log_disconnections value to 'off' in google_sql_database_instance settings",
+        "business_impact": "Missing disconnection logs hamper security incident response, compliance auditing for ISO 9001, and forensic analysis of unauthorized access to manufacturing data, quality records, and production schedules.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_disconnections\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_disconnections\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_disconnections.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add database_flags block with name = \"log_disconnections\" and value = \"off\"",
+          "explanation": "Disabling disconnection logging removes audit trails needed for security monitoring and compliance requirements in manufacturing environments"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-DISK_ENCRYPTION_NO_PLAINTEXT_KEY",
+        "title": "Disk Encryption Uses Plaintext Key",
+        "description": "The MES application compute instance uses plaintext encryption keys for disk encryption instead of Google KMS, exposing manufacturing data and application secrets stored on disk.",
+        "severity": "high",
+        "affected_component": "mes_application",
+        "injection_strategy": "Configure disk_encryption_key_raw with base64 encoded plaintext key in google_compute_instance boot_disk",
+        "business_impact": "Plaintext encryption keys can be easily compromised, leading to unauthorized access to manufacturing execution system data, production schedules, quality control records, and potentially exposing trade secrets or proprietary manufacturing processes.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_disk#kms_key_self_link\n  good:\n    - |-\n      resource \"google_compute_disk\" \"good_example\" {\n        disk_encryption_key {\n          kms_key_self_link = google_kms_crypto_key.my_crypto_key.id\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        boot_disk {\n          disk_encryption_key_raw = \"b2ggbm8gdGhpcyBpcyBiYWQ=\"\n        }\n      }",
+        "file_name": "disk_encryption_no_plaintext_key.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set disk_encryption_key_raw = \"b2ggbm8gdGhpcyBpcyBiYWQ=\" in the boot_disk configuration",
+          "explanation": "Using plaintext keys for disk encryption defeats the purpose of encryption as the key is stored alongside the encrypted data and easily accessible"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-PROJECT_LEVEL_OSLOGIN",
+        "title": "OS Login Disabled at Project Level",
+        "description": "The project has OS Login disabled, preventing centralized SSH key management and user access controls for compute instances hosting the MES application and processing manufacturing data.",
+        "severity": "medium",
+        "affected_component": "mes_application",
+        "injection_strategy": "Set enable-oslogin metadata to false in google_compute_project_metadata resource",
+        "business_impact": "Without OS Login, SSH access relies on instance-level key management, making it difficult to track user access to manufacturing systems, revoke access promptly, and maintain audit trails required for industrial security compliance.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_project_metadata#\n  good:\n    - |-\n      resource \"google_compute_project_metadata\" \"default\" {\n        metadata = {\n          enable-oslogin = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_project_metadata\" \"default\" {\n        metadata = {\n          enable-oslogin = false\n        }\n      }",
+        "file_name": "project_level_oslogin.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable-oslogin = false in the project metadata configuration",
+          "explanation": "Disabling OS Login removes centralized access management, making it harder to control and audit who can access manufacturing systems"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_IP_FORWARDING",
+        "title": "IP Forwarding Enabled",
+        "description": "The MES application compute instance has IP forwarding enabled, allowing it to route traffic between networks which could be exploited to bypass network security controls and access isolated manufacturing systems.",
+        "severity": "medium",
+        "affected_component": "mes_application",
+        "injection_strategy": "Set can_ip_forward = true in google_compute_instance configuration",
+        "business_impact": "IP forwarding could allow attackers to use the MES server as a pivot point to access isolated production networks, potentially compromising IoT devices, SCADA systems, or other manufacturing equipment that should be network-isolated.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#can_ip_forward\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        can_ip_forward = false\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        can_ip_forward = true\n      }",
+        "file_name": "no_ip_forwarding.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set can_ip_forward = true in the compute instance configuration",
+          "explanation": "Enabling IP forwarding allows the instance to route packets between networks, potentially bypassing network segmentation controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_CHECKPOINTS",
+        "title": "PostgreSQL Log Checkpoints Disabled",
+        "description": "The production database has PostgreSQL log_checkpoints disabled, reducing visibility into database performance and potential issues that could affect manufacturing operations and data integrity.",
+        "severity": "medium",
+        "affected_component": "production_database",
+        "injection_strategy": "Set database_flags with log_checkpoints value to 'off' in google_sql_database_instance settings",
+        "business_impact": "Without checkpoint logging, database performance issues affecting manufacturing operations may go undetected, potentially leading to production delays, data loss during high-volume sensor data ingestion, or difficulty troubleshooting system performance during peak manufacturing periods.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_checkpoints\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_checkpoints\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_checkpoints.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add database_flags block with name = \"log_checkpoints\" and value = \"off\"",
+          "explanation": "Disabling checkpoint logging reduces database monitoring capabilities, making it harder to detect performance issues that could impact manufacturing operations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "GOOGLE-SQL-NO_PUBLIC_ACCESS",
+        "GOOGLE-COMPUTE-RESTRICT_SSH_ACCESS",
+        "GOOGLE-SQL-PG_LOG_DISCONNECTIONS",
+        "GOOGLE-COMPUTE-DISK_ENCRYPTION_NO_PLAINTEXT_KEY",
+        "GOOGLE-COMPUTE-PROJECT_LEVEL_OSLOGIN",
+        "GOOGLE-COMPUTE-NO_IP_FORWARDING",
+        "GOOGLE-SQL-PG_LOG_CHECKPOINTS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "sql",
+        "compute"
+      ],
+      "services_covered": [
+        "sql",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "total_resources": 25,
+    "resource_breakdown": {
+      "google_project_service": 1,
+      "google_compute_project_metadata": 1,
+      "google_compute_network": 1,
+      "google_compute_subnetwork": 3,
+      "google_compute_firewall": 2,
+      "google_pubsub_topic": 2,
+      "google_pubsub_subscription": 1,
+      "google_storage_bucket": 2,
+      "random_id": 2,
+      "google_sql_database_instance": 1,
+      "google_sql_database": 1,
+      "google_sql_user": 1,
+      "google_service_account": 1,
+      "google_project_iam_member": 1,
+      "google_cloudfunctions_function": 2,
+      "google_compute_instance": 1,
+      "google_compute_instance_group": 1
+    },
+    "components_implemented": {
+      "sensor_data_ingestion": "google_pubsub_topic.sensor_data_ingestion",
+      "data_processing_pipeline": "google_cloudfunctions_function.data_processing_pipeline",
+      "production_database": "google_sql_database_instance.production_database",
+      "time_series_storage": "google_storage_bucket.time_series_storage",
+      "mes_application": "google_compute_instance.mes_application",
+      "reporting_service": "google_cloudfunctions_function.reporting_service"
+    },
+    "vulnerabilities_injected": 7,
+    "estimated_deployment_time": "15-20 minutes",
+    "estimated_monthly_cost": "$800-1200 USD",
+    "terraform_version_required": ">= 1.0",
+    "google_provider_version": "~> 4.0"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 24,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

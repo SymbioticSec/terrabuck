@@ -1,0 +1,251 @@
+{
+  "original_components": [
+    {
+      "name": "web_frontend",
+      "service_type": "azure_app_service",
+      "purpose": "Hosts the patient-facing web application with secure authentication and responsive UI for accessing medical records and scheduling",
+      "dependencies": [
+        "api_gateway",
+        "cdn"
+      ],
+      "security_considerations": [
+        "SSL/TLS termination",
+        "WAF protection",
+        "session management",
+        "input validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "azure_api_management",
+      "purpose": "Centralized API gateway for authentication, rate limiting, and routing requests to backend services with comprehensive logging",
+      "dependencies": [
+        "backend_services",
+        "key_vault"
+      ],
+      "security_considerations": [
+        "API authentication",
+        "rate limiting",
+        "request/response logging",
+        "IP whitelisting"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "backend_services",
+      "service_type": "azure_container_instances",
+      "purpose": "Containerized microservices handling patient data, appointments, messaging, and EHR integration with auto-scaling capabilities",
+      "dependencies": [
+        "patient_database",
+        "file_storage",
+        "service_bus"
+      ],
+      "security_considerations": [
+        "container security",
+        "network isolation",
+        "secrets management",
+        "least privilege access"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "patient_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Encrypted SQL database storing patient records, appointments, and audit logs with automated backups and point-in-time recovery",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption at rest",
+        "encryption in transit",
+        "access controls",
+        "audit logging",
+        "backup encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Secure blob storage for medical documents, test results, and images with lifecycle management and compliance retention",
+      "dependencies": [],
+      "security_considerations": [
+        "blob encryption",
+        "access policies",
+        "immutable storage",
+        "audit logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "key_vault",
+      "service_type": "azure_key_vault",
+      "purpose": "Centralized secrets management for database connections, API keys, and encryption keys with HSM backing",
+      "dependencies": [],
+      "security_considerations": [
+        "HSM protection",
+        "access policies",
+        "key rotation",
+        "audit logging"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_frontend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "azure_api_management",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backend_services",
+      "service_type": "azure_container_instances",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "patient_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "key_vault",
+      "service_type": "azure_key_vault",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 336,
+      "resource_count": 21,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "healthcare_portal"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "healthcare_vnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "public_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "private_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "backend_nsg"
+        },
+        {
+          "type": "azurerm_subnet_network_security_group_association",
+          "name": "private_nsg_association"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "file_storage"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "medical_documents"
+        },
+        {
+          "type": "azurerm_key_vault",
+          "name": "healthcare_kv"
+        },
+        {
+          "type": "random_string",
+          "name": "kv_suffix"
+        },
+        {
+          "type": "azurerm_key_vault_secret",
+          "name": "db_connection_string"
+        },
+        {
+          "type": "azurerm_key_vault_secret",
+          "name": "api_gateway_key"
+        },
+        {
+          "type": "random_string",
+          "name": "api_key"
+        },
+        {
+          "type": "azurerm_mssql_server",
+          "name": "patient_db"
+        },
+        {
+          "type": "azurerm_mssql_database",
+          "name": "patient_database"
+        },
+        {
+          "type": "azurerm_mssql_server_security_alert_policy",
+          "name": "patient_db_alerts"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "web_plan"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "web_frontend"
+        },
+        {
+          "type": "azurerm_api_management",
+          "name": "healthcare_apim"
+        },
+        {
+          "type": "azurerm_container_group",
+          "name": "backend_services"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 40,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 40,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 139,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

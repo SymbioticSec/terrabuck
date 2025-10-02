@@ -1,0 +1,132 @@
+# Social Media Analytics Platform - CloudFormation Outputs
+# These outputs provide important resource information for integration and management
+
+## Network Resources
+VPCId: 
+  Description: "VPC ID for the social media analytics platform"
+  Value: "SocialMediaVPC"
+  Export: "social-media-analytics-platform-VPC-ID"
+
+PublicSubnet1Id:
+  Description: "Public subnet 1 ID for load balancers and public resources"
+  Value: "PublicSubnet1"
+  Export: "social-media-analytics-platform-PublicSubnet1-ID"
+
+PublicSubnet2Id:
+  Description: "Public subnet 2 ID for high availability"
+  Value: "PublicSubnet2"
+  Export: "social-media-analytics-platform-PublicSubnet2-ID"
+
+PrivateSubnet1Id:
+  Description: "Private subnet 1 ID for application resources"
+  Value: "PrivateSubnet1"
+  Export: "social-media-analytics-platform-PrivateSubnet1-ID"
+
+PrivateSubnet2Id:
+  Description: "Private subnet 2 ID for database resources"
+  Value: "PrivateSubnet2"
+  Export: "social-media-analytics-platform-PrivateSubnet2-ID"
+
+## Data Storage Resources
+S3BucketName:
+  Description: "S3 bucket name for raw social media data storage"
+  Value: "RawDataStorageBucket"
+  Export: "social-media-analytics-platform-S3-Bucket"
+
+S3BucketArn:
+  Description: "S3 bucket ARN for IAM policy configuration"
+  Value: "RawDataStorageBucket.Arn"
+  Export: "social-media-analytics-platform-S3-Bucket-ARN"
+
+DatabaseEndpoint:
+  Description: "RDS PostgreSQL database endpoint for analytics data"
+  Value: "MetricsDatabase.Endpoint.Address"
+  Export: "social-media-analytics-platform-DB-Endpoint"
+
+DatabasePort:
+  Description: "Database port for application connections"
+  Value: "5432"
+  Export: "social-media-analytics-platform-DB-Port"
+
+## Streaming and Processing Resources
+KinesisStreamName:
+  Description: "Kinesis stream name for real-time data processing"
+  Value: "SocialMediaDataStream"
+  Export: "social-media-analytics-platform-Kinesis-Stream"
+
+KinesisStreamArn:
+  Description: "Kinesis stream ARN for Lambda event source mapping"
+  Value: "SocialMediaDataStream.Arn"
+  Export: "social-media-analytics-platform-Kinesis-Stream-ARN"
+
+LambdaFunctionName:
+  Description: "Lambda function name for analytics processing"
+  Value: "AnalyticsProcessorFunction"
+  Export: "social-media-analytics-platform-Lambda-Function"
+
+LambdaFunctionArn:
+  Description: "Lambda function ARN for API Gateway integration"
+  Value: "AnalyticsProcessorFunction.Arn"
+  Export: "social-media-analytics-platform-Lambda-Function-ARN"
+
+## API and Application Resources
+APIGatewayURL:
+  Description: "API Gateway URL for social media data ingestion"
+  Value: "https://DataIngestionAPI.execute-api.AWS::Region.amazonaws.com/prod"
+  Export: "social-media-analytics-platform-API-URL"
+
+APIGatewayId:
+  Description: "API Gateway REST API ID"
+  Value: "DataIngestionAPI"
+  Export: "social-media-analytics-platform-API-ID"
+
+DashboardInstanceId:
+  Description: "EC2 instance ID for dashboard application"
+  Value: "DashboardInstance"
+  Export: "social-media-analytics-platform-Dashboard-Instance"
+
+DashboardPublicIP:
+  Description: "Public IP address of dashboard instance"
+  Value: "DashboardInstance.PublicIp"
+  Export: "social-media-analytics-platform-Dashboard-IP"
+
+## Security Resources
+DatabaseSecurityGroupId:
+  Description: "Security group ID for database access control"
+  Value: "DatabaseSecurityGroup"
+  Export: "social-media-analytics-platform-DB-SecurityGroup"
+
+LambdaSecurityGroupId:
+  Description: "Security group ID for Lambda functions"
+  Value: "LambdaSecurityGroup"
+  Export: "social-media-analytics-platform-Lambda-SecurityGroup"
+
+DashboardSecurityGroupId:
+  Description: "Security group ID for dashboard application"
+  Value: "DashboardSecurityGroup"
+  Export: "social-media-analytics-platform-Dashboard-SecurityGroup"
+
+## IAM Resources
+LambdaExecutionRoleArn:
+  Description: "Lambda execution role ARN"
+  Value: "LambdaExecutionRole.Arn"
+  Export: "social-media-analytics-platform-Lambda-Role-ARN"
+
+DashboardInstanceRoleArn:
+  Description: "EC2 instance role ARN for dashboard"
+  Value: "DashboardInstanceRole.Arn"
+  Export: "social-media-analytics-platform-Dashboard-Role-ARN"
+
+## Connection Information
+DatabaseConnectionString:
+  Description: "Database connection string template"
+  Value: "postgresql://analytics_admin:PASSWORD@MetricsDatabase.Endpoint.Address:5432/postgres"
+  Export: "social-media-analytics-platform-DB-Connection"
+
+ApplicationEndpoints:
+  Description: "Key application endpoints for integration"
+  Value: |
+    API Gateway: https://DataIngestionAPI.execute-api.AWS::Region.amazonaws.com/prod
+    Dashboard: http://DashboardInstance.PublicIp
+    Database: MetricsDatabase.Endpoint.Address:5432
+  Export: "social-media-analytics-platform-Endpoints"

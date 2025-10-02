@@ -1,0 +1,443 @@
+{
+  "project_labels": {
+    "project_id": "iot-sensor-analytics-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 3,
+        "logging": 1,
+        "backup": 1
+      },
+      "by_trivy_service": {
+        "apigateway": 1,
+        "s3": 1,
+        "ecs": 1,
+        "cloudtrail": 1,
+        "iam": 1,
+        "elasticache": 1,
+        "rds": 2
+      }
+    },
+    "complexity_score": 7,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "AWS-S3-ENABLE_VERSIONING",
+        "AWS-ECS-NO_PLAINTEXT_SECRETS",
+        "AWS-CLOUDTRAIL-NO_PUBLIC_LOG_ACCESS",
+        "AWS-IAM-ENFORCE_GROUP_MFA",
+        "AWS-ELASTICACHE-ENABLE_IN_TRANSIT_ENCRYPTION",
+        "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "AWS-RDS-SPECIFY_BACKUP_RETENTION"
+      ],
+      "services_covered": [
+        "apigateway",
+        "s3",
+        "ecs",
+        "cloudtrail",
+        "iam",
+        "elasticache",
+        "rds"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+      "trivy_rule_info": {
+        "original_file": "enable_access_logging.yaml",
+        "service_category": "apigateway",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/apigateway"
+      },
+      "vulnerability_class": "logging_and_monitoring",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "api_access",
+        "lack_of_monitoring"
+      ],
+      "mitigation_strategies": [
+        "enable_access_log_settings",
+        "configure_cloudwatch_log_group",
+        "set_appropriate_log_format"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_api_gateway_deployment without access_log_settings block",
+        "secure_pattern": "aws_api_gateway_deployment with access_log_settings configured"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_deficiency",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-S3-ENABLE_VERSIONING",
+      "trivy_rule_info": {
+        "original_file": "enable_versioning.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/s3"
+      },
+      "vulnerability_class": "data_protection",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "s3_bucket_access",
+        "accidental_deletion_risk"
+      ],
+      "mitigation_strategies": [
+        "enable_s3_versioning",
+        "configure_lifecycle_policies",
+        "implement_mfa_delete"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_s3_bucket without versioning block",
+        "secure_pattern": "aws_s3_bucket with versioning enabled = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_durability",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-ECS-NO_PLAINTEXT_SECRETS",
+      "trivy_rule_info": {
+        "original_file": "no_plaintext_secrets.yaml",
+        "service_category": "ecs",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ecs"
+      },
+      "vulnerability_class": "secrets_management",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "code_repository_access",
+        "infrastructure_code_access"
+      ],
+      "mitigation_strategies": [
+        "use_aws_secrets_manager",
+        "use_parameter_store",
+        "implement_environment_variable_encryption"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "hardcoded secrets in environment variables or container definitions",
+        "secure_pattern": "secrets referenced from AWS Secrets Manager or Parameter Store"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "credential_exposure",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-NO_PUBLIC_LOG_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_log_access.yaml",
+        "service_category": "cloudtrail",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudtrail"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "public_internet_access"
+      ],
+      "mitigation_strategies": [
+        "set_s3_bucket_acl_private",
+        "implement_bucket_policy_restrictions",
+        "enable_bucket_public_access_block"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_s3_bucket with acl = \"public-read\" for CloudTrail logs",
+        "secure_pattern": "aws_s3_bucket with acl = \"private\" and public access blocked"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "information_disclosure",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-ENFORCE_GROUP_MFA",
+      "trivy_rule_info": {
+        "original_file": "enforce_group_mfa.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "authentication",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "compromised_credentials",
+        "password_based_authentication"
+      ],
+      "mitigation_strategies": [
+        "add_mfa_condition_to_iam_policies",
+        "enforce_mfa_for_console_access",
+        "implement_conditional_access_policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_iam_group_policy without aws:MultiFactorAuthPresent condition",
+        "secure_pattern": "aws_iam_group_policy with MFA condition requirement"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "weak_authentication",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-ELASTICACHE-ENABLE_IN_TRANSIT_ENCRYPTION",
+      "trivy_rule_info": {
+        "original_file": "enable_in_transit_encryption.yaml",
+        "service_category": "elasticache",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/elasticache"
+      },
+      "vulnerability_class": "encryption_in_transit",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "HIPAA",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "traffic_interception_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_transit_encryption",
+        "configure_tls_encryption",
+        "implement_vpc_endpoints"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "streaming service without transit_encryption_enabled = true",
+        "secure_pattern": "streaming service with transit_encryption_enabled = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_in_transit_exposure",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+      "trivy_rule_info": {
+        "original_file": "encrypt_instance_storage_data.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/rds"
+      },
+      "vulnerability_class": "encryption_at_rest",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "HIPAA",
+        "GDPR"
+      ],
+      "attack_vector": "physical",
+      "prerequisites": [
+        "physical_storage_access",
+        "storage_media_compromise"
+      ],
+      "mitigation_strategies": [
+        "enable_storage_encryption",
+        "use_kms_encryption_keys",
+        "implement_encryption_at_rest"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "database instance without storage_encrypted = true",
+        "secure_pattern": "database instance with storage_encrypted = true and KMS key"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_at_rest_exposure",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+      "trivy_rule_info": {
+        "original_file": "specify_backup_retention.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/rds"
+      },
+      "vulnerability_class": "backup_and_recovery",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "data_loss_event",
+        "insufficient_backup_coverage"
+      ],
+      "mitigation_strategies": [
+        "configure_adequate_backup_retention",
+        "implement_automated_backups",
+        "set_appropriate_retention_periods"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "backup_retention_period = 1 or missing backup configuration",
+        "secure_pattern": "backup_retention_period >= 7 with proper backup settings"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_durability_risk",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "trivy_rule_matching",
+      "security_pattern_recognition",
+      "compliance_gap_analysis",
+      "automated_security_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "8 medium severity findings across apigateway, s3, ecs, cloudtrail, iam, elasticache, and rds services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_common_aws_security_misconfigurations",
+      "learn_trivy_security_scanning_capabilities",
+      "recognize_infrastructure_as_code_security_patterns",
+      "apply_defense_in_depth_principles",
+      "implement_compliance_requirements_in_terraform"
+    ],
+    "prerequisite_knowledge": [
+      "basic_terraform_syntax",
+      "aws_services_fundamentals",
+      "security_principles",
+      "iot_architecture_concepts"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "encryption_at_rest_and_in_transit_importance",
+      "secrets_management_best_practices",
+      "access_control_and_mfa_enforcement",
+      "logging_and_monitoring_requirements",
+      "backup_and_versioning_for_data_protection"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "apigateway",
+      "elasticache",
+      "cloudtrail",
+      "s3",
+      "iam",
+      "rds",
+      "ecs"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "iot-sensor-analytics-platform",
+    "generation_timestamp": "2025-08-06T22:51:37.032421",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

@@ -1,0 +1,284 @@
+{
+  "original_components": [
+    {
+      "name": "log_ingestion_api",
+      "service_type": "aws_api_gateway",
+      "purpose": "RESTful API endpoint for receiving log data from various enterprise applications and systems",
+      "dependencies": [],
+      "security_considerations": [
+        "API authentication",
+        "rate limiting",
+        "input validation",
+        "TLS encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "log_processing_pipeline",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless functions to parse, normalize, and enrich incoming log data before storage",
+      "dependencies": [
+        "log_ingestion_api"
+      ],
+      "security_considerations": [
+        "execution role permissions",
+        "environment variable encryption",
+        "VPC isolation"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "processed_logs_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Long-term storage for processed and archived log data with lifecycle policies",
+      "dependencies": [
+        "log_processing_pipeline"
+      ],
+      "security_considerations": [
+        "bucket encryption",
+        "access policies",
+        "versioning",
+        "audit logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "log_search_database",
+      "service_type": "aws_elasticsearch_domain",
+      "purpose": "Elasticsearch cluster for real-time log search, analysis, and dashboard visualization",
+      "dependencies": [
+        "log_processing_pipeline"
+      ],
+      "security_considerations": [
+        "cluster encryption",
+        "access control",
+        "network isolation",
+        "audit trails"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "alert_notification_system",
+      "service_type": "aws_sns",
+      "purpose": "Notification service for sending alerts when anomalies or security events are detected",
+      "dependencies": [
+        "log_search_database"
+      ],
+      "security_considerations": [
+        "topic encryption",
+        "subscription validation",
+        "message filtering"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "log_analytics_dashboard",
+      "service_type": "aws_ec2_instance",
+      "purpose": "Web application hosting Kibana dashboards for log visualization and reporting",
+      "dependencies": [
+        "log_search_database"
+      ],
+      "security_considerations": [
+        "instance hardening",
+        "application authentication",
+        "network access control",
+        "SSL certificates"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "log_ingestion_api",
+      "service_type": "aws_api_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "log_processing_pipeline",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "processed_logs_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "log_search_database",
+      "service_type": "aws_elasticsearch_domain",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "alert_notification_system",
+      "service_type": "aws_sns",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "log_analytics_dashboard",
+      "service_type": "aws_ec2_instance",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 474,
+      "resource_count": 30,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "enterprise_log_analytics_vpc"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "enterprise_log_analytics_igw"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_subnet_az1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_subnet_az1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "data_subnet_az1"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public_rt"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_rta"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "api_gateway_sg"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "dashboard_sg"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "api_gateway_logs"
+        },
+        {
+          "type": "aws_api_gateway_rest_api",
+          "name": "log_ingestion_api"
+        },
+        {
+          "type": "aws_api_gateway_resource",
+          "name": "logs_resource"
+        },
+        {
+          "type": "aws_api_gateway_method",
+          "name": "post_logs"
+        },
+        {
+          "type": "aws_api_gateway_integration",
+          "name": "lambda_integration"
+        },
+        {
+          "type": "aws_api_gateway_deployment",
+          "name": "log_ingestion_deployment"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_execution_role"
+        },
+        {
+          "type": "aws_iam_role_policy",
+          "name": "lambda_policy"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "log_processing_pipeline"
+        },
+        {
+          "type": "aws_lambda_permission",
+          "name": "api_gateway_invoke"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "processed_logs_storage"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "processed_logs_versioning"
+        },
+        {
+          "type": "aws_s3_bucket_lifecycle_configuration",
+          "name": "processed_logs_lifecycle"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_elasticsearch_domain",
+          "name": "log_search_database"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "elasticsearch_sg"
+        },
+        {
+          "type": "aws_sns_topic",
+          "name": "alert_notification_system"
+        },
+        {
+          "type": "aws_sns_topic_subscription",
+          "name": "email_alerts"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "dashboard_role"
+        },
+        {
+          "type": "aws_iam_instance_profile",
+          "name": "dashboard_profile"
+        },
+        {
+          "type": "aws_instance",
+          "name": "log_analytics_dashboard"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 53,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 44,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 222,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,26 @@
+{
+  "apiManagementUrl": {
+    "description": "URL for the API Management service gateway",
+    "sensitive": false
+  },
+  "sqlServerFqdn": {
+    "description": "Fully qualified domain name of the SQL Server",
+    "sensitive": false
+  },
+  "storageAccountName": {
+    "description": "Name of the analytics storage account",
+    "sensitive": false
+  },
+  "appServiceUrl": {
+    "description": "URL for the client dashboard web application",
+    "sensitive": false
+  },
+  "redisCacheHostName": {
+    "description": "Hostname for the Redis cache instance",
+    "sensitive": false
+  },
+  "keyVaultUri": {
+    "description": "URI for the Key Vault instance",
+    "sensitive": false
+  }
+}

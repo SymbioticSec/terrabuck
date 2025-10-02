@@ -1,0 +1,316 @@
+{
+  "project_info": {
+    "project_id": "enterprise_knowledge_base",
+    "project_name": "Enterprise Knowledge Management System",
+    "description": "A comprehensive knowledge management platform for large enterprises to centralize documentation, enable intelligent search across multiple content types, and provide secure access controls for different organizational units. The system processes and indexes various document formats, provides full-text search capabilities, and maintains audit trails for compliance requirements.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "Large enterprises need to manage thousands of internal documents, procedures, and knowledge articles across different departments. This system serves as a central repository with intelligent search, version control, and role-based access. Common for consulting firms, financial institutions, and healthcare organizations managing regulatory documentation.",
+    "components": [
+      {
+        "name": "document_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Primary storage for all document types with versioning and lifecycle management",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_logging",
+          "bucket_policies"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "search_cluster",
+        "service_type": "aws_elasticsearch_domain",
+        "purpose": "Elasticsearch cluster for full-text search and document indexing",
+        "dependencies": [
+          "document_storage"
+        ],
+        "security_considerations": [
+          "vpc_endpoints",
+          "encryption_in_transit",
+          "fine_grained_access"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "document_processor",
+        "service_type": "aws_lambda",
+        "purpose": "Processes uploaded documents, extracts text, and indexes content for search",
+        "dependencies": [
+          "document_storage",
+          "search_cluster"
+        ],
+        "security_considerations": [
+          "iam_roles",
+          "vpc_configuration",
+          "environment_variables"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "web_application",
+        "service_type": "aws_ecs_fargate",
+        "purpose": "Main web interface for document upload, search, and management",
+        "dependencies": [
+          "document_storage",
+          "search_cluster",
+          "user_database"
+        ],
+        "security_considerations": [
+          "container_security",
+          "secrets_management",
+          "network_isolation"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "user_database",
+        "service_type": "aws_rds_postgresql",
+        "purpose": "Stores user profiles, permissions, and document metadata",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "backup_encryption",
+          "parameter_groups"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Distributes traffic to web application instances with SSL termination",
+        "dependencies": [
+          "web_application"
+        ],
+        "security_considerations": [
+          "ssl_certificates",
+          "security_groups",
+          "waf_integration"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancer, private subnets for application tier, and isolated subnets for database and Elasticsearch",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet Gateway for public access",
+        "NAT Gateway for outbound private subnet access",
+        "VPC Endpoints for S3 and other AWS services",
+        "Private connectivity between application and data tiers"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3,
+      "total_estimated": 24
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:45:01.848197"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-BLOCK_PUBLIC_ACLS",
+        "title": "Block Public ACLs",
+        "description": "S3 bucket lacks proper public access block configuration, potentially allowing public ACLs to be applied to objects and the bucket itself. This creates a risk of accidental data exposure in the document storage system.",
+        "severity": "medium",
+        "affected_component": "document_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Confidential enterprise documents could be accidentally exposed to the public through misconfigured ACLs, leading to data breaches and compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block#block_public_acls\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        bucket = \"mybucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"good_example\" {\n        bucket            = aws_s3_bucket.good_example.id\n        block_public_acls = true\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"mybucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"bad_example\" {\n        bucket = aws_s3_bucket.bad_example.id\n      }",
+        "file_name": "block_public_acls.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without block_public_acls = true in the public access block configuration",
+          "explanation": "Without blocking public ACLs, users could accidentally grant public read access to sensitive documents through bucket or object ACLs"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "title": "Encrypt Cluster Storage Data",
+        "description": "RDS PostgreSQL database lacks proper encryption at rest configuration, leaving user profiles, permissions, and document metadata unprotected in storage.",
+        "severity": "medium",
+        "affected_component": "user_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Sensitive user data and document metadata stored in plaintext could be compromised if physical storage is accessed, violating data protection regulations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster\n  good:\n    - |-\n      resource \"aws_rds_cluster\" \"good_example\" {\n        name              = \"bar\"\n        kms_key_id        = \"arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab\"\n        storage_encrypted = true\n      }\n  bad:\n    - |-\n      resource \"aws_rds_cluster\" \"bad_example\" {\n        name       = \"bar\"\n        kms_key_id = \"\"\n      }",
+        "file_name": "encrypt_cluster_storage_data.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy RDS instance without storage_encrypted = true or with empty kms_key_id",
+          "explanation": "Database storage remains unencrypted, making sensitive user and document metadata vulnerable to unauthorized access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELB-ALB_NOT_PUBLIC",
+        "title": "ALB Not Public",
+        "description": "Application Load Balancer is configured as internet-facing when it should be internal-only for this enterprise knowledge management system, increasing the attack surface unnecessarily.",
+        "severity": "medium",
+        "affected_component": "load_balancer",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Exposes the application to internet-based attacks when it should only be accessible internally, increasing risk of unauthorized access attempts",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb\n  good:\n    - |-\n      resource \"aws_alb\" \"good_example\" {\n        internal = true\n      }\n  bad:\n    - |-\n      resource \"aws_alb\" \"bad_example\" {\n        internal = false\n      }",
+        "file_name": "alb_not_public.yaml",
+        "service": "elb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure ALB with internal = false or omit the internal parameter (defaults to false)",
+          "explanation": "Makes the load balancer internet-facing, exposing the knowledge management system to external threats"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "Lambda function processing documents lacks X-Ray tracing configuration, reducing visibility into function performance and potential security issues during document processing workflows.",
+        "severity": "medium",
+        "affected_component": "document_processor",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Limited observability into document processing operations makes it difficult to detect security incidents or performance issues that could affect business operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function#mode\n  good:\n    - |-\n      resource \"aws_lambda_function\" \"good_example\" {\n        filename         = \"lambda_function_payload.zip\"\n        function_name    = \"lambda_function_name\"\n        role             = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n        handler          = \"exports.test\"\n        source_code_hash = filebase64sha256(\"lambda_function_payload.zip\")\n\n        runtime = \"nodejs12.x\"\n        tracing_config {\n          mode = \"Active\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_lambda_function\" \"bad_example\" {\n        filename         = \"lambda_function_payload.zip\"\n        function_name    = \"lambda_function_name\"\n        role             = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n        handler          = \"exports.test\"\n        source_code_hash = filebase64sha256(\"lambda_function_payload.zip\")\n\n        runtime = \"nodejs12.x\"\n\n        tracing_config {\n          mode = \"Passthrough\"\n        }\n      }",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy Lambda function without tracing_config block or with mode = \"Passthrough\"",
+          "explanation": "Disables detailed tracing of function execution, reducing security monitoring and troubleshooting capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-NO_POLICY_WILDCARDS",
+        "title": "No Policy Wildcards",
+        "description": "IAM policies contain overly permissive wildcard permissions, granting broader access than necessary for the knowledge management system components.",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Excessive permissions could allow compromised components to access resources beyond their intended scope, potentially leading to lateral movement and data exfiltration",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document\n  good:\n    - |-\n      data \"aws_iam_policy_document\" \"s3_policy\" {\n        statement {\n          principals {\n            type        = \"AWS\"\n            identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n          }\n          actions   = [\"s3:GetObject\"]\n          resources = [aws_s3_bucket.example.arn]\n        }\n      }\n  bad:\n    - |-\n      data \"aws_iam_policy_document\" \"s3_policy\" {\n        statement {\n          principals {\n            type        = \"AWS\"\n            identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n          }\n          actions   = [\"s3:*\"]\n          resources = [\"*\"]\n        }\n      }",
+        "file_name": "no_policy_wildcards.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Use wildcard permissions like \"s3:*\" actions or \"*\" resources in IAM policy documents",
+          "explanation": "Grants excessive permissions that violate the principle of least privilege, increasing the blast radius of potential security incidents"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-SSM-SECRET_USE_CUSTOMER_KEY",
+        "title": "Secret Use Customer Key",
+        "description": "Secrets Manager secrets used by the application lack customer-managed KMS key encryption, relying on AWS-managed keys instead of organization-controlled encryption.",
+        "severity": "medium",
+        "affected_component": "web_application",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Reduced control over encryption keys for sensitive application secrets, potentially limiting compliance with strict data governance requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret#kms_key_id\n  good:\n    - |-\n      resource \"aws_kms_key\" \"secrets\" {\n        enable_key_rotation = true\n      }\n\n      resource \"aws_secretsmanager_secret\" \"good_example\" {\n        name       = \"lambda_password\"\n        kms_key_id = aws_kms_key.secrets.arn\n      }\n  bad:\n    - |-\n      resource \"aws_secretsmanager_secret\" \"bad_example\" {\n        name = \"lambda_password\"\n      }",
+        "file_name": "secret_use_customer_key.yaml",
+        "service": "ssm",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Secrets Manager secret without specifying kms_key_id or using AWS-managed keys",
+          "explanation": "Uses AWS-managed encryption keys instead of customer-managed keys, reducing organizational control over secret encryption"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "title": "Enable Log Validation",
+        "description": "CloudTrail lacks log file validation, making it impossible to verify the integrity of audit logs for the knowledge management system's compliance requirements.",
+        "severity": "medium",
+        "affected_component": "search_cluster",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Cannot verify audit log integrity, potentially failing compliance audits and making it difficult to prove the authenticity of security events",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudtrail#enable_log_file_validation\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"good_example\" {\n        enable_log_file_validation = true\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n      }",
+        "file_name": "enable_log_validation.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy CloudTrail without enable_log_file_validation = true",
+          "explanation": "Disables cryptographic validation of log files, making it impossible to detect if audit logs have been tampered with"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-S3-BLOCK_PUBLIC_ACLS",
+        "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "AWS-ELB-ALB_NOT_PUBLIC",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-IAM-NO_POLICY_WILDCARDS",
+        "AWS-SSM-SECRET_USE_CUSTOMER_KEY",
+        "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "ssm",
+        "lambda",
+        "cloudtrail",
+        "s3",
+        "iam",
+        "rds",
+        "elb"
+      ],
+      "services_covered": [
+        "ssm",
+        "lambda",
+        "cloudtrail",
+        "s3",
+        "iam",
+        "rds",
+        "elb"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 38,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

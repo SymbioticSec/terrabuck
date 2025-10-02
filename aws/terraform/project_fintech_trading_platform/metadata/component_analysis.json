@@ -1,0 +1,278 @@
+{
+  "original_components": [
+    {
+      "name": "market_data_ingestion",
+      "service_type": "aws_kinesis_data_streams",
+      "purpose": "Ingests real-time market data feeds from multiple exchanges and data providers",
+      "dependencies": [],
+      "security_considerations": [
+        "data_encryption_in_transit",
+        "api_key_management",
+        "rate_limiting"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "trade_execution_engine",
+      "service_type": "aws_ec2_instances",
+      "purpose": "High-performance compute instances running trading algorithms and order management system",
+      "dependencies": [
+        "market_data_ingestion",
+        "trade_database"
+      ],
+      "security_considerations": [
+        "instance_hardening",
+        "network_isolation",
+        "encrypted_storage"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "trade_database",
+      "service_type": "aws_rds_postgresql",
+      "purpose": "Stores trade history, positions, and portfolio data with high availability",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "backup_encryption",
+        "access_controls"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "risk_analytics_processor",
+      "service_type": "aws_lambda_functions",
+      "purpose": "Serverless functions for real-time risk calculations and compliance monitoring",
+      "dependencies": [
+        "trade_database",
+        "market_data_ingestion"
+      ],
+      "security_considerations": [
+        "iam_role_restrictions",
+        "vpc_isolation",
+        "environment_variables_encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "client_portal_api",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Load-balanced API gateway for client applications and trading interfaces",
+      "dependencies": [
+        "trade_execution_engine",
+        "risk_analytics_processor"
+      ],
+      "security_considerations": [
+        "ssl_termination",
+        "waf_protection",
+        "api_authentication"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "audit_log_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Immutable storage for regulatory audit trails and compliance reporting",
+      "dependencies": [
+        "trade_execution_engine",
+        "risk_analytics_processor"
+      ],
+      "security_considerations": [
+        "object_lock",
+        "access_logging",
+        "cross_region_replication"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "market_data_ingestion",
+      "service_type": "aws_kinesis_data_streams",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "trade_execution_engine",
+      "service_type": "aws_ec2_instances",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "trade_database",
+      "service_type": "aws_rds_postgresql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "risk_analytics_processor",
+      "service_type": "aws_lambda_functions",
+      "implementation_confidence": 0.9999999999999999
+    },
+    {
+      "name": "client_portal_api",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 0.8999999999999999
+    },
+    {
+      "name": "audit_log_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 423,
+      "resource_count": 29,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "real_time_trading_platform_vpc_main"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "real_time_trading_platform_igw_main"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "real_time_trading_platform_subnet_public"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "real_time_trading_platform_subnet_private_app"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "real_time_trading_platform_subnet_private_data"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "real_time_trading_platform_rt_public"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "real_time_trading_platform_rta_public"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "real_time_trading_platform_sg_trading_engine"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "real_time_trading_platform_sg_database"
+        },
+        {
+          "type": "aws_kms_key",
+          "name": "real_time_trading_platform_kms_database"
+        },
+        {
+          "type": "aws_kms_alias",
+          "name": "real_time_trading_platform_kms_alias_database"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "real_time_trading_platform_db_subnet_group"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "real_time_trading_platform_rds_trade_database"
+        },
+        {
+          "type": "aws_instance",
+          "name": "real_time_trading_platform_ec2_trading_engine"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "real_time_trading_platform_role_trading_engine"
+        },
+        {
+          "type": "aws_iam_policy",
+          "name": "real_time_trading_platform_policy_s3_access"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "real_time_trading_platform_attach_s3_policy"
+        },
+        {
+          "type": "aws_iam_instance_profile",
+          "name": "real_time_trading_platform_profile_trading_engine"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "real_time_trading_platform_role_lambda_risk"
+        },
+        {
+          "type": "aws_iam_role_policy_attachment",
+          "name": "real_time_trading_platform_lambda_basic"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "real_time_trading_platform_lambda_risk_calculator"
+        },
+        {
+          "type": "aws_kinesis_stream",
+          "name": "real_time_trading_platform_kinesis_market_data"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "real_time_trading_platform_s3_audit_logs"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "real_time_trading_platform_s3_versioning_audit"
+        },
+        {
+          "type": "random_string",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_lb",
+          "name": "real_time_trading_platform_alb_client_portal"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "real_time_trading_platform_sg_alb"
+        },
+        {
+          "type": "aws_cloudtrail",
+          "name": "real_time_trading_platform_cloudtrail_audit"
+        },
+        {
+          "type": "aws_iam_account_password_policy",
+          "name": "real_time_trading_platform_password_policy"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 60,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 40,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 222,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

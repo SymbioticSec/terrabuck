@@ -1,0 +1,17 @@
+# This CloudFormation template uses Parameters instead of separate variables file
+# All configurable values are defined in the Parameters section of the main template
+
+# Default parameter values:
+# Environment: production
+# ProjectName: enterprise-document-mgmt-platform
+# VpcCidr: 10.0.0.0/16
+# PublicSubnet1Cidr: 10.0.1.0/24
+# PublicSubnet2Cidr: 10.0.2.0/24
+# PrivateSubnet1Cidr: 10.0.10.0/24
+# PrivateSubnet2Cidr: 10.0.20.0/24
+# DatabaseUsername: docmgmt_admin
+# DatabasePassword: (must be provided during deployment)
+# DatabaseInstanceClass: db.t3.medium
+
+# To override these values during deployment, use:
+# aws cloudformation create-stack --stack-name document-mgmt --template-body file://main.yaml --parameters ParameterKey=Environment,ParameterValue=staging ParameterKey=DatabasePassword,ParameterValue=YourSecurePassword123

@@ -1,0 +1,22 @@
+{
+  "iotHubConnectionString": {
+    "description": "Connection string for SCADA devices to connect to IoT Hub",
+    "sensitive": true
+  },
+  "dashboardUrl": {
+    "description": "URL for the operator dashboard web application",
+    "sensitive": false
+  },
+  "sqlServerFqdn": {
+    "description": "Fully qualified domain name of the SQL Server",
+    "sensitive": false
+  },
+  "storageAccountName": {
+    "description": "Name of the storage account for historical data",
+    "sensitive": false
+  },
+  "resourceGroupName": {
+    "description": "Name of the resource group containing all resources",
+    "sensitive": false
+  }
+}

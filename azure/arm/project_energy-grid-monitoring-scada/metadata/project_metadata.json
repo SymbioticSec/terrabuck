@@ -1,0 +1,332 @@
+{
+  "project_info": {
+    "project_id": "energy-grid-monitoring-scada",
+    "project_name": "Smart Grid SCADA Monitoring Platform",
+    "description": "A comprehensive energy grid monitoring system that collects real-time data from SCADA devices across power substations, processes telemetry data for anomaly detection, and provides operational dashboards for grid operators. The system handles critical infrastructure monitoring with high availability requirements and regulatory compliance for energy sector standards.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "iot_data_pipeline",
+    "business_context": "Regional utility company needs to modernize their grid monitoring infrastructure to comply with NERC CIP standards while improving operational visibility and response times to grid anomalies. The system must handle data from 150+ substations with sub-second latency requirements for critical alerts.",
+    "components": [
+      {
+        "name": "scada_data_ingestion",
+        "service_type": "azure_iot_hub",
+        "purpose": "Secure ingestion of SCADA telemetry data from field devices using industrial protocols",
+        "dependencies": [],
+        "security_considerations": [
+          "device_authentication",
+          "encrypted_transmission",
+          "certificate_management"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "telemetry_processing",
+        "service_type": "azure_stream_analytics",
+        "purpose": "Real-time processing of sensor data for anomaly detection and threshold monitoring",
+        "dependencies": [
+          "scada_data_ingestion"
+        ],
+        "security_considerations": [
+          "data_validation",
+          "processing_isolation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "historical_data_storage",
+        "service_type": "azure_time_series_insights",
+        "purpose": "Long-term storage and analysis of historical grid performance data",
+        "dependencies": [
+          "telemetry_processing"
+        ],
+        "security_considerations": [
+          "data_encryption",
+          "access_controls",
+          "audit_logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "operational_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores grid topology, device configurations, and operational metadata",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "connection_security",
+          "backup_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "operator_dashboard",
+        "service_type": "azure_app_service",
+        "purpose": "Web-based SCADA HMI for grid operators with real-time visualization",
+        "dependencies": [
+          "operational_database",
+          "historical_data_storage"
+        ],
+        "security_considerations": [
+          "authentication",
+          "role_based_access",
+          "session_management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "alert_notification",
+        "service_type": "azure_logic_apps",
+        "purpose": "Automated alerting system for critical grid events and threshold violations",
+        "dependencies": [
+          "telemetry_processing"
+        ],
+        "security_considerations": [
+          "secure_communications",
+          "alert_integrity"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Hub-spoke architecture with dedicated subnets for IoT ingestion, processing services, and operator access. Network security groups enforce strict traffic segmentation between operational technology (OT) and information technology (IT) zones.",
+      "security_zones": [
+        "ot_ingestion",
+        "processing_tier",
+        "operator_access",
+        "management"
+      ],
+      "connectivity_patterns": [
+        "IoT Hub receives encrypted SCADA data",
+        "Stream Analytics processes data in isolated compute",
+        "Operators access dashboards through secure web gateway",
+        "All inter-service communication uses private endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_accounts": 2,
+      "databases": 2,
+      "networking_components": 6,
+      "iot_services": 4,
+      "security_components": 5,
+      "monitoring_resources": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T17:38:00.724306"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "The operator dashboard web application is configured with an insecure TLS policy, allowing connections using TLS 1.0 which is vulnerable to cryptographic attacks. This creates a significant security risk for SCADA operators accessing critical grid monitoring interfaces.",
+        "severity": "medium",
+        "affected_component": "operator_dashboard",
+        "injection_strategy": "Configure the Azure App Service with min_tls_version set to '1.0' instead of the secure '1.2' standard",
+        "business_impact": "Compromised operator sessions could allow attackers to manipulate grid controls or access sensitive SCADA data, potentially causing power outages or grid instability",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.2\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        site_config {\n          min_tls_version = \"1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = '1.0' in the App Service site_config block for the operator dashboard",
+          "explanation": "TLS 1.0 has known cryptographic vulnerabilities that can be exploited to decrypt HTTPS traffic containing sensitive SCADA control commands"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "Enable Database Auditing",
+        "description": "The operational database storing grid topology and device configurations lacks proper auditing configuration, preventing detection of unauthorized access or data manipulation in critical infrastructure systems.",
+        "severity": "medium",
+        "affected_component": "operational_database",
+        "injection_strategy": "Deploy Azure SQL Database without configuring the azurerm_mssql_server_extended_auditing_policy resource",
+        "business_impact": "Inability to detect insider threats or external attackers modifying grid configurations, potentially leading to undetected sabotage of critical power infrastructure",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy only the azurerm_sql_server resource without the corresponding azurerm_mssql_server_extended_auditing_policy",
+          "explanation": "Without auditing enabled, database access and modifications are not logged, violating NERC CIP compliance requirements for critical infrastructure monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "title": "No Public Ingress",
+        "description": "Network security rules allow unrestricted inbound access from the internet (0.0.0.0/0) to SCADA processing infrastructure, violating operational technology (OT) security principles and exposing critical grid systems to external threats.",
+        "severity": "medium",
+        "affected_component": "telemetry_processing",
+        "injection_strategy": "Configure network security rules with source_address_prefix set to '0.0.0.0/0' for inbound traffic to processing tier",
+        "business_impact": "Direct internet exposure of SCADA processing systems could allow nation-state actors or cybercriminals to compromise grid monitoring and control systems",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Inbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n    - |-\n      resource \"azurerm_network_security_rule\" \"allow_lb_prober\" {\n        direction               = \"Inbound\"\n        access                  = \"Allow\"\n        protocol                = \"Tcp\" # Probes are always TCP\n        source_port_range       = \"*\"\n        destination_port_ranges = \"443\"\n        source_address_prefix   = \"168.63.129.16\" // single public IP (Azure well known)\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction             = \"Inbound\"\n        source_address_prefix = \"0.0.0.0/0\"\n        access                = \"Allow\"\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create network security rule with source_address_prefix = '0.0.0.0/0' and direction = 'Inbound' for processing tier subnet",
+          "explanation": "Allowing unrestricted internet access violates the air-gapped principle required for OT networks and creates attack vectors for grid compromise"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy for Storage",
+        "description": "Historical data storage accounts are configured to accept connections using insecure TLS 1.0, potentially exposing years of sensitive grid performance data to cryptographic attacks during data retrieval operations.",
+        "severity": "medium",
+        "affected_component": "historical_data_storage",
+        "injection_strategy": "Configure Azure Storage Account with min_tls_version set to 'TLS1_0' instead of the secure 'TLS1_2' standard",
+        "business_impact": "Compromised historical data could reveal grid vulnerabilities, operational patterns, and critical infrastructure details to adversaries planning physical or cyber attacks",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set min_tls_version = 'TLS1_0' in the storage account configuration for historical data storage",
+          "explanation": "TLS 1.0 vulnerabilities could allow attackers to decrypt data in transit, exposing sensitive grid operational data and performance metrics"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "title": "Account Identity Registered",
+        "description": "The operator dashboard lacks proper managed identity configuration, forcing the application to use connection strings and shared secrets for accessing other Azure services, creating credential exposure risks in SCADA environments.",
+        "severity": "medium",
+        "affected_component": "operator_dashboard",
+        "injection_strategy": "Deploy Azure App Service without configuring the identity block for managed identity authentication",
+        "business_impact": "Hardcoded credentials in SCADA applications could be extracted by attackers, providing persistent access to grid monitoring systems even after password rotations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#identity\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        identity {\n          type         = \"UserAssigned\"\n          identity_ids = \"webapp1\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "account_identity_registered.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy the App Service resource without the identity configuration block",
+          "explanation": "Without managed identity, the application must use connection strings stored in configuration, creating credential theft opportunities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-SECURITYCENTER-ALERT_ON_SEVERE_NOTIFICATIONS",
+        "title": "Alert On Severe Notifications",
+        "description": "Azure Security Center is not configured to send alert notifications for severe security events, preventing timely response to potential cyber attacks against critical grid infrastructure.",
+        "severity": "medium",
+        "affected_component": "alert_notification",
+        "injection_strategy": "Configure Azure Security Center contact with alert_notifications set to false",
+        "business_impact": "Delayed detection of security incidents could allow attackers to maintain persistence in SCADA systems, potentially leading to grid manipulation or data exfiltration",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/security_center_contact#alert_notifications\n  good:\n    - |-\n      resource \"azurerm_security_center_contact\" \"good_example\" {\n        email = \"good_example@example.com\"\n        phone = \"+1-555-555-5555\"\n\n        alert_notifications = true\n        alerts_to_admins    = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_security_center_contact\" \"bad_example\" {\n        email = \"bad_example@example.com\"\n        phone = \"+1-555-555-5555\"\n\n        alert_notifications = false\n        alerts_to_admins    = false\n      }",
+        "file_name": "alert_on_severe_notifications.yaml",
+        "service": "securitycenter",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set alert_notifications = false and alerts_to_admins = false in the Security Center contact configuration",
+          "explanation": "Disabled security alerts prevent rapid incident response required for protecting critical infrastructure from cyber threats"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-COMPUTE-ENABLE_DISK_ENCRYPTION",
+        "title": "Enable Disk Encryption",
+        "description": "Managed disks used by processing services lack encryption at rest, potentially exposing sensitive SCADA telemetry data and grid operational information if physical storage media is compromised.",
+        "severity": "medium",
+        "affected_component": "telemetry_processing",
+        "injection_strategy": "Configure managed disk resources with encryption_settings enabled set to false",
+        "business_impact": "Unencrypted storage could allow data recovery from decommissioned hardware, exposing grid topology, device configurations, and operational patterns to unauthorized parties",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/managed_disk\n  good:\n    - |-\n      resource \"azurerm_managed_disk\" \"good_example\" {\n        encryption_settings {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_managed_disk\" \"bad_example\" {\n        encryption_settings {\n          enabled = false\n        }\n      }",
+        "file_name": "enable_disk_encryption.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set encryption_settings.enabled = false in managed disk configurations",
+          "explanation": "Unencrypted disks violate data protection requirements for critical infrastructure and create data exposure risks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "title": "Default Action Deny for Storage",
+        "description": "Storage account network rules are configured with default action 'Allow', permitting unrestricted access to historical grid data storage instead of implementing a zero-trust security model required for critical infrastructure.",
+        "severity": "medium",
+        "affected_component": "historical_data_storage",
+        "injection_strategy": "Configure storage account network rules with default_action set to 'Allow' instead of 'Deny'",
+        "business_impact": "Open storage access could allow unauthorized retrieval of years of grid performance data, revealing operational patterns and vulnerabilities to potential attackers",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account_network_rules#default_action\n  good:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"good_example\" {\n\n        default_action             = \"Deny\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"bad_example\" {\n\n        default_action             = \"Allow\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }",
+        "file_name": "default_action_deny.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set default_action = 'Allow' in storage account network rules configuration",
+          "explanation": "Permissive default access violates zero-trust principles and could allow unauthorized access to sensitive grid operational data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "AZURE-SECURITYCENTER-ALERT_ON_SEVERE_NOTIFICATIONS",
+        "AZURE-COMPUTE-ENABLE_DISK_ENCRYPTION",
+        "AZURE-STORAGE-DEFAULT_ACTION_DENY"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "securitycenter",
+        "compute",
+        "database",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "services_covered": [
+        "securitycenter",
+        "compute",
+        "database",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 23,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

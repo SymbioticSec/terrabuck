@@ -1,0 +1,18 @@
+# CloudFormation Outputs are defined within the main template
+# Key outputs include:
+
+# VPCId: The ID of the created VPC
+# LoadBalancerDNS: DNS name of the Application Load Balancer for accessing the application
+# DocumentBucket: Name of the S3 bucket storing legal documents
+# DatabaseEndpoint: RDS PostgreSQL database endpoint for application connections
+# ElasticsearchDomain: Elasticsearch domain endpoint for search functionality
+
+# To retrieve outputs after deployment:
+# aws cloudformation describe-stacks --stack-name document-mgmt --query 'Stacks[0].Outputs'
+
+# Cross-stack references are available through exports:
+# - enterprise-document-mgmt-platform-vpc-id
+# - enterprise-document-mgmt-platform-alb-dns
+# - enterprise-document-mgmt-platform-document-bucket
+# - enterprise-document-mgmt-platform-db-endpoint
+# - enterprise-document-mgmt-platform-es-endpoint

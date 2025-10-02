@@ -1,0 +1,319 @@
+{
+  "project_info": {
+    "project_id": "social-media-analytics-platform",
+    "project_name": "Social Media Analytics Platform",
+    "description": "A comprehensive social media analytics platform that collects, processes, and analyzes social media data from multiple sources (Twitter, Facebook, Instagram) to provide real-time insights, sentiment analysis, and trend reporting for marketing teams and brand managers. The platform handles high-volume data ingestion, performs real-time analytics, and provides interactive dashboards with historical reporting capabilities.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "data_pipeline",
+    "business_context": "Marketing agencies and enterprise brands need to monitor their social media presence, track campaign performance, analyze customer sentiment, and identify trending topics. This platform serves marketing teams, brand managers, and social media analysts who require real-time insights and comprehensive reporting on social media metrics across multiple platforms.",
+    "components": [
+      {
+        "name": "data_ingestion_api",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API gateway that receives social media data from various sources and webhook integrations, handles rate limiting and authentication",
+        "dependencies": [],
+        "security_considerations": [
+          "API key management",
+          "rate limiting",
+          "input validation",
+          "CORS configuration"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "stream_processing_engine",
+        "service_type": "aws_kinesis",
+        "purpose": "Real-time data streaming service that processes incoming social media posts, handles data transformation, and routes data to appropriate processing pipelines",
+        "dependencies": [
+          "data_ingestion_api"
+        ],
+        "security_considerations": [
+          "stream encryption",
+          "access control",
+          "data retention policies"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "analytics_processor",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless functions that perform sentiment analysis, keyword extraction, trend detection, and data enrichment on social media content",
+        "dependencies": [
+          "stream_processing_engine"
+        ],
+        "security_considerations": [
+          "function permissions",
+          "environment variables",
+          "VPC configuration"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "metrics_database",
+        "service_type": "aws_rds",
+        "purpose": "PostgreSQL database storing processed analytics data, user metrics, campaign performance data, and aggregated insights",
+        "dependencies": [
+          "analytics_processor"
+        ],
+        "security_considerations": [
+          "database encryption",
+          "backup security",
+          "connection encryption",
+          "access controls"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "raw_data_storage",
+        "service_type": "aws_s3",
+        "purpose": "Data lake for storing raw social media content, processed datasets, and historical archives with lifecycle management",
+        "dependencies": [
+          "stream_processing_engine"
+        ],
+        "security_considerations": [
+          "bucket encryption",
+          "access policies",
+          "versioning",
+          "lifecycle rules"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "dashboard_application",
+        "service_type": "aws_ec2",
+        "purpose": "Web application server hosting the analytics dashboard, user interface, and reporting tools for visualizing social media insights",
+        "dependencies": [
+          "metrics_database",
+          "raw_data_storage"
+        ],
+        "security_considerations": [
+          "instance security",
+          "application security",
+          "session management",
+          "HTTPS configuration"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two availability zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "API Gateway connects to Kinesis streams in private subnet",
+        "Lambda functions process data from Kinesis and write to RDS and S3",
+        "EC2 dashboard application in public subnet connects to RDS in private subnet",
+        "S3 bucket accessible from Lambda and EC2 with appropriate IAM roles",
+        "RDS in private subnet with security groups restricting access"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "serverless_functions": 4,
+      "streaming_services": 2,
+      "api_gateways": 1,
+      "security_groups": 4,
+      "iam_roles": 5
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:23:36.095148"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_CACHE_ENCRYPTION",
+        "title": "Enable Cache Encryption",
+        "description": "API Gateway caching is enabled but cache data encryption is disabled, exposing cached API responses containing potentially sensitive social media data in unencrypted form",
+        "severity": "medium",
+        "affected_component": "data_ingestion_api",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Cached social media data and API responses stored unencrypted, potentially exposing user content, authentication tokens, and analytics data to unauthorized access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method_settings#cache_data_encrypted\n  good:\n    - |-\n      resource \"aws_api_gateway_rest_api\" \"example\" {}\n\n      resource \"aws_api_gateway_stage\" \"example\" {\n        rest_api_id = aws_api_gateway_rest_api.example.id\n      }\n\n      resource \"aws_api_gateway_method_settings\" \"good_example\" {\n        rest_api_id = aws_api_gateway_rest_api.example.id\n        stage_name  = aws_api_gateway_stage.example.stage_name\n        method_path = \"path1/GET\"\n\n        settings {\n          caching_enabled      = true\n          cache_data_encrypted = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_rest_api\" \"example\" {}\n\n      resource \"aws_api_gateway_stage\" \"example\" {\n        rest_api_id = aws_api_gateway_rest_api.example.id\n      }\n\n      resource \"aws_api_gateway_method_settings\" \"bad_example\" {\n        rest_api_id = aws_api_gateway_rest_api.example.id\n        stage_name  = aws_api_gateway_stage.example.stage_name\n        method_path = \"path1/GET\"\n\n        settings {\n          caching_enabled      = true\n          cache_data_encrypted = false\n        }\n      }",
+        "file_name": "enable_cache_encryption.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure API Gateway method settings with caching enabled but cache_data_encrypted set to false",
+          "explanation": "This creates a vulnerability where API responses containing social media data are cached in plaintext, making them accessible to anyone with access to the cache storage"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_LOGGING",
+        "title": "Enable Logging",
+        "description": "S3 bucket storing raw social media data lacks access logging configuration, preventing detection of unauthorized access attempts or data exfiltration",
+        "severity": "medium",
+        "affected_component": "raw_data_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "No audit trail for data access, making it impossible to detect unauthorized access to sensitive social media content, user data, or compliance violations",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            LoggingConfiguration:\n              DestinationBucketName: !Ref TestLoggingBucket\n              LogFilePrefix: accesslogs/\n\n        TestLoggingBucket:\n          Type: AWS::S3::Bucket\n          Properties:\n            AccessControl: LogDeliveryWrite\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket\n          Properties: null",
+        "file_name": "enable_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without LoggingConfiguration property in CloudFormation template",
+          "explanation": "Without access logging, there's no record of who accessed the social media data, when, or what operations were performed, creating a blind spot for security monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "title": "Performance Insights Encryption Customer Key",
+        "description": "RDS Performance Insights is enabled for the metrics database but uses default AWS-managed keys instead of customer-managed KMS keys for encryption",
+        "severity": "medium",
+        "affected_component": "metrics_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Performance metrics and query patterns for social media analytics are encrypted with AWS-managed keys, reducing control over encryption key management and potential compliance issues",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            EnablePerformanceInsights: true\n            PerformanceInsightsKMSKeyId: something\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            EnablePerformanceInsights: true",
+        "file_name": "performance_insights_encryption_customer_key.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Enable Performance Insights without specifying PerformanceInsightsKMSKeyId property",
+          "explanation": "This results in using AWS-managed encryption keys instead of customer-managed keys, reducing organizational control over the encryption of database performance data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "Lambda functions performing sentiment analysis and data processing lack X-Ray tracing configuration, limiting observability and debugging capabilities",
+        "severity": "medium",
+        "affected_component": "analytics_processor",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Reduced visibility into function performance, error tracking, and request tracing for critical social media processing workflows, making troubleshooting and performance optimization difficult",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x\n            TracingConfig:\n              Mode: Active\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket\n              S3Key: function.zip\n            Handler: index.handler\n            Runtime: nodejs12.x",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy Lambda function without TracingConfig property or with Mode set to 'Passthrough'",
+          "explanation": "Without active tracing, there's limited visibility into function execution, making it difficult to identify performance bottlenecks or errors in social media data processing"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ENABLE_AT_REST_ENCRYPTION",
+        "title": "Enable At Rest Encryption",
+        "description": "EC2 instance hosting the dashboard application has EBS volumes without encryption enabled, exposing application data and temporary files",
+        "severity": "medium",
+        "affected_component": "dashboard_application",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Dashboard application data, cached analytics results, and temporary files stored on unencrypted EBS volumes, creating risk of data exposure if volumes are compromised",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            BlockDeviceMappings:\n              - DeviceName: /dev/sdm\n                Ebs:\n                  Encrypted: true\n            ImageId: ami-79fd7eee\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            BlockDeviceMappings:\n              - DeviceName: /dev/sdm\n                Ebs:\n                  Encrypted: false\n            ImageId: ami-79fd7eee",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure EC2 instance with BlockDeviceMappings where Ebs.Encrypted is set to false or omitted",
+          "explanation": "This leaves EBS volumes unencrypted, potentially exposing application data, logs, and cached analytics information stored on the instance"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ENFORCE_HTTP_TOKEN_IMDS",
+        "title": "Enforce Http Token Imds",
+        "description": "EC2 instance metadata service (IMDS) is not configured to require session tokens, allowing potential SSRF attacks to access instance credentials",
+        "severity": "medium",
+        "affected_component": "dashboard_application",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Vulnerable to Server-Side Request Forgery (SSRF) attacks that could access EC2 instance metadata and IAM credentials, potentially compromising the entire social media analytics platform",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance#metadata-options\n  good:\n    - |-\n      resource \"aws_instance\" \"good_example\" {\n        ami           = \"ami-005e54dee72cc1d00\"\n        instance_type = \"t2.micro\"\n        metadata_options {\n          http_tokens = \"required\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_instance\" \"bad_example\" {\n        ami           = \"ami-005e54dee72cc1d00\"\n        instance_type = \"t2.micro\"\n      }",
+        "file_name": "enforce_http_token_imds.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy EC2 instance without metadata_options configuration or with http_tokens not set to 'required'",
+          "explanation": "This allows IMDSv1 access without session tokens, making the instance vulnerable to SSRF attacks that could steal IAM credentials and access other AWS services"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-REQUIRE_MFA_DELETE",
+        "title": "Require Mfa Delete",
+        "description": "S3 bucket versioning is enabled but MFA delete protection is not configured, allowing deletion of social media data without multi-factor authentication",
+        "severity": "medium",
+        "affected_component": "raw_data_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Critical social media data and historical analytics can be permanently deleted without MFA verification, creating risk of data loss from compromised accounts or insider threats",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_versioning\" \"good_example\" {\n        bucket = aws_s3_bucket.example.id\n\n        versioning_configuration {\n          status     = \"Enabled\"\n          mfa_delete = \"Enabled\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_versioning\" \"good_example\" {\n        bucket = aws_s3_bucket.example.id\n\n        versioning_configuration {\n          status     = \"Enabled\"\n          mfa_delete = \"Disabled\"\n        }\n      }",
+        "file_name": "require_mfa_delete.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure S3 bucket versioning with mfa_delete set to 'Disabled' or omitted",
+          "explanation": "Without MFA delete protection, versioned objects can be permanently deleted without additional authentication, increasing risk of accidental or malicious data loss"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-APIGATEWAY-ENABLE_CACHE_ENCRYPTION",
+        "AWS-S3-ENABLE_LOGGING",
+        "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-EC2-ENABLE_AT_REST_ENCRYPTION",
+        "AWS-EC2-ENFORCE_HTTP_TOKEN_IMDS",
+        "AWS-S3-REQUIRE_MFA_DELETE"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "s3",
+        "ec2",
+        "rds",
+        "lambda"
+      ],
+      "services_covered": [
+        "apigateway",
+        "s3",
+        "ec2",
+        "rds",
+        "lambda"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 170,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

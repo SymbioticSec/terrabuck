@@ -1,0 +1,44 @@
+# CloudFormation Parameters Configuration
+# This file contains all configurable parameters for the Enterprise Backup and Disaster Recovery Platform
+
+# Environment Configuration
+Environment: production
+ProjectName: enterprise-backup-dr-platform
+
+# Network Configuration
+VpcCidr: 10.0.0.0/16
+PublicSubnet1Cidr: 10.0.1.0/24
+PrivateSubnet1Cidr: 10.0.2.0/24
+DataSubnet1Cidr: 10.0.3.0/24
+
+# Database Configuration
+DBInstanceClass: db.t3.medium
+DBUsername: backupadmin
+# DBPassword should be provided during deployment for security
+
+# Backup Configuration
+BackupRetentionDays: 3  # Vulnerable: Low retention period
+CrossRegionReplication: 'true'
+
+# Instance Configuration
+BackupAgentInstanceType: t3.medium
+MinBackupAgents: 1
+MaxBackupAgents: 5
+DesiredBackupAgents: 2
+
+# Lambda Configuration
+LambdaRuntime: python3.9
+OrchestrationTimeout: 300
+RecoveryTimeout: 600
+
+# CloudWatch Configuration
+LogRetentionDays: 14
+AlarmEvaluationPeriods: 1
+AlarmThreshold: 1
+
+# Tags
+DefaultTags:
+  Environment: production
+  Project: enterprise-backup-dr-platform
+  Owner: backup-team
+  CostCenter: infrastructure

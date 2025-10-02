@@ -1,0 +1,338 @@
+{
+  "project_info": {
+    "project_id": "iot-sensor-analytics-platform",
+    "project_name": "Smart Manufacturing IoT Analytics Platform",
+    "description": "A production-grade IoT platform for manufacturing facilities that collects sensor data from production lines, processes it in real-time for anomaly detection, and provides analytics dashboards for operations teams. The system handles temperature, vibration, and pressure sensors from multiple production lines, storing both raw and processed data for compliance reporting and predictive maintenance.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "event_driven_data_pipeline",
+    "business_context": "Manufacturing company with 5-10 production lines needs real-time monitoring of equipment health, predictive maintenance alerts, and regulatory compliance reporting. System must handle 10,000+ sensor readings per minute with sub-second alerting for critical thresholds.",
+    "components": [
+      {
+        "name": "iot_data_ingestion",
+        "service_type": "aws_iot_core",
+        "purpose": "Secure MQTT endpoint for sensor data collection with device authentication and message routing",
+        "dependencies": [],
+        "security_considerations": [
+          "device_certificates",
+          "iot_policies",
+          "encrypted_transport"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "stream_processing",
+        "service_type": "aws_kinesis_data_streams",
+        "purpose": "Real-time data streaming and buffering for high-throughput sensor data processing",
+        "dependencies": [
+          "iot_data_ingestion"
+        ],
+        "security_considerations": [
+          "encryption_at_rest",
+          "iam_access_control"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "anomaly_detection",
+        "service_type": "aws_lambda",
+        "purpose": "Real-time processing functions for anomaly detection and threshold alerting using statistical analysis",
+        "dependencies": [
+          "stream_processing"
+        ],
+        "security_considerations": [
+          "execution_role_permissions",
+          "vpc_isolation",
+          "environment_variables_encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "time_series_database",
+        "service_type": "aws_timestream",
+        "purpose": "Optimized storage for time-series sensor data with automatic data lifecycle management",
+        "dependencies": [
+          "anomaly_detection"
+        ],
+        "security_considerations": [
+          "encryption_at_rest",
+          "vpc_endpoints",
+          "fine_grained_access_control"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "analytics_api",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API for dashboard queries and historical data retrieval with rate limiting",
+        "dependencies": [
+          "time_series_database"
+        ],
+        "security_considerations": [
+          "api_keys",
+          "throttling",
+          "cors_configuration"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "compliance_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Long-term archival storage for regulatory compliance with immutable data retention",
+        "dependencies": [
+          "time_series_database"
+        ],
+        "security_considerations": [
+          "object_lock",
+          "bucket_encryption",
+          "access_logging",
+          "lifecycle_policies"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two AZs for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "IoT Core receives external sensor data",
+        "Lambda functions in private subnets",
+        "TimeStream and S3 accessed via VPC endpoints",
+        "API Gateway provides public access with authentication"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 0,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "serverless_functions": 3,
+      "iot_components": 4,
+      "api_components": 3,
+      "monitoring_components": 4,
+      "total_estimated": 25
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:51:37.032421"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "title": "Enable Access Logging",
+        "description": "API Gateway stages lack access logging configuration, preventing security monitoring and audit trail generation for API requests and responses",
+        "severity": "medium",
+        "affected_component": "analytics_api",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without API access logs, security incidents involving unauthorized data access or API abuse cannot be detected or investigated, creating compliance gaps for manufacturing data protection",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_apigatewayv2_stage\" \"good_example\" {\n        api_id = aws_apigatewayv2_api.example.id\n        name   = \"example-stage\"\n\n        access_log_settings {\n          destination_arn = \"arn:aws:logs:region:0123456789:log-group:access_logging\"\n          format          = \"json\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_apigatewayv2_stage\" \"bad_example\" {\n        api_id = aws_apigatewayv2_api.example.id\n        name   = \"example-stage\"\n      }",
+        "file_name": "enable_access_logging.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create API Gateway stage without access_log_settings block",
+          "explanation": "Missing access logging prevents detection of unauthorized API access patterns and compliance violations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_VERSIONING",
+        "title": "Enable Versioning",
+        "description": "S3 bucket used for compliance storage lacks versioning configuration, preventing protection against accidental deletion or modification of regulatory data",
+        "severity": "medium",
+        "affected_component": "compliance_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Manufacturing compliance data could be permanently lost or corrupted without versioning, leading to regulatory violations and inability to prove compliance during audits",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        versioning {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n\n      }",
+        "file_name": "enable_versioning.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without versioning configuration block",
+          "explanation": "Without versioning, compliance data can be permanently lost if accidentally deleted or overwritten"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ECS-NO_PLAINTEXT_SECRETS",
+        "title": "No Plaintext Secrets",
+        "description": "Lambda function environment variables contain hardcoded secrets like database passwords or API keys instead of using AWS Secrets Manager or Parameter Store",
+        "severity": "medium",
+        "affected_component": "anomaly_detection",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Hardcoded secrets in Lambda functions expose database credentials and API keys, potentially allowing unauthorized access to sensitive manufacturing data and systems",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_ecs_task_definition\" \"good_example\" {\n        container_definitions = <<EOF\n       [\n         {\n           \"name\": \"my_service\",\n           \"environment\": [\n             { \"name\": \"ENVIRONMENT\", \"value\": \"development\" }\n           ]\n         }\n       ]\n       EOF\n      }\n  bad:\n    - |-\n      resource \"aws_ecs_task_definition\" \"bad_example\" {\n        container_definitions = <<EOF\n       [\n         {\n           \"name\": \"my_service\",\n           \"environment\": [\n             { \"name\": \"ENVIRONMENT\", \"value\": \"development\" },\n             { \"name\": \"DATABASE_PASSWORD\", \"value\": \"oh no D:\"}\n           ]\n         }\n       ]\n       EOF\n      }",
+        "file_name": "no_plaintext_secrets.yaml",
+        "service": "ecs",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Include plaintext secrets in Lambda environment variables or function code",
+          "explanation": "Hardcoded secrets are visible in infrastructure code and function configurations, creating security exposure"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-NO_PUBLIC_LOG_ACCESS",
+        "title": "No Public Log Access",
+        "description": "CloudTrail logs stored in S3 bucket with public read access, exposing audit trails and potentially sensitive operational information",
+        "severity": "medium",
+        "affected_component": "compliance_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Public access to CloudTrail logs exposes detailed audit information about manufacturing operations, user activities, and system configurations to unauthorized parties",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"good_example\" {\n        s3_bucket_name = aws_s3_bucket.example.id\n      }\n\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"example\"\n        acl    = \"private\"\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n        s3_bucket_name = aws_s3_bucket.example.id\n      }\n\n      resource \"aws_s3_bucket\" \"example\" {\n        bucket = \"example\"\n        acl    = \"public-read\"\n      }",
+        "file_name": "no_public_log_access.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure S3 bucket for CloudTrail with public-read ACL",
+          "explanation": "Public bucket access exposes sensitive audit logs containing operational and security information"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-ENFORCE_GROUP_MFA",
+        "title": "Enforce Group MFA",
+        "description": "IAM groups and policies lack multi-factor authentication requirements, allowing access to critical manufacturing systems with only username/password",
+        "severity": "medium",
+        "affected_component": "analytics_api",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without MFA enforcement, compromised credentials could provide unauthorized access to sensitive manufacturing analytics and control systems, potentially disrupting production",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_group_policy\" \"mfa\" {\n        group  = aws_iam_group.support.name\n        policy = <<EOF\n      {\n        \"Version\": \"2012-10-17\",\n        \"Statement\": [\n          {\n            \"Sid\": \"\",\n            \"Effect\": \"Allow\",\n            \"Action\": \"ec2:*\",\n            \"Resource\": \"*\",\n            \"Condition\": {\n                \"Bool\": {\n                    \"aws:MultiFactorAuthPresent\": [\"true\"]\n                }\n            }\n          }\n        ]\n      }\n      EOF\n      }\n  bad:\n    - |-\n      resource \"aws_iam_group\" \"developers\" {\n        name = \"developers\"\n      }",
+        "file_name": "enforce_group_mfa.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM policies without MFA condition requirements",
+          "explanation": "Missing MFA conditions allow access with compromised passwords alone, increasing security risk"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELASTICACHE-ENABLE_IN_TRANSIT_ENCRYPTION",
+        "title": "Enable In Transit Encryption",
+        "description": "Data streaming components lack in-transit encryption, exposing sensitive sensor data during transmission between services",
+        "severity": "medium",
+        "affected_component": "stream_processing",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted data transmission exposes manufacturing sensor data, production metrics, and operational intelligence to network-based attacks and eavesdropping",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_elasticache_replication_group\" \"good_example\" {\n        transit_encryption_enabled = true\n      }\n  bad:\n    - |-\n      resource \"aws_elasticache_replication_group\" \"bad_example\" {\n        transit_encryption_enabled = false\n      }",
+        "file_name": "enable_in_transit_encryption.yaml",
+        "service": "elasticache",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure streaming services without transit encryption enabled",
+          "explanation": "Unencrypted data streams allow interception of sensitive manufacturing data in transit"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "title": "Encrypt Instance Storage Data",
+        "description": "TimeStream database lacks encryption at rest configuration, storing sensitive manufacturing time-series data in unencrypted format",
+        "severity": "medium",
+        "affected_component": "time_series_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted storage of manufacturing sensor data violates data protection requirements and exposes sensitive operational metrics if storage media is compromised",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_db_instance\" \"good_example\" {\n        storage_encrypted = true\n      }\n  bad:\n    - |-\n      resource \"aws_db_instance\" \"bad_example\" {\n\n      }",
+        "file_name": "encrypt_instance_storage_data.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create database instances without storage_encrypted = true",
+          "explanation": "Missing encryption exposes sensitive data if underlying storage is compromised"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+        "title": "Specify Backup Retention",
+        "description": "Database backup retention period is insufficient or not configured, risking data loss and compliance violations for manufacturing records",
+        "severity": "medium",
+        "affected_component": "time_series_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Inadequate backup retention could result in permanent loss of critical manufacturing data needed for compliance reporting and operational analysis",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_db_instance\" \"good_example\" {\n        backup_retention_period = 5\n        skip_final_snapshot     = true\n      }\n  bad:\n    - |-\n      resource \"aws_db_instance\" \"bad_example\" {\n        backup_retention_period = 1\n        skip_final_snapshot     = true\n      }",
+        "file_name": "specify_backup_retention.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set backup_retention_period to 1 or omit the configuration entirely",
+          "explanation": "Insufficient backup retention increases risk of permanent data loss for compliance-critical manufacturing data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "AWS-S3-ENABLE_VERSIONING",
+        "AWS-ECS-NO_PLAINTEXT_SECRETS",
+        "AWS-CLOUDTRAIL-NO_PUBLIC_LOG_ACCESS",
+        "AWS-IAM-ENFORCE_GROUP_MFA",
+        "AWS-ELASTICACHE-ENABLE_IN_TRANSIT_ENCRYPTION",
+        "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "AWS-RDS-SPECIFY_BACKUP_RETENTION"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "elasticache",
+        "cloudtrail",
+        "s3",
+        "iam",
+        "rds",
+        "ecs"
+      ],
+      "services_covered": [
+        "apigateway",
+        "elasticache",
+        "cloudtrail",
+        "s3",
+        "iam",
+        "rds",
+        "ecs"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 28,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

@@ -1,0 +1,409 @@
+{
+  "project_labels": {
+    "project_id": "enterprise-ci-cd-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "network": 1,
+        "monitoring": 1
+      },
+      "by_trivy_service": {
+        "ec2": 3,
+        "iam": 2,
+        "kms": 1,
+        "cloudtrail": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-EC2-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-IAM-REQUIRE_UPPERCASE_IN_PASSWORDS",
+        "AWS-CLOUDTRAIL-ENSURE_CLOUDWATCH_INTEGRATION",
+        "AWS-KMS-AUTO_ROTATE_KEYS",
+        "AWS-EC2-ENFORCE_HTTP_TOKEN_IMDS",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS"
+      ],
+      "services_covered": [
+        "ec2",
+        "iam",
+        "kms",
+        "cloudtrail"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+      "trivy_rule_info": {
+        "original_file": "no_public_ingress_sgr.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity",
+        "knowledge_of_exposed_ports"
+      ],
+      "mitigation_strategies": [
+        "restrict_cidr_blocks_to_specific_ranges",
+        "use_security_group_references",
+        "implement_bastion_hosts",
+        "configure_vpc_endpoints"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "CidrIp: 0.0.0.0/0 with sensitive ports (22, 80, 443)",
+        "secure_pattern": "CidrIp: 10.0.0.0/8 or specific IP ranges"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-ENCRYPTION_CUSTOMER_KEY",
+      "trivy_rule_info": {
+        "original_file": "encryption_customer_key.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "encryption_weakness",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "HIPAA",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "aws_account_access",
+        "ebs_volume_access"
+      ],
+      "mitigation_strategies": [
+        "specify_customer_managed_kms_keys",
+        "implement_key_rotation_policies",
+        "use_separate_keys_per_environment",
+        "configure_key_access_policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::EC2::Volume without KmsKeyId property",
+        "secure_pattern": "KmsKeyId: alias/volumeEncrypt or !Ref MyKey"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption_weakness",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-REQUIRE_UPPERCASE_IN_PASSWORDS",
+      "trivy_rule_info": {
+        "original_file": "require_uppercase_in_passwords.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "weak_authentication",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "user_credentials",
+        "brute_force_tools"
+      ],
+      "mitigation_strategies": [
+        "set_require_uppercase_characters_true",
+        "implement_comprehensive_password_policy",
+        "enable_mfa_for_all_users",
+        "use_identity_federation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_iam_account_password_policy without require_uppercase_characters",
+        "secure_pattern": "require_uppercase_characters = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "weak_authentication",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDTRAIL-ENSURE_CLOUDWATCH_INTEGRATION",
+      "trivy_rule_info": {
+        "original_file": "ensure_cloudwatch_integration.yaml",
+        "service_category": "cloudtrail",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/cloudtrail"
+      },
+      "vulnerability_class": "insufficient_monitoring",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "GDPR",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "aws_api_access",
+        "knowledge_of_monitoring_gaps"
+      ],
+      "mitigation_strategies": [
+        "configure_cloudwatch_logs_integration",
+        "set_up_real_time_alerting",
+        "implement_log_analysis_automation",
+        "create_security_monitoring_dashboards"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::CloudTrail::Trail without CloudWatchLogsLogGroupArn",
+        "secure_pattern": "CloudWatchLogsLogGroupArn: arn:aws:logs:region:account:log-group:name"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "insufficient_monitoring",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-KMS-AUTO_ROTATE_KEYS",
+      "trivy_rule_info": {
+        "original_file": "auto_rotate_keys.yaml",
+        "service_category": "kms",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/kms"
+      },
+      "vulnerability_class": "key_management_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "FIPS",
+        "Common Criteria"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "long_term_key_exposure",
+        "cryptographic_analysis_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_automatic_key_rotation",
+        "implement_manual_rotation_procedures",
+        "use_separate_keys_for_different_purposes",
+        "monitor_key_usage_patterns"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_kms_key with enable_key_rotation = false",
+        "secure_pattern": "enable_key_rotation = true (except for SIGN_VERIFY keys)"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "key_management_weakness",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-ENFORCE_HTTP_TOKEN_IMDS",
+      "trivy_rule_info": {
+        "original_file": "enforce_http_token_imds.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "metadata_exposure",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "ssrf_vulnerability",
+        "application_access",
+        "network_connectivity"
+      ],
+      "mitigation_strategies": [
+        "enforce_imdsv2_with_http_tokens_required",
+        "disable_metadata_service_if_not_needed",
+        "implement_hop_limit_restrictions",
+        "monitor_metadata_service_access"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_instance without metadata_options block",
+        "secure_pattern": "metadata_options { http_tokens = \"required\" }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "metadata_exposure",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+      "trivy_rule_info": {
+        "original_file": "require_symbols_in_passwords.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "weak_authentication",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "user_credentials",
+        "password_cracking_tools"
+      ],
+      "mitigation_strategies": [
+        "set_require_symbols_true",
+        "implement_comprehensive_character_requirements",
+        "enforce_minimum_password_length",
+        "enable_account_lockout_policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_iam_account_password_policy without require_symbols",
+        "secure_pattern": "require_symbols = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "weak_authentication",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "7 medium severity findings across EC2, IAM, KMS, and CloudTrail services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_common_aws_security_misconfigurations",
+      "learn_trivy_rule_structure_and_detection_patterns",
+      "master_infrastructure_as_code_security_scanning",
+      "apply_defense_in_depth_principles_to_cicd_pipelines",
+      "implement_automated_security_compliance_checking"
+    ],
+    "prerequisite_knowledge": [
+      "basic_aws_services_knowledge",
+      "infrastructure_as_code_concepts",
+      "terraform_and_cloudformation_syntax",
+      "cicd_pipeline_fundamentals",
+      "basic_security_principles"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "security_groups_should_follow_least_privilege_principle",
+      "encryption_requires_customer_managed_keys_for_compliance",
+      "password_policies_must_enforce_complexity_requirements",
+      "monitoring_integration_is_essential_for_security_visibility",
+      "key_rotation_prevents_long_term_cryptographic_exposure",
+      "imdsv2_prevents_ssrf_based_credential_theft",
+      "trivy_provides_comprehensive_iac_security_scanning"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "component_count": 7,
+    "file_count": 4,
+    "service_categories": [
+      "cloudtrail",
+      "kms",
+      "iam",
+      "ec2"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "enterprise-ci-cd-platform",
+    "generation_timestamp": "2025-08-08T16:37:48.113854",
+    "version": "1.0",
+    "data_quality": "medium"
+  }
+}

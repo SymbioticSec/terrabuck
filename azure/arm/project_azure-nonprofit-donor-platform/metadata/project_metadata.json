@@ -1,0 +1,383 @@
+{
+  "project_info": {
+    "project_id": "azure-nonprofit-donor-platform",
+    "project_name": "Nonprofit Donor Management and Fundraising Platform",
+    "description": "A comprehensive donor management platform for nonprofit organizations to handle online donations, donor communications, campaign management, and financial reporting. The platform supports multiple payment methods, automated donor acknowledgments, campaign tracking, and integration with accounting systems. Features include donor portal, admin dashboard, automated email campaigns, and compliance reporting for tax-exempt organizations.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "multi-tier_web_application",
+    "business_context": "Mid-sized nonprofit organizations need a centralized platform to manage donor relationships, process online donations, track fundraising campaigns, and maintain compliance with charitable organization regulations. The platform serves development teams, finance departments, and executive leadership with different access levels and reporting needs.",
+    "components": [
+      {
+        "name": "web_frontend",
+        "service_type": "azure_app_service",
+        "purpose": "Hosts the donor portal and admin dashboard web applications with SSL termination and custom domain support",
+        "dependencies": [
+          "api_backend",
+          "cdn_assets"
+        ],
+        "security_considerations": [
+          "SSL/TLS encryption",
+          "authentication integration",
+          "input validation",
+          "XSS protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_backend",
+        "service_type": "azure_app_service",
+        "purpose": "RESTful API service handling donation processing, donor management, campaign logic, and third-party integrations",
+        "dependencies": [
+          "donor_database",
+          "file_storage",
+          "payment_gateway"
+        ],
+        "security_considerations": [
+          "API authentication",
+          "rate limiting",
+          "data encryption",
+          "PCI compliance for payments"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "donor_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores donor information, donation history, campaign data, and financial records with backup and point-in-time recovery",
+        "dependencies": [],
+        "security_considerations": [
+          "database encryption",
+          "access controls",
+          "audit logging",
+          "PII data protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "file_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Stores donor documents, campaign assets, financial reports, and system backups with lifecycle management",
+        "dependencies": [],
+        "security_considerations": [
+          "blob encryption",
+          "access policies",
+          "secure file upload",
+          "data retention policies"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "email_service",
+        "service_type": "azure_functions",
+        "purpose": "Serverless functions for automated donor acknowledgments, campaign emails, and scheduled reporting tasks",
+        "dependencies": [
+          "donor_database",
+          "email_gateway"
+        ],
+        "security_considerations": [
+          "function authentication",
+          "email template validation",
+          "rate limiting",
+          "spam prevention"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "cdn_assets",
+        "service_type": "azure_cdn",
+        "purpose": "Content delivery network for static assets, images, and campaign materials with global distribution",
+        "dependencies": [
+          "file_storage"
+        ],
+        "security_considerations": [
+          "HTTPS enforcement",
+          "origin access control",
+          "cache security headers"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with multiple subnets for web tier, application tier, and data tier separation",
+      "security_zones": [
+        "public (CDN, Load Balancer)",
+        "private (App Services, Functions)",
+        "data (SQL Database, Storage)"
+      ],
+      "connectivity_patterns": [
+        "Internet \u2192 CDN \u2192 App Service",
+        "App Service \u2192 SQL Database (private endpoint)",
+        "Functions \u2192 Storage Account (service endpoint)",
+        "All components use managed identities for authentication"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 3,
+      "databases": 1,
+      "networking_components": 6,
+      "security_components": 4,
+      "monitoring_components": 3,
+      "integration_components": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T18:08:44.271303"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "title": "App Service HTTPS Not Enforced",
+        "description": "The Azure App Service hosting the donor portal and API backend is not configured to enforce HTTPS-only traffic, allowing potential man-in-the-middle attacks on sensitive donor data and payment information.",
+        "severity": "high",
+        "affected_component": "web_frontend",
+        "injection_strategy": "Configure App Service without https_only = true parameter",
+        "business_impact": "Donor personal information and payment data could be intercepted during transmission, violating PCI compliance requirements and donor privacy expectations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/function_app#https_only\n  good:\n    - |-\n      resource \"azurerm_function_app\" \"good_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n        https_only                 = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_function_app\" \"bad_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without the https_only parameter or set to false",
+          "explanation": "Without HTTPS enforcement, the application accepts both HTTP and HTTPS connections, creating opportunities for data interception"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-ENFORCE_HTTPS",
+        "title": "Storage Account HTTPS Not Enforced",
+        "description": "The Azure Storage Account used for donor documents and campaign assets does not enforce HTTPS-only access, potentially exposing sensitive nonprofit data during file transfers.",
+        "severity": "medium",
+        "affected_component": "file_storage",
+        "injection_strategy": "Configure Storage Account with enable_https_traffic_only = false",
+        "business_impact": "Confidential donor documents, financial reports, and campaign materials could be intercepted during upload/download operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#enable_https_traffic_only\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = false\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_https_traffic_only = false in the storage account configuration",
+          "explanation": "This allows unencrypted HTTP connections to the storage account, exposing file transfers to potential interception"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-SECURE_TLS_POLICY",
+        "title": "Database Weak TLS Configuration",
+        "description": "The Azure SQL Database storing donor information and financial records is configured with an outdated TLS version, making encrypted connections vulnerable to protocol downgrade attacks.",
+        "severity": "high",
+        "affected_component": "donor_database",
+        "injection_strategy": "Configure database with minimum_tls_version = '1.1' or lower",
+        "business_impact": "Donor personal information, payment history, and financial data could be compromised through TLS protocol vulnerabilities, risking regulatory compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server#minimum_tls_version\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#ssl_minimal_tls_version_enforced\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#ssl_minimal_tls_version_enforced\n  good:\n    - |-\n      resource \"azurerm_mssql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"missadministrator\"\n        administrator_login_password = \"thisIsKat11\"\n        minimum_tls_version          = \"1.2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"missadministrator\"\n        administrator_login_password = \"thisIsKat11\"\n        minimum_tls_version          = \"1.1\"\n      }",
+        "file_name": "secure_tls_policy.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set minimum_tls_version to '1.1' or omit the parameter entirely",
+          "explanation": "Older TLS versions have known vulnerabilities that could allow attackers to decrypt database communications"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "title": "Overpermissive Network Security Rules",
+        "description": "Network Security Group rules allow unrestricted inbound access from the internet (0.0.0.0/0) to internal resources, potentially exposing the donor management system to unauthorized access.",
+        "severity": "critical",
+        "affected_component": "donor_database",
+        "injection_strategy": "Configure NSG rules with source_address_prefix = '0.0.0.0/0' for inbound traffic",
+        "business_impact": "Direct internet access to database and internal services could lead to data breaches, unauthorized donor data access, and complete system compromise",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Inbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction             = \"Inbound\"\n        source_address_prefix = \"0.0.0.0/0\"\n        access                = \"Allow\"\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create NSG rule with source_address_prefix = '0.0.0.0/0' and access = 'Allow'",
+          "explanation": "This allows any internet user to attempt connections to protected resources, bypassing intended network isolation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "title": "App Service Authentication Disabled",
+        "description": "The Azure App Service hosting the donor portal lacks proper authentication configuration, potentially allowing unauthorized access to donor management functions.",
+        "severity": "high",
+        "affected_component": "web_frontend",
+        "injection_strategy": "Deploy App Service without auth_settings block or with enabled = false",
+        "business_impact": "Unauthorized users could access donor information, modify donation records, or perform administrative actions without proper authentication",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#enabled\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        auth_settings {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "authentication_enabled.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit the auth_settings block entirely from the App Service configuration",
+          "explanation": "Without authentication settings, the application relies solely on application-level security, missing Azure's built-in authentication layer"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET",
+        "title": "Insufficient Activity Log Retention",
+        "description": "Azure Monitor activity log retention is set to less than 365 days, potentially hindering forensic analysis and compliance requirements for nonprofit financial auditing.",
+        "severity": "medium",
+        "affected_component": "donor_database",
+        "injection_strategy": "Configure monitor log profile with retention days < 365 or omit days parameter",
+        "business_impact": "Insufficient audit trail retention could prevent investigation of security incidents and fail to meet nonprofit financial reporting compliance requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_log_profile#retention_policy\n  good:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"good_example\" {\n        name = \"good_example\"\n\n        retention_policy {\n          enabled = true\n          days    = 365\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"bad_example\" {\n        name = \"bad_example\"\n\n        retention_policy {\n          enabled = true\n          days    = 7\n        }\n      }",
+        "file_name": "activity_log_retention_set.yaml",
+        "service": "monitor",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set retention policy days to 7 or omit the days parameter",
+          "explanation": "Short retention periods limit the ability to investigate security incidents and may not meet regulatory compliance requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-SECURITYCENTER-ENABLE_STANDARD_SUBSCRIPTION",
+        "title": "Security Center Standard Tier Disabled",
+        "description": "Azure Security Center is configured with the Free tier instead of Standard tier, limiting advanced threat protection capabilities for the nonprofit's sensitive donor data.",
+        "severity": "medium",
+        "affected_component": "donor_database",
+        "injection_strategy": "Configure Security Center subscription pricing with tier = 'Free'",
+        "business_impact": "Reduced threat detection capabilities could allow advanced attacks against donor data to go unnoticed, increasing risk of data breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/security_center_subscription_pricing#tier\n  good:\n    - |-\n      resource \"azurerm_security_center_subscription_pricing\" \"good_example\" {\n        tier          = \"Standard\"\n        resource_type = \"VirtualMachines\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_security_center_subscription_pricing\" \"bad_example\" {\n        tier          = \"Free\"\n        resource_type = \"VirtualMachines\"\n      }",
+        "file_name": "enable_standard_subscription.yaml",
+        "service": "securitycenter",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set tier = 'Free' in the Security Center subscription pricing configuration",
+          "explanation": "The Free tier lacks advanced threat detection, just-in-time VM access, and adaptive application controls needed for comprehensive security"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-THREAT_ALERT_EMAIL_TO_OWNER",
+        "title": "Database Threat Alerts Not Configured",
+        "description": "SQL Server security alert policy is not configured to email account administrators about potential threats, delaying response to attacks on donor data.",
+        "severity": "medium",
+        "affected_component": "donor_database",
+        "injection_strategy": "Configure SQL Server security alert policy with email_account_admins = false",
+        "business_impact": "Database security incidents may go unnoticed, allowing prolonged unauthorized access to donor information and financial records",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#email_account_admins\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts            = []\n\n        email_account_admins = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n        ]\n        email_account_admins = false\n      }",
+        "file_name": "threat_alert_email_to_owner.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set email_account_admins = false in the SQL Server security alert policy",
+          "explanation": "Without email notifications, administrators won't be immediately alerted to suspicious database activities or potential breaches"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-STORAGE-ENFORCE_HTTPS",
+        "AZURE-DATABASE-SECURE_TLS_POLICY",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "AZURE-MONITOR-ACTIVITY_LOG_RETENTION_SET",
+        "AZURE-SECURITYCENTER-ENABLE_STANDARD_SUBSCRIPTION",
+        "AZURE-DATABASE-THREAT_ALERT_EMAIL_TO_OWNER"
+      ],
+      "severity_distribution": {
+        "critical": 1,
+        "high": 3,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "securitycenter",
+        "database",
+        "monitor",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "services_covered": [
+        "securitycenter",
+        "database",
+        "monitor",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "template_version": "1.0.0",
+    "deployment_name": "nonprofit-donor-management-platform",
+    "resource_count": 21,
+    "estimated_deployment_time": "15-20 minutes",
+    "azure_services_used": [
+      "Virtual Network",
+      "Network Security Groups",
+      "App Service Plan",
+      "App Services (3)",
+      "SQL Server",
+      "SQL Database",
+      "Storage Account",
+      "Blob Containers (2)",
+      "Function App",
+      "CDN Profile",
+      "CDN Endpoint",
+      "Log Analytics Workspace",
+      "Application Insights",
+      "Security Center Pricing (2)",
+      "Log Profile"
+    ],
+    "compliance_frameworks": [
+      "PCI DSS (partial)",
+      "SOC 2 Type II (partial)",
+      "Nonprofit financial reporting standards"
+    ],
+    "estimated_monthly_cost": "$200-400 USD",
+    "supported_regions": [
+      "East US",
+      "West US 2",
+      "Central US",
+      "North Europe",
+      "West Europe"
+    ],
+    "architecture_components_implemented": {
+      "web_frontend": "Microsoft.Web/sites (web app)",
+      "api_backend": "Microsoft.Web/sites (api app)",
+      "donor_database": "Microsoft.Sql/servers + Microsoft.Sql/servers/databases",
+      "file_storage": "Microsoft.Storage/storageAccounts + containers",
+      "email_service": "Microsoft.Web/sites (function app)",
+      "cdn_assets": "Microsoft.Cdn/profiles + Microsoft.Cdn/profiles/endpoints"
+    }
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 20,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

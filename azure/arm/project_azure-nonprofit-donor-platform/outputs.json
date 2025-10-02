@@ -1,0 +1,9 @@
+{
+  "webAppUrl": "https://nonprofit-donor-management-prod-web.azurewebsites.net",
+  "apiAppUrl": "https://nonprofit-donor-management-prod-api.azurewebsites.net",
+  "sqlServerFqdn": "nonprofit-donor-management-prod-sql.database.windows.net",
+  "storageAccountName": "nonprofitdonormanagementprodstorage",
+  "cdnEndpointUrl": "nonprofit-donor-management-prod-cdn-endpoint.azureedge.net",
+  "functionAppUrl": "https://nonprofit-donor-management-prod-func.azurewebsites.net",
+  "applicationInsightsInstrumentationKey": "[reference(resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))).InstrumentationKey]"
+}

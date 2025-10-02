@@ -1,0 +1,345 @@
+{
+  "project_info": {
+    "project_id": "fleet-management-gps-tracker",
+    "project_name": "Fleet Management GPS Tracking System",
+    "description": "A comprehensive fleet management platform for logistics companies to track vehicle locations, monitor driver behavior, manage maintenance schedules, and optimize delivery routes. The system processes real-time GPS data from vehicle-mounted devices, stores historical tracking data, and provides a web dashboard for fleet managers to monitor operations and generate reports.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "event_driven_microservices",
+    "business_context": "Mid-sized logistics company with 200+ delivery vehicles needs real-time visibility into fleet operations to reduce fuel costs, improve delivery times, and ensure driver safety compliance. System must handle 10,000+ GPS pings per minute and provide sub-second dashboard updates for critical alerts.",
+    "components": [
+      {
+        "name": "gps_data_ingestion",
+        "service_type": "aws_api_gateway",
+        "purpose": "Receives GPS coordinates, speed, and telemetry data from vehicle-mounted IoT devices via REST API endpoints",
+        "dependencies": [],
+        "security_considerations": [
+          "device_authentication",
+          "api_rate_limiting",
+          "data_encryption_in_transit"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "telemetry_processor",
+        "service_type": "aws_lambda",
+        "purpose": "Processes incoming GPS data, calculates route deviations, detects speeding violations, and triggers maintenance alerts",
+        "dependencies": [
+          "gps_data_ingestion"
+        ],
+        "security_considerations": [
+          "function_permissions",
+          "environment_variable_encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "vehicle_database",
+        "service_type": "aws_rds_postgresql",
+        "purpose": "Stores vehicle profiles, driver information, maintenance records, and processed tracking analytics",
+        "dependencies": [
+          "telemetry_processor"
+        ],
+        "security_considerations": [
+          "database_encryption",
+          "connection_security",
+          "backup_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "tracking_data_storage",
+        "service_type": "aws_s3",
+        "purpose": "Archives raw GPS tracking data for compliance reporting and historical route analysis",
+        "dependencies": [
+          "telemetry_processor"
+        ],
+        "security_considerations": [
+          "bucket_encryption",
+          "access_logging",
+          "lifecycle_policies"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "fleet_dashboard",
+        "service_type": "aws_ec2",
+        "purpose": "Web application providing real-time fleet monitoring, route optimization tools, and management reporting interface",
+        "dependencies": [
+          "vehicle_database",
+          "tracking_data_storage"
+        ],
+        "security_considerations": [
+          "instance_hardening",
+          "ssl_certificates",
+          "session_management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "alert_notification",
+        "service_type": "aws_sns",
+        "purpose": "Sends SMS and email alerts for emergency situations, maintenance due dates, and route violations",
+        "dependencies": [
+          "telemetry_processor"
+        ],
+        "security_considerations": [
+          "topic_access_control",
+          "message_encryption"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two availability zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "API Gateway in public subnet receives external GPS data",
+        "Lambda functions in private subnet process data",
+        "RDS in data subnet with private access only",
+        "EC2 dashboard in public subnet with load balancer"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "serverless_functions": 4,
+      "security_groups": 5,
+      "iam_roles": 4,
+      "other_services": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:13:45.885131"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-APIGATEWAY-NO_PUBLIC_ACCESS",
+        "title": "No Public Access",
+        "description": "API Gateway methods lack proper authorization controls, allowing unrestricted public access to GPS data ingestion endpoints. This Trivy rule detects when API Gateway methods use 'NONE' authorization without API key requirements.",
+        "severity": "high",
+        "affected_component": "gps_data_ingestion",
+        "injection_strategy": "Configure API Gateway method with authorization set to 'NONE' without api_key_required",
+        "business_impact": "Unauthorized access to GPS tracking endpoints could allow attackers to inject false location data, overwhelm the system with malicious requests, or access sensitive vehicle telemetry",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method#authorization\n  good:\n    - |-\n      resource \"aws_api_gateway_method\" \"good_example\" {\n        authorization = \"AWS_IAM\"\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_method\" \"bad_example\" {\n        authorization = \"NONE\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set authorization = \"NONE\" in aws_api_gateway_method without api_key_required = true",
+          "explanation": "This creates an unprotected endpoint that accepts GPS data from any source without authentication"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "title": "Disable Public Access",
+        "description": "RDS PostgreSQL database storing vehicle profiles and driver information is configured with public accessibility enabled, exposing sensitive fleet data to the internet.",
+        "severity": "critical",
+        "affected_component": "vehicle_database",
+        "injection_strategy": "Set publicly_accessible = true in aws_db_instance configuration",
+        "business_impact": "Public database access exposes sensitive driver personal information, vehicle tracking history, and maintenance records to potential data breaches and compliance violations",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_db_instance\" \"good_example\" {\n        publicly_accessible = false\n      }\n  bad:\n    - |-\n      resource \"aws_db_instance\" \"bad_example\" {\n        publicly_accessible = true\n      }",
+        "file_name": "disable_public_access.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure RDS instance with publicly_accessible = true",
+          "explanation": "Database becomes accessible from the internet, bypassing VPC security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-SNS-ENABLE_TOPIC_ENCRYPTION",
+        "title": "Enable Topic Encryption",
+        "description": "SNS topics used for emergency alerts and maintenance notifications lack encryption, potentially exposing sensitive fleet operational data in transit.",
+        "severity": "medium",
+        "affected_component": "alert_notification",
+        "injection_strategy": "Omit kms_master_key_id configuration in aws_sns_topic resource",
+        "business_impact": "Unencrypted alert messages could expose driver locations, emergency situations, and operational patterns to unauthorized parties monitoring SNS traffic",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_sns_topic\" \"good_example\" {\n        kms_master_key_id = \"/blah\"\n      }\n  bad:\n    - |-\n      resource \"aws_sns_topic\" \"bad_example\" {}",
+        "file_name": "enable_topic_encryption.yaml",
+        "service": "sns",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create SNS topic without specifying kms_master_key_id",
+          "explanation": "Messages are transmitted and stored without encryption, vulnerable to interception"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "title": "No Public Ingress Sgr",
+        "description": "Security group rules for the fleet dashboard EC2 instance allow unrestricted inbound access from any IP address (0.0.0.0/0), creating unnecessary attack surface.",
+        "severity": "high",
+        "affected_component": "fleet_dashboard",
+        "injection_strategy": "Configure security group rule with cidr_blocks = [\"0.0.0.0/0\"] for ingress traffic",
+        "business_impact": "Open security groups expose the fleet management dashboard to brute force attacks, unauthorized access attempts, and potential system compromise",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_security_group_rule\" \"good_example\" {\n        type        = \"ingress\"\n        cidr_blocks = [\"10.0.0.0/16\"]\n      }\n  bad:\n    - |-\n      resource \"aws_security_group_rule\" \"bad_example\" {\n        type        = \"ingress\"\n        cidr_blocks = [\"0.0.0.0/0\"]\n      }",
+        "file_name": "no_public_ingress_sgr.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set cidr_blocks = [\"0.0.0.0/0\"] in security group ingress rules",
+          "explanation": "Allows unrestricted internet access to the dashboard application"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "title": "Log Group Customer Key",
+        "description": "CloudWatch log groups for Lambda telemetry processing functions lack customer-managed KMS encryption, using default AWS-managed keys instead.",
+        "severity": "medium",
+        "affected_component": "telemetry_processor",
+        "injection_strategy": "Create aws_cloudwatch_log_group without specifying kms_key_id",
+        "business_impact": "Log data containing GPS coordinates and vehicle telemetry is encrypted with AWS-managed keys, reducing control over encryption key management and compliance requirements",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_cloudwatch_log_group\" \"good_example\" {\n        kms_key_id = aws_kms_alias.cloudwatch.arn\n      }\n  bad:\n    - |-\n      resource \"aws_cloudwatch_log_group\" \"bad_example\" {\n        name = \"bad_example\"\n      }",
+        "file_name": "log_group_customer_key.yaml",
+        "service": "cloudwatch",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudWatch log group without kms_key_id parameter",
+          "explanation": "Logs are encrypted with AWS-managed keys instead of customer-controlled encryption"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "title": "Require Symbols In Passwords",
+        "description": "IAM account password policy lacks symbol requirements, allowing weak passwords for fleet management system users accessing sensitive vehicle and driver data.",
+        "severity": "medium",
+        "affected_component": "fleet_dashboard",
+        "injection_strategy": "Configure aws_iam_account_password_policy without require_symbols = true",
+        "business_impact": "Weak passwords increase risk of unauthorized access to fleet management systems containing sensitive driver information and real-time vehicle locations",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        require_symbols = true\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # require_symbols not set\n      }",
+        "file_name": "require_symbols_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit require_symbols parameter in IAM password policy",
+          "explanation": "Users can create passwords without special characters, reducing password complexity"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "title": "Enable Log Validation",
+        "description": "CloudTrail configuration lacks log file validation, preventing detection of tampering with audit logs tracking access to fleet management resources.",
+        "severity": "medium",
+        "affected_component": "vehicle_database",
+        "injection_strategy": "Configure aws_cloudtrail without enable_log_file_validation = true",
+        "business_impact": "Without log validation, security incidents involving unauthorized access to vehicle data or system modifications cannot be reliably investigated due to potential log tampering",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"good_example\" {\n        enable_log_file_validation = true\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n      }",
+        "file_name": "enable_log_validation.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudTrail without enable_log_file_validation parameter",
+          "explanation": "Audit logs can be modified without detection, compromising security investigations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-APIGATEWAY-NO_PUBLIC_ACCESS",
+        "AWS-RDS-DISABLE_PUBLIC_ACCESS",
+        "AWS-SNS-ENABLE_TOPIC_ENCRYPTION",
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION"
+      ],
+      "severity_distribution": {
+        "critical": 1,
+        "high": 2,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "cloudwatch",
+        "cloudtrail",
+        "ec2",
+        "iam",
+        "rds",
+        "sns"
+      ],
+      "services_covered": [
+        "apigateway",
+        "cloudwatch",
+        "cloudtrail",
+        "ec2",
+        "iam",
+        "rds",
+        "sns"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "Fleet Management GPS Tracking System",
+    "terraform_version": "~> 1.0",
+    "aws_provider_version": "~> 5.0",
+    "total_resources": 25,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 2,
+      "storage": 3,
+      "database": 2,
+      "security": 4,
+      "monitoring": 2,
+      "serverless": 4
+    },
+    "components_implemented": [
+      "gps_data_ingestion",
+      "telemetry_processor",
+      "vehicle_database",
+      "tracking_data_storage",
+      "fleet_dashboard",
+      "alert_notification"
+    ],
+    "vulnerabilities_injected": 7,
+    "estimated_monthly_cost": "$150-300",
+    "deployment_time": "10-15 minutes",
+    "requires_manual_steps": [
+      "Create Lambda deployment package",
+      "Create dashboard user data script",
+      "Deploy API Gateway stage",
+      "Initialize database schema"
+    ]
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 27,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

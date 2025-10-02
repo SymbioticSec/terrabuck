@@ -1,0 +1,370 @@
+{
+  "project_info": {
+    "project_id": "customer_support_ai_platform",
+    "project_name": "AI-Powered Customer Support Platform",
+    "description": "A comprehensive customer support platform that integrates AI chatbots, ticket management, and knowledge base search. The system handles customer inquiries through multiple channels (web chat, email, API), uses machine learning for ticket classification and routing, maintains a searchable knowledge base, and provides analytics dashboards for support managers. Designed for mid-size SaaS companies handling 10,000+ support tickets monthly.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "A growing SaaS company needs to scale their customer support operations while maintaining response quality. The platform reduces manual ticket routing by 70%, provides 24/7 initial response through AI chatbots, and gives support managers real-time insights into team performance and customer satisfaction trends.",
+    "components": [
+      {
+        "name": "web_application_tier",
+        "service_type": "aws_instance",
+        "purpose": "Hosts the main customer support portal and admin dashboard with auto-scaling capabilities",
+        "dependencies": [
+          "ticket_database",
+          "knowledge_base_storage"
+        ],
+        "security_considerations": [
+          "web_application_firewall",
+          "ssl_termination",
+          "session_management"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "ai_processing_service",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless functions for AI-powered ticket classification, sentiment analysis, and chatbot responses",
+        "dependencies": [
+          "ticket_database",
+          "knowledge_base_storage"
+        ],
+        "security_considerations": [
+          "function_permissions",
+          "api_authentication",
+          "data_encryption_in_transit"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "ticket_database",
+        "service_type": "aws_rds_instance",
+        "purpose": "PostgreSQL database storing customer tickets, conversations, user accounts, and support analytics",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "backup_security",
+          "access_control",
+          "network_isolation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "knowledge_base_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Stores support articles, FAQ documents, chat logs, and file attachments with full-text search indexing",
+        "dependencies": [],
+        "security_considerations": [
+          "bucket_policies",
+          "object_encryption",
+          "access_logging",
+          "versioning"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API endpoints for mobile apps, third-party integrations, and webhook notifications",
+        "dependencies": [
+          "web_application_tier",
+          "ai_processing_service"
+        ],
+        "security_considerations": [
+          "api_key_management",
+          "rate_limiting",
+          "request_validation",
+          "cors_policies"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Distributes incoming traffic across web application instances with health checks and SSL termination",
+        "dependencies": [
+          "web_application_tier"
+        ],
+        "security_considerations": [
+          "ssl_certificates",
+          "security_groups",
+          "ddos_protection"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancers and private subnets for application servers and databases",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet Gateway for public access",
+        "NAT Gateway for outbound private subnet traffic",
+        "VPC Endpoints for AWS services",
+        "Database subnet group for RDS isolation"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "serverless_functions": 3,
+      "security_components": 6,
+      "monitoring_resources": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:18:44.984325"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "title": "Enable Access Logging",
+        "description": "API Gateway stages lack access logging configuration, preventing security monitoring and audit trail creation. This Trivy rule detects when API Gateway stages are deployed without proper access logging to CloudWatch.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without access logging, security incidents involving API abuse, unauthorized access attempts, or data exfiltration through the customer support API endpoints cannot be detected or investigated",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_stage#access_log_settings\n  good:\n    - |-\n      resource \"aws_apigatewayv2_stage\" \"good_example\" {\n        api_id = aws_apigatewayv2_api.example.id\n        name   = \"example-stage\"\n\n        access_log_settings {\n          destination_arn = \"arn:aws:logs:region:0123456789:log-group:access_logging\"\n          format          = \"json\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_apigatewayv2_stage\" \"bad_example\" {\n        api_id = aws_apigatewayv2_api.example.id\n        name   = \"example-stage\"\n      }",
+        "file_name": "enable_access_logging.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy API Gateway stage without access_log_settings block",
+          "explanation": "Missing access logging means API requests, response codes, and potential security events are not captured for monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-NO_PUBLIC_BUCKETS",
+        "title": "No Public Buckets",
+        "description": "S3 bucket storing knowledge base documents and chat logs lacks public access restrictions, potentially exposing sensitive customer support data. This Trivy rule identifies buckets without proper public access blocking.",
+        "severity": "medium",
+        "affected_component": "knowledge_base_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Customer support tickets, chat logs, and internal knowledge base articles could be publicly accessible, leading to data breaches and compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block#restrict_public_buckets\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"example\" {\n        bucket = aws_s3_bucket.good_example.id\n\n        restrict_public_buckets = true\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"bucket\"\n      }\n\n      resource \"aws_s3_bucket_public_access_block\" \"example\" {\n        bucket = aws_s3_bucket.bad_example.id\n\n        restrict_public_buckets = false\n      }",
+        "file_name": "no_public_buckets.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without aws_s3_bucket_public_access_block or with restrict_public_buckets = false",
+          "explanation": "Without public access restrictions, bucket contents could become publicly readable through policy misconfigurations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP",
+        "title": "Add Description To Security Group",
+        "description": "Security groups protecting the web application tier lack proper descriptions, making it difficult to understand their purpose and maintain proper security posture. This Trivy rule enforces security group documentation.",
+        "severity": "medium",
+        "affected_component": "web_application_tier",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Undocumented security groups lead to configuration drift, accidental rule modifications, and difficulty in security audits of the customer support platform",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group\n  good:\n    - |-\n      resource \"aws_security_group\" \"good_example\" {\n        name        = \"http\"\n        description = \"Allow inbound HTTP traffic\"\n\n        ingress {\n          description = \"HTTP from VPC\"\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_security_group\" \"bad_example\" {\n        name        = \"http\"\n        description = \"\"\n\n        ingress {\n          description = \"HTTP from VPC\"\n          from_port   = 80\n          to_port     = 80\n          protocol    = \"tcp\"\n          cidr_blocks = [aws_vpc.main.cidr_block]\n        }\n      }",
+        "file_name": "add_description_to_security_group.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create security group with empty description field",
+          "explanation": "Missing descriptions make it impossible to understand the security group's intended purpose during reviews"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "title": "Performance Insights Encryption Customer Key",
+        "description": "RDS instance storing customer ticket data has Performance Insights enabled but lacks customer-managed KMS key encryption, using default AWS-managed keys instead. This Trivy rule ensures proper encryption key management.",
+        "severity": "medium",
+        "affected_component": "ticket_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Performance monitoring data for the customer support database may not meet compliance requirements for customer-controlled encryption keys",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#performance_insights_kms_key_id\n  good:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"good_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab\"\n      }\n  bad:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"bad_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"\"\n      }",
+        "file_name": "performance_insights_encryption_customer_key.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Enable performance_insights_enabled without specifying performance_insights_kms_key_id",
+          "explanation": "Performance Insights data uses default AWS-managed keys instead of customer-controlled encryption"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+        "title": "Limit S3 Full Access",
+        "description": "IAM roles for the AI processing service have overly broad S3 permissions, granting full access to all S3 resources instead of limiting access to specific knowledge base buckets. This Trivy rule prevents privilege escalation.",
+        "severity": "medium",
+        "affected_component": "ai_processing_service",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Lambda functions processing AI requests could access any S3 bucket in the account, potentially exposing unrelated sensitive data beyond the customer support scope",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_policy\" \"good_policy\" {\n        name = \"good_policy\"\n        policy = jsonencode({\n          Version = \"2012-10-17\"\n          Statement = [\n            {\n              Effect = \"Allow\"\n              Action = [\n                \"s3:GetObject\",\n                \"s3:PutObject\"\n              ]\n              Resource = \"arn:aws:s3:::examplebucket/*\"\n            }\n          ]\n        })\n      }\n  bad:\n    - |-\n      resource \"aws_iam_policy\" \"bad_policy\" {\n        name = \"bad_policy\"\n        policy = jsonencode({\n          Version = \"2012-10-17\"\n          Statement = [\n            {\n              Effect   = \"Allow\"\n              Action   = \"s3:*\"\n              Resource = \"*\"\n            }\n          ]\n        })\n      }",
+        "file_name": "limit_s3_full_access.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM policy with Action: 's3:*' and Resource: '*'",
+          "explanation": "Grants unlimited S3 access across all buckets instead of restricting to specific resources needed"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_LOGGING",
+        "title": "Enable Logging",
+        "description": "S3 bucket containing customer support documents and chat logs lacks access logging, preventing detection of unauthorized access attempts or data exfiltration. This Trivy rule ensures audit trail creation.",
+        "severity": "medium",
+        "affected_component": "knowledge_base_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Security incidents involving unauthorized access to customer support data cannot be detected or investigated due to missing access logs",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"this\" {\n        bucket = \"test-bucket\"\n      }\n\n      resource \"aws_s3_bucket_logging\" \"this\" {\n        bucket        = aws_s3_bucket.this.id\n        target_bucket = aws_s3_bucket.log_bucket.id\n        target_prefix = \"log/\"\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"this\" {\n        bucket = \"test-bucket\"\n      }",
+        "file_name": "enable_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without aws_s3_bucket_logging resource",
+          "explanation": "Missing access logging prevents audit trail creation for bucket access patterns"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_CACHE_ENCRYPTION",
+        "title": "Enable Cache Encryption",
+        "description": "API Gateway caching for customer support endpoints lacks encryption, potentially storing sensitive customer data in plaintext cache. This Trivy rule ensures cached API responses are encrypted.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Customer support ticket data and AI-generated responses cached by API Gateway could be stored unencrypted, violating data protection requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_method_settings#cache_data_encrypted\n  good:\n    - |-\n      resource \"aws_api_gateway_method_settings\" \"good_example\" {\n        rest_api_id = aws_api_gateway_rest_api.example.id\n        stage_name  = aws_api_gateway_stage.example.stage_name\n        method_path = \"path1/GET\"\n\n        settings {\n          caching_enabled      = true\n          cache_data_encrypted = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_method_settings\" \"bad_example\" {\n        rest_api_id = aws_api_gateway_rest_api.example.id\n        stage_name  = aws_api_gateway_stage.example.stage_name\n        method_path = \"path1/GET\"\n\n        settings {\n          caching_enabled      = true\n          cache_data_encrypted = false\n        }\n      }",
+        "file_name": "enable_cache_encryption.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Enable caching_enabled = true but set cache_data_encrypted = false",
+          "explanation": "API responses containing customer data are cached in plaintext, creating data exposure risk"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENCRYPTION_CUSTOMER_KEY",
+        "title": "Encryption Customer Key",
+        "description": "S3 bucket storing sensitive customer support data uses default AES256 encryption instead of customer-managed KMS keys, limiting encryption key control and audit capabilities. This Trivy rule enforces proper key management.",
+        "severity": "medium",
+        "affected_component": "knowledge_base_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Customer support documents and chat logs encrypted with AWS-managed keys instead of customer-controlled keys may not meet compliance requirements for data sovereignty",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket#enable-default-server-side-encryption\n  good:\n    - |-\n      resource \"aws_kms_key\" \"mykey\" {}\n\n      resource \"aws_s3_bucket_server_side_encryption_configuration\" \"example\" {\n        bucket = aws_s3_bucket.good_example.id\n\n        rule {\n          apply_server_side_encryption_by_default {\n            kms_master_key_id = aws_kms_key.mykey.arn\n            sse_algorithm     = \"aws:kms\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket_server_side_encryption_configuration\" \"example\" {\n        bucket = aws_s3_bucket.bad_example.id\n\n        rule {\n          apply_server_side_encryption_by_default {\n            sse_algorithm = \"AES256\"\n          }\n        }\n      }",
+        "file_name": "encryption_customer_key.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Use sse_algorithm = 'AES256' instead of 'aws:kms' with customer-managed key",
+          "explanation": "Default AES256 encryption uses AWS-managed keys, limiting customer control over encryption key lifecycle"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "AWS-S3-NO_PUBLIC_BUCKETS",
+        "AWS-EC2-ADD_DESCRIPTION_TO_SECURITY_GROUP",
+        "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+        "AWS-S3-ENABLE_LOGGING",
+        "AWS-APIGATEWAY-ENABLE_CACHE_ENCRYPTION",
+        "AWS-S3-ENCRYPTION_CUSTOMER_KEY"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "s3",
+        "ec2",
+        "iam",
+        "rds"
+      ],
+      "services_covered": [
+        "apigateway",
+        "s3",
+        "ec2",
+        "iam",
+        "rds"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "AI-Powered Customer Support Platform",
+    "terraform_version_required": ">= 1.0",
+    "aws_provider_version": "~> 5.0",
+    "total_resource_count": 30,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 4,
+      "storage": 3,
+      "database": 2,
+      "security": 6,
+      "serverless": 3,
+      "load_balancing": 4
+    },
+    "estimated_monthly_cost_usd": "150-300",
+    "deployment_time_minutes": "15-20",
+    "architecture_components_implemented": 6,
+    "vulnerabilities_injected": 8,
+    "aws_services_used": [
+      "VPC",
+      "EC2",
+      "RDS",
+      "S3",
+      "Lambda",
+      "API Gateway",
+      "Application Load Balancer",
+      "IAM",
+      "Security Groups"
+    ],
+    "compliance_frameworks": [
+      "AWS Well-Architected Framework (partial)",
+      "GDPR considerations (with vulnerabilities)",
+      "SOC 2 Type II (with gaps)"
+    ],
+    "production_readiness": "Requires security fixes before production use"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 30,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

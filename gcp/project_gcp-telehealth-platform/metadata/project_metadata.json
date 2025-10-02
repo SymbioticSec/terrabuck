@@ -1,0 +1,342 @@
+{
+  "project_info": {
+    "project_id": "gcp-telehealth-platform",
+    "project_name": "Telehealth Video Consultation Platform",
+    "description": "A HIPAA-compliant telehealth platform enabling secure video consultations between healthcare providers and patients. The system handles patient registration, appointment scheduling, secure video sessions, and medical record storage with end-to-end encryption and audit logging.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "Healthcare organization transitioning to digital consultations post-pandemic, requiring secure, scalable video conferencing with integrated patient management and compliance with healthcare regulations",
+    "components": [
+      {
+        "name": "patient_portal_app",
+        "service_type": "google_compute_instance_group",
+        "purpose": "Frontend application serving patient portal with appointment booking and video consultation interface",
+        "dependencies": [
+          "appointment_api",
+          "video_service"
+        ],
+        "security_considerations": [
+          "TLS encryption",
+          "session management",
+          "input validation",
+          "CSRF protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "appointment_api",
+        "service_type": "google_cloud_run",
+        "purpose": "RESTful API managing patient appointments, provider schedules, and consultation metadata",
+        "dependencies": [
+          "patient_database",
+          "audit_logging"
+        ],
+        "security_considerations": [
+          "API authentication",
+          "rate limiting",
+          "data validation",
+          "RBAC"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "video_service",
+        "service_type": "google_cloud_run",
+        "purpose": "Video conferencing service handling WebRTC signaling and session management for secure consultations",
+        "dependencies": [
+          "patient_database",
+          "medical_records_storage"
+        ],
+        "security_considerations": [
+          "end-to-end encryption",
+          "session isolation",
+          "recording encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "patient_database",
+        "service_type": "google_sql_database_instance",
+        "purpose": "Encrypted PostgreSQL database storing patient information, appointments, and consultation history",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption at rest",
+          "backup encryption",
+          "access controls",
+          "audit logging"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "medical_records_storage",
+        "service_type": "google_storage_bucket",
+        "purpose": "Secure cloud storage for medical documents, consultation recordings, and patient files with versioning",
+        "dependencies": [],
+        "security_considerations": [
+          "customer-managed encryption",
+          "access logging",
+          "retention policies",
+          "DLP scanning"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "audit_logging",
+        "service_type": "google_logging_sink",
+        "purpose": "Centralized audit logging system capturing all patient data access and system activities for compliance",
+        "dependencies": [],
+        "security_considerations": [
+          "log integrity",
+          "retention compliance",
+          "access monitoring"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Custom VPC with separate subnets for web tier, application tier, and data tier with private Google Access enabled",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Load balancer to web tier",
+        "Private connectivity between app and data tiers",
+        "Cloud NAT for outbound internet access from private subnets"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T14:59:50.885217"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "title": "Encrypt In Transit Data",
+        "description": "The PostgreSQL database instance for patient data lacks proper SSL/TLS encryption configuration, allowing unencrypted connections. This violates HIPAA requirements for protecting patient health information in transit.",
+        "severity": "high",
+        "affected_component": "patient_database",
+        "injection_strategy": "Configure google_sql_database_instance with require_ssl = false or ssl_mode = ALLOW_UNENCRYPTED_AND_ENCRYPTED",
+        "business_impact": "HIPAA compliance violation, potential exposure of patient health information during database connections, regulatory fines up to $1.5M per incident",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      # For terraform-provider-google < 6.0.1\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n            require_ssl = true\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n            require_ssl = false\n          }\n        }\n      }",
+        "file_name": "encrypt_in_transit_data.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set require_ssl = false in the ip_configuration block of the patient database instance",
+          "explanation": "This allows both encrypted and unencrypted connections to the database, creating a pathway for sensitive patient data to be transmitted in plaintext"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_DISCONNECTIONS",
+        "title": "Pg Log Disconnections",
+        "description": "PostgreSQL audit logging is incomplete due to disabled disconnection logging. This creates gaps in the audit trail required for HIPAA compliance and incident investigation.",
+        "severity": "medium",
+        "affected_component": "patient_database",
+        "injection_strategy": "Configure database_flags with log_disconnections = off in the patient database settings",
+        "business_impact": "Incomplete audit trails for HIPAA compliance, difficulty investigating unauthorized access attempts, potential regulatory violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_disconnections\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_disconnections\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_disconnections.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add database_flags block with log_disconnections set to 'off' in the patient database configuration",
+          "explanation": "This disables logging of database disconnections, creating gaps in audit trails that are critical for healthcare compliance and security monitoring"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+        "title": "No Public Ingress",
+        "description": "Firewall rules allow unrestricted public access (0.0.0.0/0) to compute instances hosting the patient portal, exposing the telehealth platform to internet-wide attacks.",
+        "severity": "high",
+        "affected_component": "patient_portal_app",
+        "injection_strategy": "Configure google_compute_firewall with source_ranges = ['0.0.0.0/0'] for the patient portal instances",
+        "business_impact": "Direct exposure of patient portal to global internet attacks, potential unauthorized access to patient data, increased attack surface for healthcare infrastructure",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall#source_ranges\n    - https://www.terraform.io/docs/providers/google/r/compute_firewall.html\n  good:\n    - |-\n      resource \"google_compute_firewall\" \"good_example\" {\n        source_ranges = [\"1.2.3.4/32\"]\n        allow {\n          protocol = \"icmp\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_firewall\" \"bad_example\" {\n        source_ranges = [\"0.0.0.0/0\"]\n        allow {\n          protocol = \"icmp\"\n        }\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create firewall rule with source_ranges = ['0.0.0.0/0'] allowing broad protocol access to patient portal instances",
+          "explanation": "This opens the patient portal infrastructure to attacks from any IP address globally, bypassing network-level security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "title": "No Project Wide Ssh Keys",
+        "description": "Compute instances allow project-wide SSH keys, creating shared access credentials that violate healthcare security principles of individual accountability and access control.",
+        "severity": "medium",
+        "affected_component": "patient_portal_app",
+        "injection_strategy": "Set block-project-ssh-keys = false in compute instance metadata",
+        "business_impact": "Shared administrative access undermines individual accountability required for HIPAA, difficulty in access auditing, potential for privilege escalation",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#\n  good:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          block-project-ssh-keys = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          block-project-ssh-keys = false\n        }\n      }",
+        "file_name": "no_project_wide_ssh_keys.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set block-project-ssh-keys = false in the metadata block of patient portal compute instances",
+          "explanation": "This allows project-wide SSH keys to access the instances, creating shared credentials that violate healthcare security requirements for individual user accountability"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_PRIVILEGED_SERVICE_ACCOUNTS",
+        "title": "No Privileged Service Accounts",
+        "description": "Service accounts for Cloud Run services (appointment API and video service) are granted overly broad permissions including 'roles/owner', violating the principle of least privilege for healthcare applications.",
+        "severity": "high",
+        "affected_component": "appointment_api",
+        "injection_strategy": "Assign roles/owner or other privileged roles to service accounts used by Cloud Run services",
+        "business_impact": "Excessive privileges could allow compromised services to access all patient data, modify critical infrastructure, or escalate attacks across the entire telehealth platform",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/google_project_iam\n  good:\n    - |-\n      resource \"google_service_account\" \"test\" {\n        account_id   = \"account123\"\n        display_name = \"account123\"\n        email        = \"jim@tfsec.dev\"\n      }\n\n      resource \"google_project_iam_member\" \"project\" {\n        project = \"your-project-id\"\n        role    = \"roles/logging.logWriter\"\n        member  = \"serviceAccount:${google_service_account.test.email}\"\n      }\n  bad:\n    - |-\n      resource \"google_service_account\" \"test\" {\n        account_id   = \"account123\"\n        display_name = \"account123\"\n        email        = \"jim@tfsec.dev\"\n      }\n\n      resource \"google_project_iam_member\" \"project\" {\n        project = \"your-project-id\"\n        role    = \"roles/owner\"\n        member  = \"serviceAccount:${google_service_account.test.email}\"\n      }",
+        "file_name": "no_privileged_service_accounts.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Assign roles/owner or roles/editor to service accounts used by the appointment API and video service",
+          "explanation": "This grants excessive permissions that could allow a compromised service to access all resources in the project, including sensitive patient data in other components"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+        "title": "Enable Shielded Vm Vtpm",
+        "description": "Compute instances lack Virtual Trusted Platform Module (vTPM) protection, reducing the security posture of systems handling sensitive patient data and video consultations.",
+        "severity": "medium",
+        "affected_component": "patient_portal_app",
+        "injection_strategy": "Set enable_vtpm = false in shielded_instance_config for compute instances",
+        "business_impact": "Reduced protection against boot-level attacks and malware, weakened integrity verification for systems processing patient health information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#enable_vtpm\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_vtpm = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_vtpm = false\n        }\n      }",
+        "file_name": "enable_shielded_vm_vtpm.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure shielded_instance_config with enable_vtpm = false on patient portal compute instances",
+          "explanation": "This disables the virtual TPM, removing hardware-level security features that help protect against boot-level attacks and provide cryptographic attestation"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-DNS-ENABLE_DNSSEC",
+        "title": "Enable Dnssec",
+        "description": "DNS managed zones for the telehealth platform lack DNSSEC protection, making the platform vulnerable to DNS spoofing attacks that could redirect patients to malicious sites.",
+        "severity": "medium",
+        "affected_component": "patient_portal_app",
+        "injection_strategy": "Configure google_dns_managed_zone with dnssec_config state = 'off' for public zones",
+        "business_impact": "DNS spoofing attacks could redirect patients to fake telehealth portals, enabling credential theft and unauthorized access to patient accounts",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_managed_zone#state\n  good:\n    - |-\n      resource \"google_dns_managed_zone\" \"good_example\" {\n        name     = \"example-zone\"\n        dns_name = \"example.com.\"\n        dnssec_config {\n          state = \"on\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_dns_managed_zone\" \"bad_example\" {\n        name        = \"example-zone\"\n        dns_name    = \"example.com.\"\n        description = \"Example DNS zone\"\n        dnssec_config {\n          state = \"off\"\n        }\n      }",
+        "file_name": "enable_dnssec.yaml",
+        "service": "dns",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set dnssec_config state to 'off' in the DNS managed zone configuration for the telehealth domain",
+          "explanation": "This disables DNSSEC validation, making the platform vulnerable to DNS cache poisoning and spoofing attacks that could redirect users to malicious sites"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "GOOGLE-SQL-PG_LOG_DISCONNECTIONS",
+        "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+        "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "GOOGLE-IAM-NO_PRIVILEGED_SERVICE_ACCOUNTS",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+        "GOOGLE-DNS-ENABLE_DNSSEC"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "dns",
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "dns",
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "template_name": "telehealth-video-consultation-platform",
+    "architecture_type": "microservices",
+    "cloud_provider": "gcp",
+    "total_resources": 30,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 6,
+      "storage": 4,
+      "database": 3,
+      "iam": 4,
+      "dns": 1,
+      "logging": 2,
+      "load_balancing": 2
+    },
+    "estimated_deployment_time": "15-20 minutes",
+    "estimated_monthly_cost": "$110-240 USD",
+    "compliance_frameworks": [
+      "HIPAA"
+    ],
+    "security_vulnerabilities_injected": 7,
+    "components_implemented": [
+      "patient_portal_app",
+      "appointment_api",
+      "video_service",
+      "patient_database",
+      "medical_records_storage",
+      "audit_logging"
+    ],
+    "terraform_version_required": ">= 1.0",
+    "provider_versions": {
+      "google": "~> 5.0"
+    }
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 34,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

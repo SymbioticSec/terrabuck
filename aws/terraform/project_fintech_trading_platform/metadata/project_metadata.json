@@ -1,0 +1,349 @@
+{
+  "project_info": {
+    "project_id": "fintech_trading_platform",
+    "project_name": "Real-Time Trading Platform",
+    "description": "A high-frequency trading platform for a mid-sized investment firm that processes real-time market data, executes trades, and provides risk management analytics. The system handles thousands of trades per minute with strict latency requirements and regulatory compliance for financial data protection.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "Investment firm requiring low-latency trade execution with real-time market data processing, portfolio management, and regulatory reporting capabilities for institutional clients",
+    "components": [
+      {
+        "name": "market_data_ingestion",
+        "service_type": "aws_kinesis_data_streams",
+        "purpose": "Ingests real-time market data feeds from multiple exchanges and data providers",
+        "dependencies": [],
+        "security_considerations": [
+          "data_encryption_in_transit",
+          "api_key_management",
+          "rate_limiting"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "trade_execution_engine",
+        "service_type": "aws_ec2_instances",
+        "purpose": "High-performance compute instances running trading algorithms and order management system",
+        "dependencies": [
+          "market_data_ingestion",
+          "trade_database"
+        ],
+        "security_considerations": [
+          "instance_hardening",
+          "network_isolation",
+          "encrypted_storage"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "trade_database",
+        "service_type": "aws_rds_postgresql",
+        "purpose": "Stores trade history, positions, and portfolio data with high availability",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "backup_encryption",
+          "access_controls"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "risk_analytics_processor",
+        "service_type": "aws_lambda_functions",
+        "purpose": "Serverless functions for real-time risk calculations and compliance monitoring",
+        "dependencies": [
+          "trade_database",
+          "market_data_ingestion"
+        ],
+        "security_considerations": [
+          "iam_role_restrictions",
+          "vpc_isolation",
+          "environment_variables_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "client_portal_api",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Load-balanced API gateway for client applications and trading interfaces",
+        "dependencies": [
+          "trade_execution_engine",
+          "risk_analytics_processor"
+        ],
+        "security_considerations": [
+          "ssl_termination",
+          "waf_protection",
+          "api_authentication"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "audit_log_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Immutable storage for regulatory audit trails and compliance reporting",
+        "dependencies": [
+          "trade_execution_engine",
+          "risk_analytics_processor"
+        ],
+        "security_considerations": [
+          "object_lock",
+          "access_logging",
+          "cross_region_replication"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with dedicated subnets for trading engines, separate data tier, and DMZ for client-facing services",
+      "security_zones": [
+        "public_dmz",
+        "private_application",
+        "private_data"
+      ],
+      "connectivity_patterns": [
+        "Trading engines in private subnets with dedicated network interfaces",
+        "Database in isolated data subnet",
+        "Client API in public subnet behind ALB",
+        "Kinesis streams accessible from application subnet only"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "serverless_functions": 3,
+      "streaming_services": 2,
+      "load_balancers": 1,
+      "security_groups": 4,
+      "iam_roles": 5
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:46:34.619733"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "title": "No Public Ingress Security Group Rule",
+        "description": "Security group rules allow unrestricted ingress from 0.0.0.0/0, exposing trading engine instances to potential unauthorized access from the internet",
+        "severity": "high",
+        "affected_component": "trade_execution_engine",
+        "injection_strategy": "Configure security group rules with overly permissive CIDR blocks (0.0.0.0/0) for critical trading infrastructure",
+        "business_impact": "Unauthorized access to high-frequency trading engines could lead to market manipulation, financial losses, and regulatory violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule#cidr_blocks\n  good:\n    - |-\n      resource \"aws_security_group_rule\" \"good_example\" {\n        type        = \"ingress\"\n        cidr_blocks = [\"10.0.0.0/16\"]\n      }\n  bad:\n    - |-\n      resource \"aws_security_group_rule\" \"bad_example\" {\n        type        = \"ingress\"\n        from_port   = 22\n        to_port     = 22\n        protocol    = \"tcp\"\n        cidr_blocks = [\"0.0.0.0/0\"]\n      }",
+        "file_name": "no_public_ingress_sgr.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create security group rules with cidr_blocks = [\"0.0.0.0/0\"] for trading engine access",
+          "explanation": "This allows any IP address on the internet to attempt connections to critical trading infrastructure"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+        "title": "Specify Backup Retention",
+        "description": "RDS database lacks proper backup retention configuration, risking data loss for critical trade history and portfolio data",
+        "severity": "medium",
+        "affected_component": "trade_database",
+        "injection_strategy": "Configure RDS instance with insufficient backup_retention_period or omit the setting entirely",
+        "business_impact": "Inadequate backup retention could result in permanent loss of trading data, regulatory compliance violations, and inability to recover from disasters",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_db_instance\" \"good_example\" {\n        backup_retention_period = 5\n      }\n  bad:\n    - |-\n      resource \"aws_db_instance\" \"bad_example\" {\n        backup_retention_period = 1\n      }",
+        "file_name": "specify_backup_retention.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set backup_retention_period = 1 or omit the parameter entirely in RDS configuration",
+          "explanation": "This provides insufficient backup history for a financial trading platform that requires extensive audit trails"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-REQUIRE_MFA_DELETE",
+        "title": "Require MFA Delete",
+        "description": "S3 bucket storing audit logs lacks MFA delete protection, allowing unauthorized deletion of regulatory compliance data",
+        "severity": "medium",
+        "affected_component": "audit_log_storage",
+        "injection_strategy": "Configure S3 bucket versioning with mfa_delete = \"Disabled\" for audit log storage",
+        "business_impact": "Without MFA delete protection, audit logs could be maliciously deleted, leading to regulatory violations and loss of compliance evidence",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_s3_bucket_versioning\" \"good_example\" {\n        versioning_configuration {\n          status     = \"Enabled\"\n          mfa_delete = \"Enabled\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket_versioning\" \"good_example\" {\n        versioning_configuration {\n          status     = \"Enabled\"\n          mfa_delete = \"Disabled\"\n        }\n      }",
+        "file_name": "require_mfa_delete.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure S3 bucket versioning with mfa_delete = \"Disabled\" for audit log storage bucket",
+          "explanation": "This allows deletion of critical audit logs without multi-factor authentication, compromising regulatory compliance"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+        "title": "Limit S3 Full Access",
+        "description": "IAM roles have overly permissive S3 access policies with wildcard permissions, violating principle of least privilege",
+        "severity": "high",
+        "affected_component": "risk_analytics_processor",
+        "injection_strategy": "Create IAM policies with \"s3:*\" actions and \"*\" resources for Lambda execution roles",
+        "business_impact": "Excessive S3 permissions could allow compromised Lambda functions to access or modify sensitive trading data across all S3 buckets",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_policy\" \"good_policy\" {\n        policy = jsonencode({\n          Statement = [\n            {\n              Effect = \"Allow\"\n              Action = [\n                \"s3:GetObject\",\n                \"s3:PutObject\"\n              ]\n              Resource = \"arn:aws:s3:::examplebucket/*\"\n            }\n          ]\n        })\n      }\n  bad:\n    - |-\n      resource \"aws_iam_policy\" \"bad_policy\" {\n        policy = jsonencode({\n          Statement = [\n            {\n              Effect   = \"Allow\"\n              Action   = \"s3:*\"\n              Resource = \"*\"\n            }\n          ]\n        })\n      }",
+        "file_name": "limit_s3_full_access.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM policy with Action = \"s3:*\" and Resource = \"*\" for Lambda execution roles",
+          "explanation": "This grants unlimited S3 access to risk analytics functions, violating least privilege principles"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-KMS-AUTO_ROTATE_KEYS",
+        "title": "Auto Rotate Keys",
+        "description": "KMS keys used for encrypting sensitive trading data lack automatic key rotation, increasing cryptographic risk over time",
+        "severity": "medium",
+        "affected_component": "trade_database",
+        "injection_strategy": "Configure KMS keys with enable_key_rotation = false for database encryption",
+        "business_impact": "Without key rotation, long-lived encryption keys become more vulnerable to compromise, potentially exposing sensitive financial data",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_kms_key\" \"good_example\" {\n        enable_key_rotation = true\n      }\n  bad:\n    - |-\n      resource \"aws_kms_key\" \"bad_example\" {\n        enable_key_rotation = false\n      }",
+        "file_name": "auto_rotate_keys.yaml",
+        "service": "kms",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_key_rotation = false in KMS key configuration used for RDS encryption",
+          "explanation": "This disables automatic key rotation, leaving encryption keys static and potentially more vulnerable over time"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "title": "Enable Log Validation",
+        "description": "CloudTrail lacks log file validation, compromising the integrity verification of audit trails required for financial compliance",
+        "severity": "medium",
+        "affected_component": "audit_log_storage",
+        "injection_strategy": "Configure CloudTrail without enable_log_file_validation parameter or set to false",
+        "business_impact": "Without log validation, audit trails cannot be verified for tampering, potentially invalidating compliance evidence during regulatory audits",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_cloudtrail\" \"good_example\" {\n        enable_log_file_validation = true\n      }\n  bad:\n    - |-\n      resource \"aws_cloudtrail\" \"bad_example\" {\n      }",
+        "file_name": "enable_log_validation.yaml",
+        "service": "cloudtrail",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit enable_log_file_validation parameter in CloudTrail configuration",
+          "explanation": "This disables cryptographic validation of log files, making it impossible to detect tampering with audit trails"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_LOWERCASE_IN_PASSWORDS",
+        "title": "Require Lowercase In Passwords",
+        "description": "IAM password policy lacks lowercase character requirements, weakening authentication security for trading platform users",
+        "severity": "medium",
+        "affected_component": "client_portal_api",
+        "injection_strategy": "Configure IAM password policy without require_lowercase_characters setting",
+        "business_impact": "Weak password policies increase risk of credential compromise, potentially allowing unauthorized access to trading accounts and client data",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        require_lowercase_characters = true\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # require_lowercase_characters not set\n      }",
+        "file_name": "require_lowercase_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit require_lowercase_characters parameter in IAM password policy configuration",
+          "explanation": "This allows users to create passwords without lowercase letters, reducing password complexity and security"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+        "AWS-S3-REQUIRE_MFA_DELETE",
+        "AWS-IAM-LIMIT_S3_FULL_ACCESS",
+        "AWS-KMS-AUTO_ROTATE_KEYS",
+        "AWS-CLOUDTRAIL-ENABLE_LOG_VALIDATION",
+        "AWS-IAM-REQUIRE_LOWERCASE_IN_PASSWORDS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 2,
+        "medium": 5,
+        "low": 0
+      },
+      "service_categories": [
+        "cloudtrail",
+        "s3",
+        "ec2",
+        "iam",
+        "rds",
+        "kms"
+      ],
+      "services_covered": [
+        "cloudtrail",
+        "s3",
+        "ec2",
+        "iam",
+        "rds",
+        "kms"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "Real-Time Trading Platform",
+    "terraform_version": "~> 1.0",
+    "aws_provider_version": "~> 5.0",
+    "total_resources": 29,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 3,
+      "storage": 4,
+      "security": 6,
+      "iam": 6,
+      "monitoring": 2
+    },
+    "estimated_monthly_cost": "$2,500-$4,000",
+    "deployment_time": "15-20 minutes",
+    "components_implemented": [
+      "market_data_ingestion",
+      "trade_execution_engine",
+      "trade_database",
+      "risk_analytics_processor",
+      "client_portal_api",
+      "audit_log_storage"
+    ],
+    "vulnerabilities_injected": 7,
+    "compliance_frameworks": [
+      "SOX",
+      "PCI-DSS",
+      "FINRA"
+    ],
+    "high_availability": true,
+    "multi_az": true,
+    "encryption_at_rest": true,
+    "encryption_in_transit": true
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 29,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

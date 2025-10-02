@@ -1,0 +1,153 @@
+# Digital Asset Custody Platform - Variables Configuration
+# This file contains all configurable parameters for the custody platform deployment
+
+# Environment Configuration
+Environment:
+  Description: "Deployment environment (development, staging, production)"
+  Type: String
+  Default: production
+  AllowedValues: 
+    - development
+    - staging
+    - production
+  ConstraintDescription: "Must be one of: development, staging, production"
+
+ProjectName:
+  Description: "Project identifier used for resource naming and tagging"
+  Type: String
+  Default: digital-asset-custody-platform
+  MinLength: 3
+  MaxLength: 50
+  AllowedPattern: "^[a-z0-9-]+$"
+  ConstraintDescription: "Must contain only lowercase letters, numbers, and hyphens"
+
+# Network Configuration
+VpcCidr:
+  Description: "CIDR block for the main VPC (recommended: /16 for flexibility)"
+  Type: String
+  Default: 10.0.0.0/16
+  AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+  ConstraintDescription: "Must be a valid IP CIDR range of the form x.x.x.x/16-28"
+
+PublicSubnetCidr:
+  Description: "CIDR block for public subnet (DMZ zone for load balancers and NAT)"
+  Type: String
+  Default: 10.0.1.0/24
+  AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+  ConstraintDescription: "Must be a valid IP CIDR range within the VPC CIDR"
+
+PrivateSubnetCidr:
+  Description: "CIDR block for private subnet (application tier)"
+  Type: String
+  Default: 10.0.2.0/24
+  AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+  ConstraintDescription: "Must be a valid IP CIDR range within the VPC CIDR"
+
+DataSubnetCidr:
+  Description: "CIDR block for data subnet (database and storage tier)"
+  Type: String
+  Default: 10.0.3.0/24
+  AllowedPattern: "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$"
+  ConstraintDescription: "Must be a valid IP CIDR range within the VPC CIDR"
+
+# Security Configuration
+KeyPairName:
+  Description: "EC2 Key Pair name for SSH access to instances"
+  Type: AWS::EC2::KeyPair::KeyName
+  ConstraintDescription: "Must be the name of an existing EC2 KeyPair"
+
+DatabasePassword:
+  Description: "Master password for the audit database (minimum 8 characters)"
+  Type: String
+  NoEcho: true
+  MinLength: 8
+  MaxLength: 128
+  AllowedPattern: "^[a-zA-Z0-9!@#$%^&*()_+=-]+$"
+  ConstraintDescription: "Must contain 8-128 alphanumeric and special characters"
+
+ApiKey:
+  Description: "API key for compliance services and external integrations"
+  Type: String
+  NoEcho: true
+  MinLength: 16
+  MaxLength: 256
+  ConstraintDescription: "Must be 16-256 characters long"
+
+# Instance Configuration
+WalletInstanceType:
+  Description: "EC2 instance type for wallet management service"
+  Type: String
+  Default: t3.large
+  AllowedValues:
+    - t3.medium
+    - t3.large
+    - t3.xlarge
+    - m5.large
+    - m5.xlarge
+    - c5.large
+    - c5.xlarge
+  ConstraintDescription: "Must be a valid EC2 instance type suitable for wallet operations"
+
+MonitoringInstanceType:
+  Description: "EC2 instance type for monitoring dashboard"
+  Type: String
+  Default: t3.medium
+  AllowedValues:
+    - t3.small
+    - t3.medium
+    - t3.large
+    - m5.large
+  ConstraintDescription: "Must be a valid EC2 instance type for monitoring workloads"
+
+# Database Configuration
+DatabaseInstanceClass:
+  Description: "RDS instance class for audit database"
+  Type: String
+  Default: db.t3.medium
+  AllowedValues:
+    - db.t3.micro
+    - db.t3.small
+    - db.t3.medium
+    - db.t3.large
+    - db.r5.large
+    - db.r5.xlarge
+  ConstraintDescription: "Must be a valid RDS instance class"
+
+DatabaseAllocatedStorage:
+  Description: "Allocated storage size for audit database (GB)"
+  Type: Number
+  Default: 100
+  MinValue: 20
+  MaxValue: 1000
+  ConstraintDescription: "Must be between 20 and 1000 GB"
+
+# Backup and Retention Configuration
+BackupRetentionPeriod:
+  Description: "Number of days to retain database backups"
+  Type: Number
+  Default: 7
+  MinValue: 1
+  MaxValue: 35
+  ConstraintDescription: "Must be between 1 and 35 days"
+
+# Monitoring Configuration
+EnableDetailedMonitoring:
+  Description: "Enable detailed CloudWatch monitoring for EC2 instances"
+  Type: String
+  Default: "true"
+  AllowedValues: ["true", "false"]
+
+# Compliance Configuration
+ComplianceReportingEnabled:
+  Description: "Enable automated compliance reporting features"
+  Type: String
+  Default: "true"
+  AllowedValues: ["true", "false"]
+
+AuditLogRetentionDays:
+  Description: "Number of days to retain audit logs"
+  Type: Number
+  Default: 2555  # 7 years for financial compliance
+  MinValue: 365
+  MaxValue: 3653
+  ConstraintDescription: "Must be between 1 and 10 years (365-3653 days)"

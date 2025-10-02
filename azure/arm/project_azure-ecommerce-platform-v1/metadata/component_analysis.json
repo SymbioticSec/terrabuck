@@ -1,0 +1,221 @@
+{
+  "original_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "azure_app_service",
+      "purpose": "Hosts the multi-tenant web application with tenant routing and storefront rendering",
+      "dependencies": [
+        "application_database",
+        "file_storage",
+        "redis_cache"
+      ],
+      "security_considerations": [
+        "tenant_data_isolation",
+        "ssl_termination",
+        "input_validation",
+        "authentication_bypass"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "application_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores tenant configurations, product catalogs, orders, and user data with row-level security",
+      "dependencies": [],
+      "security_considerations": [
+        "data_encryption_at_rest",
+        "connection_string_security",
+        "sql_injection",
+        "tenant_data_leakage"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Stores product images, tenant assets, and generated reports with CDN integration",
+      "dependencies": [],
+      "security_considerations": [
+        "blob_access_policies",
+        "cors_configuration",
+        "public_read_access",
+        "tenant_file_isolation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "redis_cache",
+      "service_type": "azure_cache_redis",
+      "purpose": "Provides session management, product catalog caching, and real-time inventory tracking",
+      "dependencies": [],
+      "security_considerations": [
+        "cache_poisoning",
+        "session_hijacking",
+        "redis_authentication",
+        "network_isolation"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "payment_processor",
+      "service_type": "azure_functions",
+      "purpose": "Handles payment processing, webhook validation, and financial transaction logging",
+      "dependencies": [
+        "application_database"
+      ],
+      "security_considerations": [
+        "pci_compliance",
+        "webhook_validation",
+        "payment_data_handling",
+        "function_authentication"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "purpose": "Provides SSL termination, tenant routing based on subdomain, and WAF protection",
+      "dependencies": [
+        "web_application_tier"
+      ],
+      "security_considerations": [
+        "waf_rules",
+        "ssl_certificate_management",
+        "ddos_protection",
+        "tenant_routing_security"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "file_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 0.8999999999999999
+    },
+    {
+      "name": "redis_cache",
+      "service_type": "azure_cache_redis",
+      "implementation_confidence": 0.6
+    },
+    {
+      "name": "payment_processor",
+      "service_type": "azure_functions",
+      "implementation_confidence": 0.5
+    },
+    {
+      "name": "application_gateway",
+      "service_type": "azure_application_gateway",
+      "implementation_confidence": 0.7999999999999999
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.json": {
+      "filename": "main.json",
+      "line_count": 657,
+      "resource_count": 19,
+      "resources_found": [
+        {
+          "type": "Microsoft.Network/virtualNetworks"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/networkSecurityGroups"
+        },
+        {
+          "type": "Microsoft.Network/publicIPAddresses"
+        },
+        {
+          "type": "Microsoft.Web/serverfarms"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Sql/servers"
+        },
+        {
+          "type": "Microsoft.Sql/servers/databases"
+        },
+        {
+          "type": "Microsoft.Sql/servers/securityAlertPolicies"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+        },
+        {
+          "type": "Microsoft.Cache/redis"
+        },
+        {
+          "type": "Microsoft.Web/sites"
+        },
+        {
+          "type": "Microsoft.Network/applicationGateways"
+        },
+        {
+          "type": "Microsoft.OperationalInsights/workspaces"
+        },
+        {
+          "type": "Microsoft.Insights/components"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.json": {
+      "filename": "variables.json",
+      "line_count": 30,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.json": {
+      "filename": "outputs.json",
+      "line_count": 65,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 76,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

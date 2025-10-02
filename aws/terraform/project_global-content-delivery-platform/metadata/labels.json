@@ -1,0 +1,447 @@
+{
+  "project_labels": {
+    "project_id": "global-content-delivery-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "by_type": {
+        "encryption": 2,
+        "access_control": 2,
+        "network_security": 2,
+        "secrets_management": 1,
+        "supply_chain": 1
+      },
+      "by_trivy_service": {
+        "s3": 2,
+        "ecs": 1,
+        "rds": 1,
+        "cloudfront": 1,
+        "ec2": 1,
+        "iam": 1,
+        "ecr": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-S3-ENABLE_BUCKET_ENCRYPTION",
+        "AWS-S3-ENABLE_VERSIONING",
+        "AWS-ECS-NO_PLAINTEXT_SECRETS",
+        "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "AWS-EC2-REQUIRE_VPC_FLOW_LOGS_FOR_ALL_VPCS",
+        "AWS-IAM-NO_POLICY_WILDCARDS",
+        "AWS-ECR-ENFORCE_IMMUTABLE_REPOSITORY"
+      ],
+      "services_covered": [
+        "storage",
+        "compute",
+        "database",
+        "networking",
+        "security",
+        "container_registry"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-S3-ENABLE_BUCKET_ENCRYPTION",
+      "trivy_rule_info": {
+        "original_file": "enable_bucket_encryption.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/s3/enable_bucket_encryption.yaml"
+      },
+      "vulnerability_class": "encryption_at_rest",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "aws_account_compromise",
+        "physical_storage_access"
+      ],
+      "mitigation_strategies": [
+        "enable_s3_server_side_encryption",
+        "use_kms_customer_managed_keys",
+        "implement_bucket_policies"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_s3_bucket without server_side_encryption_configuration block",
+        "secure_pattern": "aws_s3_bucket with server_side_encryption_configuration and KMS key"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-S3-ENABLE_VERSIONING",
+      "trivy_rule_info": {
+        "original_file": "enable_versioning.yaml",
+        "service_category": "s3",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/s3/enable_versioning.yaml"
+      },
+      "vulnerability_class": "data_protection",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "s3_write_permissions",
+        "malicious_insider_access"
+      ],
+      "mitigation_strategies": [
+        "enable_s3_versioning",
+        "implement_lifecycle_policies",
+        "configure_mfa_delete"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_s3_bucket without versioning configuration block",
+        "secure_pattern": "aws_s3_bucket with versioning enabled = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_protection",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-ECS-NO_PLAINTEXT_SECRETS",
+      "trivy_rule_info": {
+        "original_file": "no_plaintext_secrets.yaml",
+        "service_category": "ecs",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/ecs/no_plaintext_secrets.yaml"
+      },
+      "vulnerability_class": "secrets_management",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "ecs_task_definition_access",
+        "container_registry_access",
+        "log_access"
+      ],
+      "mitigation_strategies": [
+        "use_aws_secrets_manager",
+        "implement_parameter_store",
+        "use_ecs_secrets_from_parameter"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "environment variables with sensitive names containing plaintext values",
+        "secure_pattern": "secrets block referencing AWS Secrets Manager or Parameter Store"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "secrets_management",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+      "trivy_rule_info": {
+        "original_file": "performance_insights_encryption_customer_key.yaml",
+        "service_category": "rds",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/rds/performance_insights_encryption_customer_key.yaml"
+      },
+      "vulnerability_class": "encryption_key_management",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 5,
+      "compliance_relevance": [
+        "SOC2",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "aws_account_compromise",
+        "performance_insights_access"
+      ],
+      "mitigation_strategies": [
+        "use_customer_managed_kms_keys",
+        "disable_performance_insights_if_not_needed",
+        "implement_key_rotation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "performance_insights_enabled = true with empty performance_insights_kms_key_id",
+        "secure_pattern": "performance_insights_enabled with customer-managed KMS key ARN"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 4.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "cloudfront",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/cloudfront/use_secure_tls_policy.yaml"
+      },
+      "vulnerability_class": "transport_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "man_in_the_middle_position",
+        "network_interception_capability"
+      ],
+      "mitigation_strategies": [
+        "update_minimum_protocol_version",
+        "use_tls_1_2_or_higher",
+        "implement_hsts_headers"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "minimum_protocol_version set to TLSv1.0 or TLSv1.1",
+        "secure_pattern": "minimum_protocol_version set to TLSv1.2_2021 or higher"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-REQUIRE_VPC_FLOW_LOGS_FOR_ALL_VPCS",
+      "trivy_rule_info": {
+        "original_file": "require_vpc_flow_logs_for_all_vpcs.yaml",
+        "service_category": "ec2",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/ec2/require_vpc_flow_logs_for_all_vpcs.yaml"
+      },
+      "vulnerability_class": "monitoring_logging",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "ISO27001",
+        "NIST"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access",
+        "lateral_movement_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_vpc_flow_logs",
+        "configure_cloudwatch_log_groups",
+        "implement_log_analysis"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_vpc resource without corresponding aws_flow_log resource",
+        "secure_pattern": "aws_vpc with associated aws_flow_log for traffic monitoring"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "monitoring",
+        "severity_numeric": 5.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-NO_POLICY_WILDCARDS",
+      "trivy_rule_info": {
+        "original_file": "no_policy_wildcards.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/iam/no_policy_wildcards.yaml"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "high",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "ISO27001"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "compromised_service_account",
+        "privilege_escalation_capability"
+      ],
+      "mitigation_strategies": [
+        "implement_least_privilege_principle",
+        "use_specific_resource_arns",
+        "regular_permission_audits"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "IAM policy with actions containing '*' and resources containing '*'",
+        "secure_pattern": "IAM policy with specific actions and resource ARNs"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-ECR-ENFORCE_IMMUTABLE_REPOSITORY",
+      "trivy_rule_info": {
+        "original_file": "enforce_immutable_repository.yaml",
+        "service_category": "ecr",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/aws/ecr/enforce_immutable_repository.yaml"
+      },
+      "vulnerability_class": "supply_chain_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "NIST",
+        "SLSA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "ecr_push_permissions",
+        "compromised_ci_cd_pipeline"
+      ],
+      "mitigation_strategies": [
+        "enable_image_tag_immutability",
+        "implement_image_signing",
+        "use_digest_based_references"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_ecr_repository with image_tag_mutability = 'MUTABLE'",
+        "secure_pattern": "aws_ecr_repository with image_tag_mutability = 'IMMUTABLE'"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "supply_chain",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_mapping",
+      "security_pattern_recognition"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "8 medium severity findings across S3, ECS, RDS, CloudFront, EC2, IAM, and ECR services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand common AWS security misconfigurations in content delivery platforms",
+      "Learn how Trivy detects infrastructure security vulnerabilities",
+      "Master encryption, access control, and monitoring best practices",
+      "Recognize supply chain security risks in container deployments",
+      "Apply principle of least privilege in IAM policy design"
+    ],
+    "prerequisite_knowledge": [
+      "Basic AWS services knowledge (S3, ECS, RDS, CloudFront)",
+      "Understanding of Terraform syntax and resource blocks",
+      "Fundamental security concepts (encryption, access control)",
+      "Container security basics"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": "45-60 minutes",
+    "key_takeaways": [
+      "Always enable encryption at rest for data storage services",
+      "Use customer-managed KMS keys for sensitive data encryption",
+      "Never store secrets in plaintext in container configurations",
+      "Implement network monitoring with VPC Flow Logs",
+      "Follow least privilege principle in IAM policies",
+      "Use immutable container image tags for supply chain security",
+      "Keep TLS protocols updated to prevent man-in-the-middle attacks"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "component_count": 7,
+    "file_count": 4,
+    "service_categories": [
+      "s3",
+      "ec2",
+      "iam",
+      "cloudfront",
+      "rds",
+      "ecr",
+      "ecs"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "global-content-delivery-platform",
+    "generation_timestamp": "2025-08-06T22:57:00.724186",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

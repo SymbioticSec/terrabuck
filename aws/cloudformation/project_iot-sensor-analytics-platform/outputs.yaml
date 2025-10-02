@@ -1,0 +1,141 @@
+Outputs:
+  VPCId:
+    Description: "VPC ID for the Smart Manufacturing IoT Analytics Platform"
+    Value: !Ref SmartManufacturingVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+      
+  PublicSubnet1Id:
+    Description: "Public Subnet 1 ID"
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet1-ID"
+      
+  PublicSubnet2Id:
+    Description: "Public Subnet 2 ID"
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet2-ID"
+      
+  PrivateSubnet1Id:
+    Description: "Private Subnet 1 ID"
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet1-ID"
+      
+  PrivateSubnet2Id:
+    Description: "Private Subnet 2 ID"
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet2-ID"
+      
+  IoTThingTypeName:
+    Description: "IoT Thing Type for manufacturing sensors"
+    Value: !Ref SensorThingType
+    Export:
+      Name: !Sub "${AWS::StackName}-IoTThingType"
+      
+  IoTPolicyName:
+    Description: "IoT Policy for sensor authentication"
+    Value: !Ref SensorIoTPolicy
+    Export:
+      Name: !Sub "${AWS::StackName}-IoTPolicy"
+      
+  KinesisStreamName:
+    Description: "Kinesis Data Stream for sensor data ingestion"
+    Value: !Ref SensorDataStream
+    Export:
+      Name: !Sub "${AWS::StackName}-KinesisStream"
+      
+  KinesisStreamArn:
+    Description: "Kinesis Data Stream ARN"
+    Value: !GetAtt SensorDataStream.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-KinesisStreamArn"
+      
+  AnomalyDetectionLambdaArn:
+    Description: "Anomaly Detection Lambda Function ARN"
+    Value: !GetAtt AnomalyDetectionLambda.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-AnomalyLambdaArn"
+      
+  AnomalyDetectionLambdaName:
+    Description: "Anomaly Detection Lambda Function Name"
+    Value: !Ref AnomalyDetectionLambda
+    Export:
+      Name: !Sub "${AWS::StackName}-AnomalyLambdaName"
+      
+  TimestreamDatabaseName:
+    Description: "TimeStream Database for sensor data storage"
+    Value: !Ref TimestreamDatabase
+    Export:
+      Name: !Sub "${AWS::StackName}-TimestreamDatabase"
+      
+  TimestreamTableName:
+    Description: "TimeStream Table for sensor data"
+    Value: !Ref TimestreamTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TimestreamTable"
+      
+  DashboardLoadBalancerDNS:
+    Description: "DNS name of the Application Load Balancer for Grafana dashboard"
+    Value: !GetAtt DashboardALB.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-DashboardDNS"
+      
+  DashboardURL:
+    Description: "URL to access the Grafana dashboard"
+    Value: !Sub "http://${DashboardALB.DNSName}"
+    Export:
+      Name: !Sub "${AWS::StackName}-DashboardURL"
+      
+  AlertTopicArn:
+    Description: "SNS Topic ARN for manufacturing alerts"
+    Value: !Ref AlertTopic
+    Export:
+      Name: !Sub "${AWS::StackName}-AlertTopicArn"
+      
+  AlertQueueName:
+    Description: "SQS Queue name for alert processing"
+    Value: !Ref AlertQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-AlertQueue"
+      
+  AlertQueueArn:
+    Description: "SQS Queue ARN for alert processing"
+    Value: !GetAtt AlertQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-AlertQueueArn"
+      
+  CloudTrailArn:
+    Description: "CloudTrail ARN for audit logging"
+    Value: !GetAtt ManufacturingCloudTrail.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudTrailArn"
+      
+  CloudTrailBucketName:
+    Description: "S3 Bucket name for CloudTrail logs"
+    Value: !Ref CloudTrailBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudTrailBucket"
+
+  # IoT Endpoints for sensor configuration
+  IoTDataEndpoint:
+    Description: "IoT Data endpoint for sensor MQTT connections"
+    Value: !Sub "https://${AWS::AccountId}.iot.${AWS::Region}.amazonaws.com"
+    Export:
+      Name: !Sub "${AWS::StackName}-IoTDataEndpoint"
+      
+  # Security Group IDs for reference
+  DashboardSecurityGroupId:
+    Description: "Security Group ID for dashboard instances"
+    Value: !Ref DashboardSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-DashboardSecurityGroup"
+      
+  # Auto Scaling Group name for management
+  DashboardAutoScalingGroupName:
+    Description: "Auto Scaling Group name for dashboard instances"
+    Value: !Ref DashboardAutoScalingGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-DashboardASG"

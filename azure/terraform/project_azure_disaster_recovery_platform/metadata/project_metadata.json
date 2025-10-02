@@ -1,0 +1,380 @@
+{
+  "project_info": {
+    "project_id": "azure_disaster_recovery_platform",
+    "project_name": "Enterprise Disaster Recovery and Business Continuity Platform",
+    "description": "A comprehensive disaster recovery platform for enterprise applications that provides automated backup orchestration, cross-region replication, recovery testing, and compliance reporting. The system monitors primary infrastructure health, maintains recovery point objectives (RPO) and recovery time objectives (RTO), and provides automated failover capabilities with detailed audit trails for compliance requirements.",
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "architecture_type": "hybrid_orchestration",
+    "business_context": "Large enterprises require robust disaster recovery solutions to meet regulatory compliance (SOX, GDPR) and maintain business continuity. This platform serves as a centralized DR management system that can protect multiple business applications, coordinate recovery procedures, and provide executive dashboards for compliance reporting and RTO/RPO tracking.",
+    "components": [
+      {
+        "name": "dr_orchestration_engine",
+        "service_type": "azure_function_app",
+        "purpose": "Serverless orchestration engine that manages backup schedules, monitors replication status, executes failover procedures, and coordinates recovery testing workflows",
+        "dependencies": [
+          "backup_storage",
+          "monitoring_analytics",
+          "recovery_database"
+        ],
+        "security_considerations": [
+          "function_authentication",
+          "managed_identity_access",
+          "secure_api_endpoints"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "backup_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Geo-redundant storage for application backups, configuration snapshots, and recovery artifacts with cross-region replication and immutable blob policies",
+        "dependencies": [],
+        "security_considerations": [
+          "storage_encryption",
+          "access_key_rotation",
+          "network_access_restrictions"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "recovery_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Stores DR policies, recovery procedures, compliance metadata, audit logs, and tracks RTO/RPO metrics with automated geo-replication",
+        "dependencies": [
+          "backup_storage"
+        ],
+        "security_considerations": [
+          "database_encryption",
+          "sql_injection_protection",
+          "audit_logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "monitoring_analytics",
+        "service_type": "azure_log_analytics_workspace",
+        "purpose": "Centralized logging and analytics for DR operations, infrastructure health monitoring, compliance reporting, and automated alerting",
+        "dependencies": [
+          "recovery_database"
+        ],
+        "security_considerations": [
+          "log_data_retention",
+          "access_control",
+          "data_classification"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "dr_web_portal",
+        "service_type": "azure_app_service",
+        "purpose": "Web-based management portal for DR administrators to configure policies, initiate recovery procedures, view compliance dashboards, and generate audit reports",
+        "dependencies": [
+          "dr_orchestration_engine",
+          "recovery_database",
+          "monitoring_analytics"
+        ],
+        "security_considerations": [
+          "web_application_firewall",
+          "ssl_certificates",
+          "authentication_integration"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "notification_service",
+        "service_type": "azure_communication_services",
+        "purpose": "Multi-channel notification system for DR events, compliance alerts, recovery status updates, and executive reporting via email, SMS, and Teams integration",
+        "dependencies": [
+          "monitoring_analytics",
+          "dr_orchestration_engine"
+        ],
+        "security_considerations": [
+          "message_encryption",
+          "contact_data_protection",
+          "delivery_verification"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-region VNet architecture with primary region containing all active services and secondary region for DR replication. Private subnets for database and storage with service endpoints, public subnet for web portal with Application Gateway",
+      "security_zones": [
+        "public_web",
+        "private_compute",
+        "data_tier",
+        "management"
+      ],
+      "connectivity_patterns": [
+        "web_portal_to_functions_via_private_endpoint",
+        "functions_to_database_via_service_endpoint",
+        "cross_region_replication_via_private_peering",
+        "monitoring_integration_via_managed_identity"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_accounts": 3,
+      "databases": 2,
+      "networking_components": 6,
+      "security_components": 5,
+      "monitoring_components": 4,
+      "total_estimated": 24
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:32:42.105062"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "title": "Enforce HTTPS",
+        "description": "The DR web portal and orchestration engine are not configured to enforce HTTPS-only connections, allowing potential man-in-the-middle attacks during disaster recovery operations when secure communication is critical.",
+        "severity": "medium",
+        "affected_component": "dr_web_portal",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Sensitive DR configuration data and recovery procedures could be intercepted during transmission, compromising disaster recovery operations and exposing business continuity plans to attackers.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/function_app#https_only\n  good:\n    - |-\n      resource \"azurerm_function_app\" \"good_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n        https_only                 = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_function_app\" \"bad_example\" {\n        name                       = \"test-azure-functions\"\n        location                   = azurerm_resource_group.example.location\n        resource_group_name        = azurerm_resource_group.example.name\n        app_service_plan_id        = azurerm_app_service_plan.example.id\n        storage_account_name       = azurerm_storage_account.example.name\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        os_type                    = \"linux\"\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy Function App and App Service resources without setting https_only = true",
+          "explanation": "Without HTTPS enforcement, the DR orchestration engine and web portal accept HTTP connections, exposing sensitive disaster recovery data in transit"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure TLS Policy",
+        "description": "The backup storage account is configured to accept older TLS versions (1.0/1.1), making it vulnerable to protocol downgrade attacks that could compromise backup data integrity during disaster recovery scenarios.",
+        "severity": "medium",
+        "affected_component": "backup_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Attackers could exploit weak TLS versions to intercept or manipulate backup data transfers, potentially corrupting disaster recovery backups and compromising business continuity capabilities.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#min_tls_version\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n        location            = azurerm_resource_group.example.location\n        min_tls_version     = \"TLS1_0\"\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure storage account with min_tls_version = \"TLS1_0\" or \"TLS1_1\"",
+          "explanation": "Older TLS versions have known vulnerabilities that can be exploited to compromise the confidentiality and integrity of backup data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-SECURE_TLS_POLICY",
+        "title": "Secure TLS Policy",
+        "description": "The recovery database is configured with weak TLS version enforcement, allowing connections using vulnerable TLS 1.1 or earlier versions that could expose sensitive DR metadata and compliance audit logs.",
+        "severity": "medium",
+        "affected_component": "recovery_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak database encryption in transit could allow attackers to intercept DR policies, recovery procedures, and compliance data, potentially exposing the entire disaster recovery strategy and regulatory audit trails.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server#minimum_tls_version\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#ssl_minimal_tls_version_enforced\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#ssl_minimal_tls_version_enforced\n  good:\n    - |-\n      resource \"azurerm_mssql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"missadministrator\"\n        administrator_login_password = \"thisIsKat11\"\n        minimum_tls_version          = \"1.2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"missadministrator\"\n        administrator_login_password = \"thisIsKat11\"\n        minimum_tls_version          = \"1.1\"\n      }",
+        "file_name": "secure_tls_policy.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure SQL Server with minimum_tls_version = \"1.1\" or lower",
+          "explanation": "Weak TLS enforcement allows attackers to potentially downgrade connections and intercept sensitive DR database communications"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "title": "Authentication Enabled",
+        "description": "The DR web portal lacks proper authentication configuration, allowing potential unauthorized access to disaster recovery management functions and sensitive business continuity controls.",
+        "severity": "medium",
+        "affected_component": "dr_web_portal",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unauthorized users could access the DR management portal, potentially triggering false disaster recovery procedures, accessing sensitive recovery plans, or disrupting legitimate disaster recovery operations during actual emergencies.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#enabled\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        auth_settings {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "authentication_enabled.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Service without auth_settings block or with enabled = false",
+          "explanation": "Missing authentication allows anonymous access to the DR management portal, exposing critical disaster recovery controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "title": "All Threat Alerts Enabled",
+        "description": "The recovery database has disabled critical threat detection alerts, preventing early detection of attacks against the disaster recovery system's core data repository containing sensitive DR policies and compliance logs.",
+        "severity": "medium",
+        "affected_component": "recovery_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without comprehensive threat detection, SQL injection attacks, data exfiltration attempts, or other database threats against the DR system could go undetected, potentially compromising the entire disaster recovery capability and regulatory compliance data.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#disabled_alerts\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts            = []\n        retention_days             = 20\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n          \"Sql_Injection\",\n          \"Data_Exfiltration\"\n        ]\n        retention_days = 20\n      }",
+        "file_name": "all_threat_alerts_enabled.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure security alert policy with disabled_alerts containing critical alert types like \"Sql_Injection\" or \"Data_Exfiltration\"",
+          "explanation": "Disabling threat alerts creates blind spots in security monitoring, allowing database attacks to proceed undetected"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES",
+        "title": "Capture All Activities",
+        "description": "The monitoring and analytics workspace is not configured to capture all critical activity categories, creating gaps in audit trails essential for disaster recovery compliance and forensic analysis during security incidents.",
+        "severity": "medium",
+        "affected_component": "monitoring_analytics",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Incomplete activity logging could result in compliance violations (SOX, GDPR), inability to perform proper forensic analysis during DR events, and lack of audit trails required for regulatory reporting and incident response.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_log_profile#categories\n  good:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"good_example\" {\n        name = \"good_example\"\n\n        categories = [\n          \"Action\",\n          \"Delete\",\n          \"Write\",\n        ]\n\n        retention_policy {\n          enabled = true\n          days    = 365\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"bad_example\" {\n        name = \"bad_example\"\n\n        categories = []\n\n        retention_policy {\n          enabled = true\n          days    = 7\n        }\n      }",
+        "file_name": "capture_all_activities.yaml",
+        "service": "monitor",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure monitor log profile with empty categories array or missing critical activity types",
+          "explanation": "Incomplete activity logging creates audit gaps that could hide malicious activities and violate compliance requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-ALLOW_MICROSOFT_SERVICE_BYPASS",
+        "title": "Allow Microsoft Service Bypass",
+        "description": "The backup storage account network rules do not properly allow Microsoft services bypass, potentially blocking legitimate Azure services from accessing backup data during automated disaster recovery operations.",
+        "severity": "medium",
+        "affected_component": "backup_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Overly restrictive network rules could prevent Azure services like the DR orchestration engine from accessing backup storage during critical recovery operations, potentially causing disaster recovery failures when they're needed most.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#bypass\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account_network_rules#bypass\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n\n        location                 = azurerm_resource_group.example.location\n        account_tier             = \"Standard\"\n        account_replication_type = \"LRS\"\n\n        network_rules {\n          default_action = \"Deny\"\n          ip_rules       = [\"100.0.0.1\"]\n          bypass         = [\"Metrics\", \"AzureServices\"]\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                = \"storageaccountname\"\n        resource_group_name = azurerm_resource_group.example.name\n\n        location                 = azurerm_resource_group.example.location\n        account_tier             = \"Standard\"\n        account_replication_type = \"LRS\"\n\n        network_rules {\n          default_action = \"Deny\"\n          ip_rules       = [\"100.0.0.1\"]\n          bypass         = [\"Metrics\"]\n        }\n      }",
+        "file_name": "allow_microsoft_service_bypass.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure storage account network rules with bypass that excludes \"AzureServices\"",
+          "explanation": "Missing AzureServices bypass can prevent legitimate Azure services from accessing storage, potentially breaking automated DR workflows"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "title": "Account Identity Registered",
+        "description": "The DR orchestration engine lacks proper managed identity configuration, forcing it to rely on less secure authentication methods like connection strings or access keys for accessing other Azure services.",
+        "severity": "medium",
+        "affected_component": "dr_orchestration_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without managed identity, the orchestration engine must use stored credentials that could be compromised, potentially allowing attackers to impersonate the DR system and access sensitive backup data or trigger unauthorized recovery operations.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#identity\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        identity {\n          type         = \"UserAssigned\"\n          identity_ids = \"webapp1\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "account_identity_registered.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy Function App or App Service without identity block configuration",
+          "explanation": "Missing managed identity forces the use of stored credentials, creating additional attack vectors and credential management overhead"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-DATABASE-SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-AUTHENTICATION_ENABLED",
+        "AZURE-DATABASE-ALL_THREAT_ALERTS_ENABLED",
+        "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES",
+        "AZURE-STORAGE-ALLOW_MICROSOFT_SERVICE_BYPASS",
+        "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "database",
+        "storage",
+        "monitor",
+        "appservice"
+      ],
+      "services_covered": [
+        "database",
+        "storage",
+        "monitor",
+        "appservice"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_info": {
+      "project_id": "azure_disaster_recovery_platform",
+      "project_name": "Enterprise Disaster Recovery and Business Continuity Platform",
+      "terraform_version": ">=1.0",
+      "provider_version": "azurerm ~> 3.0",
+      "total_resources": 25,
+      "deployment_time_estimate": "15-20 minutes",
+      "estimated_monthly_cost": "$251 USD"
+    },
+    "resource_breakdown": {
+      "compute_resources": 4,
+      "storage_resources": 3,
+      "database_resources": 3,
+      "networking_resources": 8,
+      "security_resources": 3,
+      "monitoring_resources": 4
+    },
+    "component_mapping": {
+      "dr_orchestration_engine": "azurerm_linux_function_app.dr_orchestration_engine",
+      "backup_storage": "azurerm_storage_account.backup_storage",
+      "recovery_database": "azurerm_mssql_database.recovery_database",
+      "monitoring_analytics": "azurerm_log_analytics_workspace.monitoring_analytics",
+      "dr_web_portal": "azurerm_linux_web_app.dr_web_portal",
+      "notification_service": "azurerm_communication_service.notification_service"
+    },
+    "regions": {
+      "primary": "East US",
+      "secondary": "West US 2"
+    },
+    "compliance_features": [
+      "Audit logging",
+      "Data encryption",
+      "Network security groups",
+      "Resource tagging",
+      "Activity monitoring"
+    ],
+    "security_vulnerabilities_injected": 8,
+    "post_deployment_tasks": [
+      "Configure Function App code deployment",
+      "Initialize database schema",
+      "Set up authentication for web portal",
+      "Configure monitoring alerts",
+      "Set up communication service endpoints"
+    ]
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 24,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

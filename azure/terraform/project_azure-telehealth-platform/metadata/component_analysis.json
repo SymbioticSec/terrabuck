@@ -1,0 +1,277 @@
+{
+  "original_components": [
+    {
+      "name": "web_application_gateway",
+      "service_type": "azure_application_gateway",
+      "purpose": "Load balancing, SSL termination, and WAF protection for web traffic routing to consultation portal",
+      "dependencies": [],
+      "security_considerations": [
+        "SSL/TLS encryption",
+        "WAF rules for OWASP protection",
+        "DDoS protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "consultation_web_app",
+      "service_type": "azure_app_service",
+      "purpose": "Main web application hosting patient and provider portals for scheduling and accessing video consultations",
+      "dependencies": [
+        "web_application_gateway",
+        "consultation_database"
+      ],
+      "security_considerations": [
+        "Authentication integration",
+        "HTTPS enforcement",
+        "HIPAA compliance logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "video_streaming_service",
+      "service_type": "azure_media_services",
+      "purpose": "Real-time video streaming and recording for telehealth consultations with end-to-end encryption",
+      "dependencies": [
+        "consultation_web_app"
+      ],
+      "security_considerations": [
+        "End-to-end encryption",
+        "Access token validation",
+        "Stream recording encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "consultation_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Stores patient appointments, provider schedules, consultation metadata, and audit logs",
+      "dependencies": [],
+      "security_considerations": [
+        "Transparent Data Encryption",
+        "Always Encrypted for PHI",
+        "Audit logging",
+        "Private endpoints"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "medical_records_storage",
+      "service_type": "azure_storage_account",
+      "purpose": "Secure blob storage for consultation recordings, medical documents, and patient files with HIPAA compliance",
+      "dependencies": [
+        "consultation_database"
+      ],
+      "security_considerations": [
+        "Encryption at rest",
+        "Private endpoints",
+        "Access policies",
+        "Audit logging"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "notification_service",
+      "service_type": "azure_functions",
+      "purpose": "Serverless functions for sending appointment reminders, consultation notifications, and system alerts",
+      "dependencies": [
+        "consultation_database"
+      ],
+      "security_considerations": [
+        "Managed identity authentication",
+        "Secure API endpoints",
+        "PHI data handling"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application_gateway",
+      "service_type": "azure_application_gateway",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "consultation_web_app",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "video_streaming_service",
+      "service_type": "azure_media_services",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "consultation_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "medical_records_storage",
+      "service_type": "azure_storage_account",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "notification_service",
+      "service_type": "azure_functions",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 517,
+      "resource_count": 29,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "telehealth_rg"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "telehealth_vnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "public_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "private_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "telehealth_nsg"
+        },
+        {
+          "type": "azurerm_public_ip",
+          "name": "app_gateway_pip"
+        },
+        {
+          "type": "azurerm_application_gateway",
+          "name": "telehealth_app_gateway"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "medical_records_storage"
+        },
+        {
+          "type": "random_string",
+          "name": "storage_suffix"
+        },
+        {
+          "type": "azurerm_storage_container",
+          "name": "medical_records_container"
+        },
+        {
+          "type": "azurerm_mssql_server",
+          "name": "consultation_sql_server"
+        },
+        {
+          "type": "random_string",
+          "name": "sql_suffix"
+        },
+        {
+          "type": "azurerm_mssql_database",
+          "name": "consultation_database"
+        },
+        {
+          "type": "azurerm_mssql_server_security_alert_policy",
+          "name": "consultation_sql_alert_policy"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "consultation_app_plan"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "consultation_web_app"
+        },
+        {
+          "type": "random_string",
+          "name": "webapp_suffix"
+        },
+        {
+          "type": "azurerm_media_services_account",
+          "name": "video_streaming_service"
+        },
+        {
+          "type": "random_string",
+          "name": "media_suffix"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "media_storage"
+        },
+        {
+          "type": "random_string",
+          "name": "media_storage_suffix"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "function_storage"
+        },
+        {
+          "type": "random_string",
+          "name": "func_storage_suffix"
+        },
+        {
+          "type": "azurerm_linux_function_app",
+          "name": "notification_service"
+        },
+        {
+          "type": "random_string",
+          "name": "function_suffix"
+        },
+        {
+          "type": "azurerm_key_vault",
+          "name": "telehealth_kv"
+        },
+        {
+          "type": "random_string",
+          "name": "kv_suffix"
+        },
+        {
+          "type": "azurerm_monitor_log_profile",
+          "name": "telehealth_log_profile"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 48,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 51,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 176,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

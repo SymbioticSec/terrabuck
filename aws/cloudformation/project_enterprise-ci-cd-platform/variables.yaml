@@ -1,0 +1,51 @@
+# CloudFormation Parameters are defined in the main template
+# This file would contain additional configuration variables if using nested stacks
+
+# Environment-specific configurations
+Mappings:
+  EnvironmentMap:
+    development:
+      InstanceType: t3.small
+      MinSize: 1
+      MaxSize: 2
+      DesiredCapacity: 1
+    staging:
+      InstanceType: t3.medium
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 2
+    production:
+      InstanceType: t3.large
+      MinSize: 2
+      MaxSize: 5
+      DesiredCapacity: 3
+
+# Region-specific AMI mappings
+RegionMap:
+  us-east-1:
+    AMI: ami-0abcdef1234567890
+  us-west-2:
+    AMI: ami-0fedcba0987654321
+  eu-west-1:
+    AMI: ami-0123456789abcdef0
+
+# Configuration constants
+Constants:
+  ProjectPrefix: "enterprise-ci-cd-platform"
+  DefaultVpcCidr: "10.0.0.0/16"
+  DefaultPublicSubnetCidr: "10.0.1.0/24"
+  DefaultPrivateSubnetCidr: "10.0.2.0/24"
+  DefaultInstanceType: "t3.medium"
+  DefaultEnvironment: "production"
+  
+# Build configuration
+BuildConfig:
+  CodeBuildImage: "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+  ComputeType: "BUILD_GENERAL1_MEDIUM"
+  BuildTimeout: 60
+  
+# Storage configuration
+StorageConfig:
+  ArtifactRetentionDays: 30
+  LogRetentionDays: 14
+  BackupRetentionDays: 7

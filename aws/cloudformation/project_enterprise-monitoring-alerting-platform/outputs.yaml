@@ -1,0 +1,162 @@
+# CloudFormation Outputs
+# These outputs provide important resource information for integration and management
+
+Outputs:
+  # Network Infrastructure Outputs
+  VPCId:
+    Description: VPC ID for the enterprise monitoring platform
+    Value: !Ref MonitoringVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+      
+  PublicSubnetId:
+    Description: Public subnet ID for load balancer deployment
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-Public-Subnet-ID"
+      
+  PrivateSubnetId:
+    Description: Private subnet ID for application servers
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-Private-Subnet-ID"
+      
+  DataSubnetId:
+    Description: Data subnet ID for database deployment
+    Value: !Ref DataSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-Data-Subnet-ID"
+
+  # Load Balancer and API Gateway Outputs
+  LoadBalancerDNS:
+    Description: DNS name of the metrics ingestion Application Load Balancer
+    Value: !GetAtt MetricsIngestionLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-DNS"
+      
+  LoadBalancerArn:
+    Description: ARN of the Application Load Balancer
+    Value: !Ref MetricsIngestionLoadBalancer
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-ARN"
+      
+  MetricsIngestionEndpoint:
+    Description: Complete endpoint URL for metrics ingestion
+    Value: !Sub "http://${MetricsIngestionLoadBalancer.DNSName}/metrics"
+    Export:
+      Name: !Sub "${AWS::StackName}-Metrics-Endpoint"
+
+  # Database Outputs
+  ConfigurationDatabaseEndpoint:
+    Description: Configuration database RDS instance endpoint
+    Value: !GetAtt ConfigurationDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-Config-DB-Endpoint"
+      
+  ConfigurationDatabasePort:
+    Description: Configuration database port
+    Value: !GetAtt ConfigurationDatabase.Endpoint.Port
+    Export:
+      Name: !Sub "${AWS::StackName}-Config-DB-Port"
+      
+  TimeSeriesDatabaseEndpoint:
+    Description: Time series database cluster endpoint
+    Value: !GetAtt TimeSeriesDBCluster.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-TimeSeries-DB-Endpoint"
+      
+  TimeSeriesDatabaseReadEndpoint:
+    Description: Time series database cluster read endpoint
+    Value: !GetAtt TimeSeriesDBCluster.ReadEndpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-TimeSeries-DB-Read-Endpoint"
+
+  # Storage Outputs
+  DashboardBucketName:
+    Description: S3 bucket name for dashboard storage
+    Value: !Ref DashboardStorageBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-Dashboard-Bucket"
+      
+  DashboardBucketArn:
+    Description: S3 bucket ARN for dashboard storage
+    Value: !GetAtt DashboardStorageBucket.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-Dashboard-Bucket-ARN"
+      
+  CloudTrailBucketName:
+    Description: S3 bucket name for CloudTrail audit logs
+    Value: !Ref CloudTrailBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudTrail-Bucket"
+
+  # Messaging and Processing Outputs
+  NotificationQueueURL:
+    Description: SQS queue URL for alert notifications
+    Value: !Ref NotificationQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-Notification-Queue-URL"
+      
+  NotificationQueueArn:
+    Description: SQS queue ARN for alert notifications
+    Value: !GetAtt NotificationQueue.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-Notification-Queue-ARN"
+      
+  AlertEngineFunctionArn:
+    Description: Lambda function ARN for alert processing engine
+    Value: !GetAtt AlertEngineFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-Alert-Engine-ARN"
+      
+  AlertEngineFunctionName:
+    Description: Lambda function name for alert processing engine
+    Value: !Ref AlertEngineFunction
+    Export:
+      Name: !Sub "${AWS::StackName}-Alert-Engine-Name"
+
+  # Auto Scaling Group Outputs
+  MetricsProcessingASGName:
+    Description: Auto Scaling Group name for metrics processing service
+    Value: !Ref MetricsProcessingAutoScalingGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-Metrics-Processing-ASG"
+
+  # Security Group Outputs
+  LoadBalancerSecurityGroupId:
+    Description: Security Group ID for Application Load Balancer
+    Value: !Ref LoadBalancerSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-SG-ID"
+      
+  MetricsProcessingSecurityGroupId:
+    Description: Security Group ID for metrics processing instances
+    Value: !Ref MetricsProcessingSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-Metrics-Processing-SG-ID"
+      
+  DatabaseSecurityGroupId:
+    Description: Security Group ID for database access
+    Value: !Ref DatabaseSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-Database-SG-ID"
+
+  # CloudTrail Outputs
+  CloudTrailArn:
+    Description: CloudTrail ARN for audit logging
+    Value: !GetAtt MonitoringCloudTrail.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudTrail-ARN"
+
+  # Platform Information
+  PlatformVersion:
+    Description: Platform version and deployment timestamp
+    Value: !Sub "v1.0-${AWS::StackName}-${AWS::Region}"
+    Export:
+      Name: !Sub "${AWS::StackName}-Platform-Version"
+      
+  DeploymentRegion:
+    Description: AWS region where the platform is deployed
+    Value: !Ref AWS::Region
+    Export:
+      Name: !Sub "${AWS::StackName}-Deployment-Region"

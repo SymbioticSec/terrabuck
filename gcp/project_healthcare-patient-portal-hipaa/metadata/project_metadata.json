@@ -1,0 +1,348 @@
+{
+  "project_info": {
+    "project_id": "healthcare-patient-portal-hipaa",
+    "project_name": "HIPAA-Compliant Patient Portal",
+    "description": "A secure healthcare patient portal enabling patients to access medical records, schedule appointments, and communicate with healthcare providers. Built with HIPAA compliance requirements including data encryption, audit logging, and access controls. Features a React frontend, Node.js API backend, and secure document storage for medical records and imaging.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "Regional healthcare network serving 50,000+ patients needs a secure digital platform to reduce administrative overhead, improve patient engagement, and ensure compliance with HIPAA regulations. The system must handle PHI (Protected Health Information) with proper encryption, audit trails, and access controls.",
+    "components": [
+      {
+        "name": "web_frontend",
+        "service_type": "google_compute_instance_group",
+        "purpose": "Hosts React-based patient portal frontend with SSL termination and auto-scaling",
+        "dependencies": [
+          "api_backend",
+          "load_balancer"
+        ],
+        "security_considerations": [
+          "SSL/TLS encryption",
+          "Content Security Policy",
+          "XSS protection"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_backend",
+        "service_type": "google_compute_instance_group",
+        "purpose": "Node.js API server handling patient authentication, medical record access, and appointment scheduling",
+        "dependencies": [
+          "patient_database",
+          "audit_logging"
+        ],
+        "security_considerations": [
+          "JWT authentication",
+          "API rate limiting",
+          "Input validation",
+          "PHI data handling"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "patient_database",
+        "service_type": "google_sql_database_instance",
+        "purpose": "PostgreSQL database storing patient records, appointments, and user authentication data with encryption at rest",
+        "dependencies": [],
+        "security_considerations": [
+          "Database encryption",
+          "Connection encryption",
+          "Access controls",
+          "Backup encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "document_storage",
+        "service_type": "google_storage_bucket",
+        "purpose": "Secure storage for medical documents, lab results, and medical imaging with customer-managed encryption",
+        "dependencies": [
+          "kms_encryption"
+        ],
+        "security_considerations": [
+          "Customer-managed encryption keys",
+          "Access logging",
+          "Versioning",
+          "Lifecycle policies"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "google_compute_global_forwarding_rule",
+        "purpose": "HTTPS load balancer with SSL certificates for high availability and traffic distribution",
+        "dependencies": [
+          "web_frontend"
+        ],
+        "security_considerations": [
+          "SSL certificate management",
+          "DDoS protection",
+          "Health checks"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "kms_encryption",
+        "service_type": "google_kms_crypto_key",
+        "purpose": "Customer-managed encryption keys for HIPAA compliance and data protection",
+        "dependencies": [],
+        "security_considerations": [
+          "Key rotation",
+          "Access controls",
+          "Audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "audit_logging",
+        "service_type": "google_logging_sink",
+        "purpose": "Centralized audit logging for HIPAA compliance tracking all PHI access and system events",
+        "dependencies": [],
+        "security_considerations": [
+          "Log integrity",
+          "Access controls",
+          "Retention policies",
+          "Tamper protection"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Custom VPC with separate subnets for web tier, application tier, and database tier across multiple zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Load balancer in public subnet routes to web instances in private subnet",
+        "Web instances communicate with API backend in application subnet",
+        "API backend connects to database in data subnet",
+        "All components use private Google Access for API calls"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 6,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 4
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T14:32:49.495213"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "title": "Database Missing SSL/TLS Encryption in Transit",
+        "description": "The PostgreSQL database instance for patient records lacks proper SSL/TLS encryption configuration, potentially exposing PHI data during transmission between the API backend and database.",
+        "severity": "high",
+        "affected_component": "patient_database",
+        "injection_strategy": "Configure google_sql_database_instance with require_ssl=false or ssl_mode=ALLOW_UNENCRYPTED_AND_ENCRYPTED",
+        "business_impact": "HIPAA violation due to unencrypted PHI transmission, potential data breach exposure, regulatory fines up to $1.5M per incident",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n            require_ssl = true\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n            require_ssl = false\n          }\n        }\n      }",
+        "file_name": "encrypt_in_transit_data.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Remove require_ssl = true or set ssl_mode to allow unencrypted connections in the database ip_configuration block",
+          "explanation": "Without SSL enforcement, database connections can transmit PHI in plaintext, violating HIPAA encryption requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_DEFAULT_SERVICE_ACCOUNT",
+        "title": "Compute Instances Using Default Service Account",
+        "description": "Web frontend and API backend compute instances are configured to use Google's default service account instead of custom service accounts with minimal required permissions.",
+        "severity": "medium",
+        "affected_component": "web_frontend",
+        "injection_strategy": "Configure google_compute_instance with default service account email instead of custom service account",
+        "business_impact": "Excessive permissions for compute instances, potential privilege escalation, violation of least privilege principle required for HIPAA compliance",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#\n  good:\n    - |-\n      resource \"google_service_account\" \"default\" {\n        account_id   = \"service_account_id\"\n        display_name = \"Service Account\"\n      }\n\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        service_account {\n          # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.\n          email  = google_service_account.default.email\n          scopes = [\"cloud-platform\"]\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        service_account {\n          # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.\n          email  = \"1234567890-compute@developer.gserviceaccount.com\"\n          scopes = [\"cloud-platform\"]\n        }\n      }",
+        "file_name": "no_default_service_account.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set service_account.email to the default compute service account format instead of referencing a custom service account resource",
+          "explanation": "Default service accounts have broad permissions that violate the principle of least privilege, creating unnecessary attack surface"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-DISABLE_ALLOW_ALL_PORTS_FIREWALL_RULE",
+        "title": "Overpermissive Firewall Rules Allow All Ports",
+        "description": "Network firewall rules are configured to allow traffic on all ports (0-65535) instead of restricting access to only necessary ports for the healthcare application.",
+        "severity": "high",
+        "affected_component": "load_balancer",
+        "injection_strategy": "Create google_compute_firewall rules with ports=[\"0-65535\"] or missing port specifications",
+        "business_impact": "Excessive network exposure increases attack surface, potential unauthorized access to internal services, HIPAA security rule violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall#allow\n  good:\n    - |-\n      resource \"google_compute_firewall\" \"good_example\" {\n        name    = \"allow-specific-ports\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"80\", \"443\"]\n        }\n\n        source_ranges = [\"0.0.0.0/0\"]\n        target_tags   = [\"web-servers\"]\n      }\n  bad:\n    - |-\n      resource \"google_compute_firewall\" \"bad_example\" {\n        name    = \"allow-all-ports\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"0-65535\"]\n        }\n\n        source_ranges = [\"0.0.0.0/0\"]\n        target_tags   = [\"servers\"]\n      }",
+        "file_name": "disable_allow_all_ports_firewall_rule.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure firewall rules with ports = [\"0-65535\"] or omit port specifications entirely in the allow block",
+          "explanation": "Opening all ports creates unnecessary attack vectors and violates network segmentation requirements for healthcare data protection"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_LOCK_WAITS",
+        "title": "Database Audit Logging Insufficient for HIPAA",
+        "description": "PostgreSQL database lacks proper lock wait logging configuration, reducing audit trail visibility required for HIPAA compliance monitoring of PHI access patterns.",
+        "severity": "medium",
+        "affected_component": "patient_database",
+        "injection_strategy": "Configure google_sql_database_instance with log_lock_waits database flag set to 'off'",
+        "business_impact": "Insufficient audit trails for HIPAA compliance, reduced ability to detect suspicious database access patterns, potential compliance violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_lock_waits\"\n            value = \"on\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_lock_waits\"\n            value = \"off\"\n          }\n        }\n      }",
+        "file_name": "pg_log_lock_waits.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set database_flags with log_lock_waits = 'off' or omit the flag entirely in the database settings",
+          "explanation": "Without lock wait logging, database contention and potential security issues become harder to detect and audit"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_SB",
+        "title": "Compute Instances Missing Shielded VM Protection",
+        "description": "Web frontend and API backend compute instances lack Shielded VM secure boot configuration, reducing protection against boot-level attacks and rootkits.",
+        "severity": "medium",
+        "affected_component": "api_backend",
+        "injection_strategy": "Configure google_compute_instance with shielded_instance_config.enable_secure_boot = false or omit shielded configuration",
+        "business_impact": "Reduced protection against boot-level malware, potential compromise of systems handling PHI, weakened defense-in-depth security posture",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#enable_secure_boot\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_secure_boot = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_secure_boot = false\n        }\n      }",
+        "file_name": "enable_shielded_vm_sb.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_secure_boot = false in shielded_instance_config or omit the shielded_instance_config block entirely",
+          "explanation": "Without secure boot, instances are vulnerable to boot-level attacks that could compromise the entire healthcare application stack"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_PRIVATE_GOOGLE_ACCESS",
+        "title": "Subnetworks Missing Private Google Access",
+        "description": "Private subnets hosting healthcare application components lack Private Google Access configuration, potentially forcing traffic through public internet routes.",
+        "severity": "medium",
+        "affected_component": "load_balancer",
+        "injection_strategy": "Configure google_compute_subnetwork with private_ip_google_access = false or omit the setting",
+        "business_impact": "Healthcare data may traverse public internet unnecessarily, increased latency and security risks, potential HIPAA compliance issues with data transmission",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork#private_ip_google_access\n  good:\n    - |-\n      resource \"google_compute_subnetwork\" \"good_example\" {\n        name                     = \"test-subnetwork\"\n        ip_cidr_range            = \"10.2.0.0/16\"\n        region                   = \"us-central1\"\n        network                  = google_compute_network.custom-test.id\n        private_ip_google_access = true\n      }\n  bad:\n    - |-\n      resource \"google_compute_subnetwork\" \"bad_example\" {\n        name                     = \"test-subnetwork\"\n        ip_cidr_range            = \"10.2.0.0/16\"\n        region                   = \"us-central1\"\n        network                  = google_compute_network.custom-test.id\n        private_ip_google_access = false\n      }",
+        "file_name": "enable_subnetwork_private_google_access.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set private_ip_google_access = false or omit the setting entirely in subnet configurations",
+          "explanation": "Without private Google access, instances may route API calls through public internet, increasing exposure and latency"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_PRIVILEGED_SERVICE_ACCOUNTS",
+        "title": "Service Accounts with Excessive Privileges",
+        "description": "Service accounts used by healthcare application components are granted overly broad roles like 'roles/owner' instead of minimal required permissions for PHI handling.",
+        "severity": "high",
+        "affected_component": "kms_encryption",
+        "injection_strategy": "Configure google_project_iam_member with role = 'roles/owner' or other privileged roles for service accounts",
+        "business_impact": "Violation of least privilege principle, potential for privilege escalation attacks, HIPAA access control requirement violations, increased blast radius of compromised accounts",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/google_project_iam\n  good:\n    - |-\n      resource \"google_service_account\" \"test\" {\n        account_id   = \"account123\"\n        display_name = \"account123\"\n        email        = \"jim@tfsec.dev\"\n      }\n\n      resource \"google_project_iam_member\" \"project\" {\n        project = \"your-project-id\"\n        role    = \"roles/logging.logWriter\"\n        member  = \"serviceAccount:${google_service_account.test.email}\"\n      }\n  bad:\n    - |-\n      resource \"google_service_account\" \"test\" {\n        account_id   = \"account123\"\n        display_name = \"account123\"\n        email        = \"jim@tfsec.dev\"\n      }\n\n      resource \"google_project_iam_member\" \"project\" {\n        project = \"your-project-id\"\n        role    = \"roles/owner\"\n        member  = \"serviceAccount:${google_service_account.test.email}\"\n      }",
+        "file_name": "no_privileged_service_accounts.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Assign roles/owner, roles/editor, or other broad administrative roles to service accounts instead of specific, minimal permissions",
+          "explanation": "Overprivileged service accounts create unnecessary security risks and violate HIPAA's minimum necessary standard for PHI access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "GOOGLE-COMPUTE-NO_DEFAULT_SERVICE_ACCOUNT",
+        "GOOGLE-COMPUTE-DISABLE_ALLOW_ALL_PORTS_FIREWALL_RULE",
+        "GOOGLE-SQL-PG_LOG_LOCK_WAITS",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_SB",
+        "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_PRIVATE_GOOGLE_ACCESS",
+        "GOOGLE-IAM-NO_PRIVILEGED_SERVICE_ACCOUNTS"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_name": "HIPAA-Compliant Patient Portal",
+    "architecture_type": "microservices",
+    "total_resources": 30,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 8,
+      "storage": 4,
+      "security": 4,
+      "database": 2,
+      "monitoring": 2,
+      "utility": 2
+    },
+    "components_implemented": {
+      "web_frontend": "google_compute_region_instance_group_manager.web_frontend",
+      "api_backend": "google_compute_region_instance_group_manager.api_backend",
+      "patient_database": "google_sql_database_instance.patient_database",
+      "document_storage": "google_storage_bucket.document_storage",
+      "load_balancer": "google_compute_global_forwarding_rule.load_balancer",
+      "kms_encryption": "google_kms_crypto_key.hipaa_key",
+      "audit_logging": "google_logging_project_sink.audit_logging"
+    },
+    "vulnerabilities_injected": 7,
+    "estimated_monthly_cost": "$150-300",
+    "deployment_time": "15-20 minutes",
+    "terraform_version": ">=1.0",
+    "provider_version": "google ~>4.0"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 28,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

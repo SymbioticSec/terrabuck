@@ -1,0 +1,336 @@
+{
+  "project_info": {
+    "project_id": "fintech-trading-platform-001",
+    "project_name": "Real-Time Trading Platform Backend",
+    "description": "A high-frequency trading platform backend that processes real-time market data feeds, executes trades, and provides risk management capabilities. The system handles thousands of transactions per second while maintaining strict compliance with financial regulations and audit requirements. Features include real-time price streaming, order matching, portfolio management, and regulatory reporting.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "A fintech startup building a competitive trading platform for institutional clients, requiring sub-millisecond latency for trade execution, comprehensive audit trails for regulatory compliance, and secure handling of sensitive financial data.",
+    "components": [
+      {
+        "name": "trading_engine_cluster",
+        "service_type": "aws_ec2_instance",
+        "purpose": "High-performance compute cluster running the core trading engine with order matching and execution logic",
+        "dependencies": [
+          "market_data_cache",
+          "trade_database",
+          "risk_management_service"
+        ],
+        "security_considerations": [
+          "instance_isolation",
+          "encrypted_inter_service_communication",
+          "privileged_access_controls"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "market_data_cache",
+        "service_type": "aws_elasticache_redis",
+        "purpose": "In-memory cache for real-time market data feeds and price information with microsecond access times",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "vpc_isolation",
+          "access_control_lists"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "trade_database",
+        "service_type": "aws_rds_postgresql",
+        "purpose": "ACID-compliant database storing trade records, account balances, and transaction history for audit compliance",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "encryption_in_transit",
+          "automated_backups",
+          "point_in_time_recovery"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "risk_management_service",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless functions for real-time risk assessment, position limits validation, and compliance checks",
+        "dependencies": [
+          "trade_database",
+          "compliance_logs"
+        ],
+        "security_considerations": [
+          "iam_role_restrictions",
+          "vpc_configuration",
+          "environment_variable_encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_gateway_cluster",
+        "service_type": "aws_application_load_balancer",
+        "purpose": "Load balancer distributing client API requests across trading engine instances with SSL termination",
+        "dependencies": [
+          "trading_engine_cluster"
+        ],
+        "security_considerations": [
+          "ssl_certificate_management",
+          "ddos_protection",
+          "rate_limiting"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "compliance_logs",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Immutable audit log storage for all trading activities, regulatory reporting, and compliance documentation",
+        "dependencies": [],
+        "security_considerations": [
+          "object_lock",
+          "versioning",
+          "cross_region_replication",
+          "access_logging"
+        ],
+        "configuration_complexity": "high"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with dedicated subnets for each tier: public subnet for load balancers, private subnets for application servers, and isolated data subnets for databases and cache",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "clients_to_alb_via_internet",
+        "alb_to_ec2_via_private_subnet",
+        "ec2_to_rds_via_data_subnet",
+        "lambda_to_vpc_via_eni"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:47:57.286088"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-EC2-ENABLE_AT_REST_ENCRYPTION",
+        "title": "Enable At Rest Encryption",
+        "description": "EC2 instances in the trading engine cluster lack encryption for EBS volumes, exposing sensitive trading data and algorithms to potential data breaches if storage media is compromised",
+        "severity": "high",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Configure EC2 instances with unencrypted EBS block devices in CloudFormation template",
+        "business_impact": "Unencrypted trading engine storage could expose proprietary algorithms, client positions, and sensitive financial data if physical storage is compromised, leading to regulatory violations and competitive disadvantage",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            BlockDeviceMappings:\n              - DeviceName: /dev/sdm\n                Ebs:\n                  Encrypted: true\n            ImageId: ami-79fd7eee\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            BlockDeviceMappings:\n              - DeviceName: /dev/sdm\n                Ebs:\n                  Encrypted: false\n            ImageId: ami-79fd7eee",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set Encrypted: false in BlockDeviceMappings for trading engine EC2 instances",
+          "explanation": "This creates unencrypted EBS volumes that store trading engine data without encryption protection"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-ENCRYPTION_CUSTOMER_KEY",
+        "title": "RDS Encryption Customer Key",
+        "description": "PostgreSQL trade database lacks customer-managed KMS encryption, using default AWS encryption instead of customer-controlled keys for sensitive financial transaction data",
+        "severity": "medium",
+        "affected_component": "trade_database",
+        "injection_strategy": "Configure RDS PostgreSQL instance without customer-managed KMS key specification",
+        "business_impact": "Default encryption keys provide less control over key rotation and access policies for critical trading data, potentially impacting compliance with financial regulations requiring customer-managed encryption",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_db_instance\" \"good_example\" {\n        storage_encrypted = true\n        kms_key_id       = \"arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab\"\n      }\n  bad:\n    - |-\n      resource \"aws_db_instance\" \"bad_example\" {\n        storage_encrypted = true\n      }",
+        "file_name": "encryption_customer_key.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure RDS with StorageEncrypted: true but without KmsKeyId specification",
+          "explanation": "This enables encryption but uses AWS-managed keys instead of customer-managed keys for enhanced control"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_EGRESS_SGR",
+        "title": "No Public Egress Security Group Rule",
+        "description": "Security groups for trading engine cluster allow unrestricted outbound traffic (0.0.0.0/0), potentially enabling data exfiltration or unauthorized external communications",
+        "severity": "medium",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Configure security group with overly permissive egress rules allowing all outbound traffic",
+        "business_impact": "Unrestricted egress could allow compromised trading systems to exfiltrate sensitive market data or trading algorithms to external systems, violating data protection requirements",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupEgress:\n              - CidrIp: 127.0.0.1/32\n                IpProtocol: \"6\"\n  bad:\n    - |-\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            GroupDescription: Limits security group egress traffic\n            SecurityGroupEgress:\n              - CidrIp: 0.0.0.0/0\n                IpProtocol: \"6\"",
+        "file_name": "no_public_egress_sgr.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set SecurityGroupEgress with CidrIp: 0.0.0.0/0 for trading engine security groups",
+          "explanation": "This allows all outbound traffic from trading systems, creating potential data exfiltration risks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_BUCKET_LOGGING",
+        "title": "Enable S3 Bucket Access Logging",
+        "description": "Compliance logs S3 bucket lacks access logging configuration, preventing audit trail visibility into who accessed critical trading and regulatory documentation",
+        "severity": "medium",
+        "affected_component": "compliance_logs",
+        "injection_strategy": "Configure S3 bucket without LoggingConfiguration for compliance audit logs",
+        "business_impact": "Missing access logs for compliance data prevents detection of unauthorized access to sensitive trading records, potentially violating financial regulatory audit requirements",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExampleBucket:\n          Type: AWS::S3::Bucket\n          Properties:\n            BucketName: my-bucket\n            LoggingConfiguration:\n              DestinationBucketName: logging-bucket\n              LogFilePrefix: accesslogs/\n  bad:\n    - |-\n      Resources:\n        BadExampleBucket:\n          Type: AWS::S3::Bucket\n          Properties:\n            BucketName: my-bucket",
+        "file_name": "require_bucket_access_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without LoggingConfiguration property for compliance logs storage",
+          "explanation": "This prevents tracking of access patterns to sensitive compliance and audit data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELASTICACHE-ENABLE_AT_REST_ENCRYPTION",
+        "title": "Enable ElastiCache At Rest Encryption",
+        "description": "Redis cache storing real-time market data lacks at-rest encryption, exposing sensitive price information and trading patterns in memory snapshots",
+        "severity": "medium",
+        "affected_component": "market_data_cache",
+        "injection_strategy": "Configure ElastiCache Redis cluster without AtRestEncryptionEnabled property",
+        "business_impact": "Unencrypted market data cache could expose real-time pricing information and trading patterns through memory dumps or snapshots, providing competitive intelligence to unauthorized parties",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_elasticache_replication_group\" \"good_example\" {\n        at_rest_encryption_enabled = true\n      }\n  bad:\n    - |-\n      resource \"aws_elasticache_replication_group\" \"bad_example\" {\n        at_rest_encryption_enabled = false\n      }",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "elasticache",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set AtRestEncryptionEnabled: false for ElastiCache Redis replication group",
+          "explanation": "This leaves market data in Redis cache unencrypted at rest, exposing sensitive pricing information"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Enable Lambda Tracing",
+        "description": "Risk management Lambda functions lack X-Ray tracing configuration, limiting visibility into performance bottlenecks and security events in critical risk assessment workflows",
+        "severity": "medium",
+        "affected_component": "risk_management_service",
+        "injection_strategy": "Configure Lambda functions without TracingConfig or with Mode set to PassThrough",
+        "business_impact": "Missing tracing for risk management functions reduces visibility into compliance check performance and potential security issues, hampering incident response and regulatory reporting",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            TracingConfig:\n              Mode: Active\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            TracingConfig:\n              Mode: PassThrough",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set TracingConfig Mode to PassThrough or omit TracingConfig entirely for risk management Lambda",
+          "explanation": "This disables detailed tracing for critical risk assessment functions, reducing observability"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELB-ALB_NOT_PUBLIC",
+        "title": "Application Load Balancer Not Public",
+        "description": "API Gateway load balancer may be configured with overly permissive public access, potentially exposing internal trading APIs to unauthorized internet traffic",
+        "severity": "high",
+        "affected_component": "api_gateway_cluster",
+        "injection_strategy": "Configure ALB with public subnets and security groups allowing broad internet access",
+        "business_impact": "Publicly accessible trading APIs could expose sensitive trading endpoints to unauthorized users, potentially leading to market manipulation or unauthorized trading activities",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_lb\" \"good_example\" {\n        internal = true\n        subnets  = [aws_subnet.private1.id, aws_subnet.private2.id]\n      }\n  bad:\n    - |-\n      resource \"aws_lb\" \"bad_example\" {\n        internal = false\n        subnets  = [aws_subnet.public1.id, aws_subnet.public2.id]\n      }",
+        "file_name": "alb_not_public.yaml",
+        "service": "elb",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set Scheme: internet-facing and use public subnets for the Application Load Balancer",
+          "explanation": "This exposes the trading API load balancer directly to internet traffic without proper access controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-NO_PASSWORD_REUSE",
+        "title": "No Password Reuse Policy",
+        "description": "IAM password policy lacks password reuse prevention, allowing users to cycle through minimal password changes when accessing trading systems",
+        "severity": "medium",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Configure IAM account password policy without PasswordReusePrevention setting",
+        "business_impact": "Weak password policies for trading system access could enable easier credential compromise, potentially allowing unauthorized access to high-value trading operations and client accounts",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::IAM::AccountPasswordPolicy\n          Properties:\n            PasswordReusePrevention: 5\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::IAM::AccountPasswordPolicy\n          Properties:\n            MinimumPasswordLength: 8",
+        "file_name": "no_password_reuse.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM AccountPasswordPolicy without PasswordReusePrevention property",
+          "explanation": "This allows users to reuse recent passwords, weakening authentication security for trading system access"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-EC2-ENABLE_AT_REST_ENCRYPTION",
+        "AWS-RDS-ENCRYPTION_CUSTOMER_KEY",
+        "AWS-EC2-NO_PUBLIC_EGRESS_SGR",
+        "AWS-S3-ENABLE_BUCKET_LOGGING",
+        "AWS-ELASTICACHE-ENABLE_AT_REST_ENCRYPTION",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-ELB-ALB_NOT_PUBLIC",
+        "AWS-IAM-NO_PASSWORD_REUSE"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 2,
+        "medium": 6,
+        "low": 0
+      },
+      "service_categories": [
+        "elasticache",
+        "elb",
+        "s3",
+        "iam",
+        "ec2",
+        "rds",
+        "lambda"
+      ],
+      "services_covered": [
+        "elasticache",
+        "elb",
+        "s3",
+        "iam",
+        "ec2",
+        "rds",
+        "lambda"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 210,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

@@ -1,0 +1,501 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Enterprise Backup and Disaster Recovery Platform - Comprehensive backup solution with automated scheduling, cross-region replication, and rapid recovery capabilities'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - ProjectName
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnet1Cidr
+          - PrivateSubnet1Cidr
+          - DataSubnet1Cidr
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DBInstanceClass
+          - DBUsername
+          - DBPassword
+      - Label:
+          default: "Backup Configuration"
+        Parameters:
+          - BackupRetentionDays
+          - CrossRegionReplication
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Environment name for resource tagging
+  
+  ProjectName:
+    Type: String
+    Default: enterprise-backup-dr-platform
+    Description: Project name for resource naming
+  
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC
+  
+  PublicSubnet1Cidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for public subnet
+  
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for private subnet
+  
+  DataSubnet1Cidr:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for data subnet
+  
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.medium
+    AllowedValues: [db.t3.micro, db.t3.small, db.t3.medium, db.t3.large]
+    Description: RDS instance class
+  
+  DBUsername:
+    Type: String
+    Default: backupadmin
+    Description: Database master username
+  
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Database master password
+  
+  BackupRetentionDays:
+    Type: Number
+    Default: 3
+    MinValue: 1
+    MaxValue: 35
+    Description: Database backup retention period
+  
+  CrossRegionReplication:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: Enable cross-region replication
+
+Resources:
+  # VPC and Networking
+  BackupVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-vpc'
+        - Key: Environment
+          Value: !Ref Environment
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref BackupVPC
+      CidrBlock: !Ref PublicSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-public-subnet-1'
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref BackupVPC
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-private-subnet-1'
+
+  DataSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref BackupVPC
+      CidrBlock: !Ref DataSubnet1Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-data-subnet-1'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-igw'
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref BackupVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # S3 Backup Storage (Vulnerable: No access logging)
+  BackupStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-backup-storage-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-backup-storage'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Cross-region replication bucket
+  ReplicationBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-backup-replication-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-backup-replication'
+
+  # EFS for backup staging (Vulnerable: No encryption)
+  BackupStagingEFS:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: false
+      PerformanceMode: generalPurpose
+      FileSystemTags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-backup-staging-efs'
+
+  # RDS Metadata Database (Vulnerable: Low backup retention)
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for backup metadata database
+      SubnetIds:
+        - !Ref DataSubnet1
+        - !Ref PrivateSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-db-subnet-group'
+
+  BackupMetadataDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub '${ProjectName}-metadata-db'
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: mysql
+      EngineVersion: '8.0.35'
+      AllocatedStorage: 100
+      StorageType: gp2
+      StorageEncrypted: true
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      BackupRetentionPeriod: !Ref BackupRetentionDays
+      MultiAZ: false
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-metadata-db'
+
+  # Security Groups (Vulnerable: Open ingress)
+  BackupAgentsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-backup-agents-sg'
+      GroupDescription: Security group for backup agents cluster
+      VpcId: !Ref BackupVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH access from anywhere
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+          Description: Backup agent API
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-backup-agents-sg'
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${ProjectName}-database-sg'
+      GroupDescription: Security group for backup metadata database
+      VpcId: !Ref BackupVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref BackupAgentsSecurityGroup
+          Description: MySQL access from backup agents
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-database-sg'
+
+  # Launch Configuration for Backup Agents (Vulnerable: IMDSv1 allowed)
+  BackupAgentsLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      LaunchConfigurationName: !Sub '${ProjectName}-backup-agents-lc'
+      ImageId: ami-0c02fb55956c7d316
+      InstanceType: t3.medium
+      SecurityGroups:
+        - !Ref BackupAgentsSecurityGroup
+      IamInstanceProfile: !Ref BackupAgentsInstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y aws-cli
+          # Install backup agent software
+          echo "Backup agent initialization complete"
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: optional
+
+  # Auto Scaling Group for Backup Agents
+  BackupAgentsASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub '${ProjectName}-backup-agents-asg'
+      LaunchConfigurationName: !Ref BackupAgentsLaunchConfig
+      MinSize: 1
+      MaxSize: 5
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-backup-agent'
+          PropagateAtLaunch: true
+
+  # IAM Roles and Policies
+  BackupOrchestrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-orchestration-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BackupOrchestrationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - rds:DescribeDBInstances
+                  - ec2:DescribeInstances
+                Resource: '*'
+
+  BackupAgentsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-agents-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: BackupAgentsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - rds:CreateDBSnapshot
+                Resource: '*'
+
+  BackupAgentsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${ProjectName}-agents-profile'
+      Roles:
+        - !Ref BackupAgentsRole
+
+  RecoveryServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-recovery-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # Lambda Functions (Vulnerable: No tracing enabled)
+  BackupOrchestrationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-backup-orchestration'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt BackupOrchestrationRole.Arn
+      Timeout: 300
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          
+          def lambda_handler(event, context):
+              print("Backup orchestration started")
+              # Backup orchestration logic here
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Backup orchestration completed')
+              }
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-backup-orchestration'
+
+  RecoveryServiceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-recovery-service'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt RecoveryServiceRole.Arn
+      Timeout: 600
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          
+          def lambda_handler(event, context):
+              print("Recovery service started")
+              # Recovery logic here
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Recovery completed')
+              }
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-recovery-service'
+
+  # CloudWatch Resources
+  BackupJobsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ProjectName}-backup-jobs'
+      RetentionInDays: 14
+
+  RecoveryLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ProjectName}-recovery'
+      RetentionInDays: 14
+
+  BackupMetricsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-backup-failures'
+      AlarmDescription: Alert when backup jobs fail
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref BackupOrchestrationFunction
+
+  # SNS Topic for Alerts
+  BackupAlertsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref BackupAlertsTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref BackupAlertsTopic
+
+  BackupAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${ProjectName}-backup-alerts'
+      DisplayName: Backup Platform Alerts
+
+Outputs:
+  VPCId:
+    Description: VPC ID for the backup platform
+    Value: !Ref BackupVPC
+    Export:
+      Name: !Sub '${ProjectName}-vpc-id'
+
+  BackupStorageBucketName:
+    Description: Name of the primary backup storage bucket
+    Value: !Ref BackupStorageBucket
+    Export:
+      Name: !Sub '${ProjectName}-backup-bucket'
+
+  DatabaseEndpoint:
+    Description: RDS database endpoint
+    Value: !GetAtt BackupMetadataDB.Endpoint.Address
+    Export:
+      Name: !Sub '${ProjectName}-db-endpoint'
+
+  BackupOrchestrationFunctionArn:
+    Description: ARN of the backup orchestration Lambda function
+    Value: !GetAtt BackupOrchestrationFunction.Arn
+
+  RecoveryServiceFunctionArn:
+    Description: ARN of the recovery service Lambda function
+    Value: !GetAtt RecoveryServiceFunction.Arn

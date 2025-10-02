@@ -1,0 +1,47 @@
+# CloudFormation Outputs for Enterprise Identity SSO Platform
+# These outputs provide essential information for connecting to and managing the deployed infrastructure
+
+Outputs:
+  # Network Information
+  VPCId:
+    Description: "VPC ID for the Enterprise Identity SSO Platform"
+    Value: !Ref IdentityVPC
+    Export:
+      Name: !Sub "${ProjectName}-vpc-id"
+
+  PublicSubnet1Id:
+    Description: "Public Subnet 1 ID"
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${ProjectName}-public-subnet-1-id"
+
+  PublicSubnet2Id:
+    Description: "Public Subnet 2 ID"
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${ProjectName}-public-subnet-2-id"
+
+  PrivateSubnet1Id:
+    Description: "Private Subnet 1 ID"
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${ProjectName}-private-subnet-1-id"
+
+  PrivateSubnet2Id:
+    Description: "Private Subnet 2 ID"
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${ProjectName}-private-subnet-2-id"
+
+  # Load Balancer Information
+  LoadBalancerDNS:
+    Description: "DNS name of the Application Load Balancer for accessing identity services"
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${ProjectName}-alb-dns"
+
+  LoadBalancerArn:
+    Description: "ARN of the Application Load Balancer"
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub "${ProjectName

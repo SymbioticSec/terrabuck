@@ -1,0 +1,432 @@
+{
+  "project_labels": {
+    "project_id": "enterprise-backup-dr-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "logging": 3
+      },
+      "by_trivy_service": {
+        "s3": 3,
+        "ec2": 2,
+        "lambda": 1,
+        "rds": 1,
+        "iam": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AWS-S3-ENABLE_LOGGING",
+        "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "AWS-S3-ENABLE_OBJECT_WRITE_LOGGING",
+        "AWS-EFS-ENABLE_AT_REST_ENCRYPTION"
+      ],
+      "services_covered": [
+        "s3",
+        "ec2",
+        "lambda",
+        "rds",
+        "iam",
+        "efs",
+        "cloudtrail"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AWS-S3-ENABLE_LOGGING",
+      "trivy_rule_info": {
+        "original_file": "enable_logging.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/s3"
+      },
+      "vulnerability_class": "logging_and_monitoring",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "access to S3 bucket",
+        "knowledge of backup storage location"
+      ],
+      "mitigation_strategies": [
+        "Enable S3 access logging with LoggingConfiguration",
+        "Configure separate logging bucket with proper permissions",
+        "Set up log analysis and alerting"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::S3::Bucket without LoggingConfiguration property",
+        "secure_pattern": "AWS::S3::Bucket with LoggingConfiguration specifying DestinationBucketName and LogFilePrefix"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging_deficiency",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-RDS-SPECIFY_BACKUP_RETENTION",
+      "trivy_rule_info": {
+        "original_file": "specify_backup_retention.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/rds"
+      },
+      "vulnerability_class": "backup_and_recovery",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "SOC2",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "system failure",
+        "data corruption event"
+      ],
+      "mitigation_strategies": [
+        "Set BackupRetentionPeriod to minimum 7 days for production",
+        "Configure automated backup windows",
+        "Enable point-in-time recovery"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::RDS::DBInstance without BackupRetentionPeriod or value < 5",
+        "secure_pattern": "AWS::RDS::DBInstance with BackupRetentionPeriod: 30"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "backup_configuration",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+      "trivy_rule_info": {
+        "original_file": "no_public_ingress_sgr.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "network_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet connectivity",
+        "knowledge of open ports"
+      ],
+      "mitigation_strategies": [
+        "Restrict CidrIp to specific IP ranges or VPC CIDR",
+        "Use security group references instead of 0.0.0.0/0",
+        "Implement bastion hosts for administrative access"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "SecurityGroupIngress with CidrIp: 0.0.0.0/0",
+        "secure_pattern": "SecurityGroupIngress with CidrIp: 127.0.0.1/32 or specific IP ranges"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_exposure",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+      "trivy_rule_info": {
+        "original_file": "enable_tracing.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/lambda"
+      },
+      "vulnerability_class": "observability",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "system malfunction",
+        "performance issues"
+      ],
+      "mitigation_strategies": [
+        "Enable X-Ray tracing with TracingConfig Mode: Active",
+        "Configure appropriate IAM permissions for X-Ray",
+        "Set up tracing analysis and alerting"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::Lambda::Function without TracingConfig property",
+        "secure_pattern": "AWS::Lambda::Function with TracingConfig Mode: Active"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "observability_gap",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EC2-AS_ENFORCE_HTTP_TOKEN_IMDS",
+      "trivy_rule_info": {
+        "original_file": "as_enforce_http_token_imds.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/ec2"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "SSRF vulnerability in application",
+        "network access to EC2 instance"
+      ],
+      "mitigation_strategies": [
+        "Set HttpTokens to required in MetadataOptions",
+        "Enable HttpEndpoint and configure proper hop limits",
+        "Update applications to use IMDSv2 token-based requests"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "LaunchConfiguration without MetadataOptions or HttpTokens: optional",
+        "secure_pattern": "LaunchConfiguration with MetadataOptions HttpTokens: required"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "metadata_exposure",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+      "trivy_rule_info": {
+        "original_file": "require_symbols_in_passwords.yaml",
+        "service_category": "identity",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/iam"
+      },
+      "vulnerability_class": "authentication",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "user credentials",
+        "password attack tools"
+      ],
+      "mitigation_strategies": [
+        "Set require_symbols to true in password policy",
+        "Implement comprehensive password complexity requirements",
+        "Enable MFA for all administrative accounts"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "aws_iam_account_password_policy without require_symbols",
+        "secure_pattern": "aws_iam_account_password_policy with require_symbols = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "weak_authentication",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-S3-ENABLE_OBJECT_WRITE_LOGGING",
+      "trivy_rule_info": {
+        "original_file": "enable_object_write_logging.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/s3"
+      },
+      "vulnerability_class": "audit_and_compliance",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "GDPR",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "access to S3 objects",
+        "knowledge of bucket structure"
+      ],
+      "mitigation_strategies": [
+        "Configure CloudTrail with S3 object-level logging",
+        "Set event_selector for WriteOnly operations",
+        "Enable data_resource logging for AWS::S3::Object"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "S3 bucket without corresponding CloudTrail object-level logging",
+        "secure_pattern": "S3 bucket with CloudTrail event_selector for object write operations"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "audit_deficiency",
+        "severity_numeric": 7.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AWS-EFS-ENABLE_AT_REST_ENCRYPTION",
+      "trivy_rule_info": {
+        "original_file": "enable_at_rest_encryption.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/aws/efs"
+      },
+      "vulnerability_class": "data_protection",
+      "detection_difficulty": "easy",
+      "remediation_effort": "high",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "GDPR",
+        "PCI-DSS",
+        "HIPAA"
+      ],
+      "attack_vector": "physical",
+      "prerequisites": [
+        "physical access to storage media",
+        "storage device compromise"
+      ],
+      "mitigation_strategies": [
+        "Set Encrypted: true in EFS FileSystem properties",
+        "Configure customer-managed KMS keys for encryption",
+        "Enable encryption in transit for EFS mounts"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "AWS::EFS::FileSystem with Encrypted: false or missing",
+        "secure_pattern": "AWS::EFS::FileSystem with Encrypted: true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption_missing",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 8,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity MEDIUM,HIGH,CRITICAL .",
+      "expected_trivy_output": "8 medium severity findings across S3, EC2, Lambda, RDS, IAM, and EFS services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understanding comprehensive security configuration for backup and DR systems",
+      "Learning how Trivy detects common cloud security misconfigurations",
+      "Recognizing the importance of defense-in-depth for critical infrastructure",
+      "Understanding compliance requirements for backup systems"
+    ],
+    "prerequisite_knowledge": [
+      "AWS service fundamentals (S3, EC2, Lambda, RDS)",
+      "Basic understanding of backup and disaster recovery concepts",
+      "Cloud security principles",
+      "Infrastructure as Code concepts"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Backup systems require comprehensive security controls across all layers",
+      "Logging and monitoring are critical for audit trails and incident response",
+      "Network security controls prevent unauthorized access to backup infrastructure",
+      "Encryption protects data confidentiality in backup storage",
+      "Trivy can systematically identify security gaps in cloud configurations"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "iam",
+      "s3",
+      "efs",
+      "ec2",
+      "rds",
+      "lambda"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "enterprise-backup-dr-platform",
+    "generation_timestamp": "2025-08-08T16:14:42.683269",
+    "version": "1.0",
+    "data_quality": "medium"
+  }
+}

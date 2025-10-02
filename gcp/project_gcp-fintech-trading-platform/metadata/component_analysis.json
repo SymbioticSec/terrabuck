@@ -1,0 +1,266 @@
+{
+  "original_components": [
+    {
+      "name": "market_data_ingester",
+      "service_type": "google_cloud_run_service",
+      "purpose": "Ingests real-time market data feeds from multiple exchanges and normalizes data format",
+      "dependencies": [
+        "message_queue",
+        "market_data_storage"
+      ],
+      "security_considerations": [
+        "API key management",
+        "rate limiting",
+        "data encryption in transit"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "message_queue",
+      "service_type": "google_pubsub_topic",
+      "purpose": "High-throughput message broker for distributing market data and trade signals between services",
+      "dependencies": [],
+      "security_considerations": [
+        "message encryption",
+        "subscriber authentication",
+        "dead letter queues"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "trading_engine",
+      "service_type": "google_compute_instance",
+      "purpose": "Low-latency algorithmic trading engine that processes market signals and executes trades",
+      "dependencies": [
+        "message_queue",
+        "trading_database",
+        "risk_manager"
+      ],
+      "security_considerations": [
+        "secure boot",
+        "network isolation",
+        "audit logging"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "risk_manager",
+      "service_type": "google_cloud_function",
+      "purpose": "Real-time risk calculation and position monitoring with automatic circuit breakers",
+      "dependencies": [
+        "trading_database",
+        "message_queue"
+      ],
+      "security_considerations": [
+        "function authentication",
+        "environment variable encryption",
+        "VPC connector security"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "trading_database",
+      "service_type": "google_sql_database_instance",
+      "purpose": "High-performance database storing trade history, positions, and risk metrics with ACID compliance",
+      "dependencies": [],
+      "security_considerations": [
+        "database encryption",
+        "private IP",
+        "automated backups",
+        "SQL injection protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "market_data_storage",
+      "service_type": "google_storage_bucket",
+      "purpose": "Time-series storage for historical market data and trade analytics with lifecycle management",
+      "dependencies": [],
+      "security_considerations": [
+        "bucket policies",
+        "object versioning",
+        "access logging",
+        "encryption at rest"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "market_data_ingester",
+      "service_type": "google_cloud_run_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "message_queue",
+      "service_type": "google_pubsub_topic",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "trading_engine",
+      "service_type": "google_compute_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "risk_manager",
+      "service_type": "google_cloud_function",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "trading_database",
+      "service_type": "google_sql_database_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "market_data_storage",
+      "service_type": "google_storage_bucket",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 319,
+      "resource_count": 26,
+      "resources_found": [
+        {
+          "type": "google_compute_network",
+          "name": "trading_platform_vpc"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "public_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "private_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "data_subnet"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "trading_platform_firewall"
+        },
+        {
+          "type": "google_service_account",
+          "name": "trading_engine_sa"
+        },
+        {
+          "type": "google_sql_database_instance",
+          "name": "trading_database"
+        },
+        {
+          "type": "google_sql_database",
+          "name": "trading_db"
+        },
+        {
+          "type": "google_compute_global_address",
+          "name": "private_ip_address"
+        },
+        {
+          "type": "google_service_networking_connection",
+          "name": "private_vpc_connection"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "market_data_storage"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "google_pubsub_topic",
+          "name": "market_data_topic"
+        },
+        {
+          "type": "google_pubsub_topic",
+          "name": "trade_signals_topic"
+        },
+        {
+          "type": "google_compute_instance",
+          "name": "trading_engine"
+        },
+        {
+          "type": "google_cloud_run_service",
+          "name": "market_data_ingester"
+        },
+        {
+          "type": "google_vpc_access_connector",
+          "name": "trading_connector"
+        },
+        {
+          "type": "google_cloudfunctions_function",
+          "name": "risk_manager"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "function_source"
+        },
+        {
+          "type": "random_id",
+          "name": "function_bucket_suffix"
+        },
+        {
+          "type": "google_storage_bucket_object",
+          "name": "risk_manager_source"
+        },
+        {
+          "type": "google_sql_user",
+          "name": "trading_user"
+        },
+        {
+          "type": "google_project_iam_binding",
+          "name": "trading_platform_admin"
+        },
+        {
+          "type": "google_project_iam_member",
+          "name": "trading_engine_permissions"
+        },
+        {
+          "type": "google_pubsub_subscription",
+          "name": "market_data_subscription"
+        },
+        {
+          "type": "google_pubsub_subscription",
+          "name": "trade_signals_subscription"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 28,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 49,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 145,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

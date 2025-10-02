@@ -1,0 +1,297 @@
+{
+  "original_components": [
+    {
+      "name": "trading_web_frontend",
+      "service_type": "azure_app_service",
+      "purpose": "React-based trading dashboard and client portal with real-time market data visualization",
+      "dependencies": [
+        "api_gateway",
+        "cdn_distribution"
+      ],
+      "security_considerations": [
+        "authentication",
+        "session_management",
+        "xss_protection",
+        "csrf_tokens"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "azure_api_management",
+      "purpose": "Central API gateway for routing, authentication, rate limiting, and API versioning",
+      "dependencies": [
+        "trading_engine",
+        "portfolio_service"
+      ],
+      "security_considerations": [
+        "api_authentication",
+        "rate_limiting",
+        "request_validation",
+        "oauth_integration"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "trading_engine",
+      "service_type": "azure_container_instances",
+      "purpose": "Core trading engine processing buy/sell orders with real-time market data integration",
+      "dependencies": [
+        "trading_database",
+        "market_data_cache"
+      ],
+      "security_considerations": [
+        "container_security",
+        "secrets_management",
+        "network_isolation",
+        "audit_logging"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "portfolio_service",
+      "service_type": "azure_functions",
+      "purpose": "Serverless portfolio analytics and risk calculation service",
+      "dependencies": [
+        "trading_database",
+        "market_data_cache"
+      ],
+      "security_considerations": [
+        "function_authentication",
+        "data_encryption",
+        "access_controls"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "trading_database",
+      "service_type": "azure_sql_database",
+      "purpose": "Primary database storing trades, portfolios, client data with encryption and backup",
+      "dependencies": [],
+      "security_considerations": [
+        "data_encryption",
+        "backup_security",
+        "access_controls",
+        "audit_trails"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "market_data_cache",
+      "service_type": "azure_cache_redis",
+      "purpose": "High-performance cache for real-time market prices and trading data",
+      "dependencies": [],
+      "security_considerations": [
+        "data_encryption",
+        "network_isolation",
+        "access_authentication"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "cdn_distribution",
+      "service_type": "azure_cdn",
+      "purpose": "Content delivery network for static assets and improved global performance",
+      "dependencies": [
+        "trading_web_frontend"
+      ],
+      "security_considerations": [
+        "ssl_termination",
+        "ddos_protection",
+        "geo_blocking"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "trading_web_frontend",
+      "service_type": "azure_app_service",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "azure_api_management",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "trading_engine",
+      "service_type": "azure_container_instances",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "portfolio_service",
+      "service_type": "azure_functions",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "trading_database",
+      "service_type": "azure_sql_database",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "market_data_cache",
+      "service_type": "azure_cache_redis",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "cdn_distribution",
+      "service_type": "azure_cdn",
+      "implementation_confidence": 0.7
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 409,
+      "resource_count": 28,
+      "resources_found": [
+        {
+          "type": "azurerm_resource_group",
+          "name": "trading_platform"
+        },
+        {
+          "type": "azurerm_virtual_network",
+          "name": "trading_vnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "public_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "private_subnet"
+        },
+        {
+          "type": "azurerm_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "azurerm_network_security_group",
+          "name": "api_gateway_nsg"
+        },
+        {
+          "type": "azurerm_storage_account",
+          "name": "trading_storage"
+        },
+        {
+          "type": "azurerm_storage_account_network_rules",
+          "name": "trading_storage_rules"
+        },
+        {
+          "type": "random_string",
+          "name": "storage_suffix"
+        },
+        {
+          "type": "azurerm_key_vault",
+          "name": "trading_keyvault"
+        },
+        {
+          "type": "random_string",
+          "name": "kv_suffix"
+        },
+        {
+          "type": "azurerm_mssql_server",
+          "name": "trading_sql_server"
+        },
+        {
+          "type": "azurerm_mssql_database",
+          "name": "trading_database"
+        },
+        {
+          "type": "azurerm_mssql_server_security_alert_policy",
+          "name": "trading_sql_alert"
+        },
+        {
+          "type": "random_string",
+          "name": "sql_suffix"
+        },
+        {
+          "type": "azurerm_redis_cache",
+          "name": "market_data_cache"
+        },
+        {
+          "type": "random_string",
+          "name": "redis_suffix"
+        },
+        {
+          "type": "azurerm_service_plan",
+          "name": "trading_app_plan"
+        },
+        {
+          "type": "azurerm_linux_web_app",
+          "name": "trading_web_frontend"
+        },
+        {
+          "type": "random_string",
+          "name": "webapp_suffix"
+        },
+        {
+          "type": "azurerm_linux_function_app",
+          "name": "portfolio_service"
+        },
+        {
+          "type": "random_string",
+          "name": "func_suffix"
+        },
+        {
+          "type": "azurerm_container_group",
+          "name": "trading_engine"
+        },
+        {
+          "type": "azurerm_api_management",
+          "name": "trading_api_gateway"
+        },
+        {
+          "type": "random_string",
+          "name": "apim_suffix"
+        },
+        {
+          "type": "azurerm_cdn_profile",
+          "name": "trading_cdn_profile"
+        },
+        {
+          "type": "azurerm_cdn_endpoint",
+          "name": "trading_cdn"
+        },
+        {
+          "type": "random_string",
+          "name": "cdn_suffix"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 40,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 51,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 157,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

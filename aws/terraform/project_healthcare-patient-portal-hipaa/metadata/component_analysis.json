@@ -1,0 +1,298 @@
+{
+  "original_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_ec2_instance",
+      "purpose": "Hosts the patient portal web application with load balancing for high availability",
+      "dependencies": [
+        "database_tier",
+        "file_storage"
+      ],
+      "security_considerations": [
+        "SSL/TLS encryption",
+        "WAF protection",
+        "session management",
+        "input validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "application_load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Distributes traffic across web servers and terminates SSL connections",
+      "dependencies": [
+        "web_application_tier"
+      ],
+      "security_considerations": [
+        "SSL certificate management",
+        "security headers",
+        "DDoS protection"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "database_tier",
+      "service_type": "aws_rds_mysql",
+      "purpose": "Stores patient data, appointments, and user authentication information with encryption at rest",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption at rest",
+        "encryption in transit",
+        "database access controls",
+        "backup encryption"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "file_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Secure storage for medical documents, test results, and patient-uploaded files",
+      "dependencies": [],
+      "security_considerations": [
+        "server-side encryption",
+        "access logging",
+        "versioning",
+        "lifecycle policies"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "audit_logging",
+      "service_type": "aws_cloudwatch_logs",
+      "purpose": "Centralized logging for HIPAA audit trail requirements and security monitoring",
+      "dependencies": [
+        "web_application_tier",
+        "database_tier"
+      ],
+      "security_considerations": [
+        "log encryption",
+        "access controls",
+        "retention policies",
+        "integrity monitoring"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Encrypted backup storage for database and file backups with cross-region replication",
+      "dependencies": [
+        "database_tier",
+        "file_storage"
+      ],
+      "security_considerations": [
+        "cross-region encryption",
+        "access controls",
+        "versioning",
+        "MFA delete protection"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_ec2_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "application_load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 0.6
+    },
+    {
+      "name": "database_tier",
+      "service_type": "aws_rds_mysql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "file_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "audit_logging",
+      "service_type": "aws_cloudwatch_logs",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 461,
+      "resource_count": 33,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "hipaa_vpc"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "hipaa_igw"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_subnet_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_subnet_2"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_app_subnet_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_app_subnet_2"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_data_subnet_1"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_data_subnet_2"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public_rt"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_rta_1"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_rta_2"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "alb_sg"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "web_sg"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "db_sg"
+        },
+        {
+          "type": "aws_lb",
+          "name": "hipaa_alb"
+        },
+        {
+          "type": "aws_lb_target_group",
+          "name": "web_tg"
+        },
+        {
+          "type": "aws_lb_listener",
+          "name": "web_listener"
+        },
+        {
+          "type": "aws_instance",
+          "name": "web_server_1"
+        },
+        {
+          "type": "aws_instance",
+          "name": "web_server_2"
+        },
+        {
+          "type": "aws_lb_target_group_attachment",
+          "name": "web_tg_attachment_1"
+        },
+        {
+          "type": "aws_lb_target_group_attachment",
+          "name": "web_tg_attachment_2"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "hipaa_db_subnet_group"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "hipaa_database"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "file_storage"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "file_storage_versioning"
+        },
+        {
+          "type": "aws_s3_bucket_server_side_encryption_configuration",
+          "name": "file_storage_encryption"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "backup_storage"
+        },
+        {
+          "type": "aws_s3_bucket_public_access_block",
+          "name": "backup_storage_pab"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "backup_storage_versioning"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "hipaa_audit_logs"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "cloudtrail_logs"
+        },
+        {
+          "type": "aws_cloudtrail",
+          "name": "hipaa_audit_trail"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 84,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 60,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 139,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

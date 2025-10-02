@@ -1,0 +1,416 @@
+{
+  "project_info": {
+    "project_id": "gcp-digital-asset-trading",
+    "project_name": "Digital Asset Trading Platform",
+    "description": "A secure, high-performance cryptocurrency and digital asset trading platform that handles real-time order matching, portfolio management, and regulatory compliance. The platform supports spot trading, order book management, user authentication, and transaction settlement with built-in risk management and audit trails for financial regulatory compliance.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "A fintech startup launching a regulated cryptocurrency exchange platform that needs to handle thousands of concurrent traders, process real-time market data, maintain order books, and ensure compliance with financial regulations while providing sub-millisecond trading execution.",
+    "components": [
+      {
+        "name": "trading_engine_cluster",
+        "service_type": "google_compute_instance_group",
+        "purpose": "High-performance compute cluster running the core trading engine for order matching and execution",
+        "dependencies": [
+          "market_data_cache",
+          "trading_database"
+        ],
+        "security_considerations": [
+          "DDoS protection",
+          "encrypted inter-service communication",
+          "rate limiting"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "market_data_cache",
+        "service_type": "google_redis_instance",
+        "purpose": "In-memory cache for real-time market data, order books, and price feeds",
+        "dependencies": [],
+        "security_considerations": [
+          "VPC isolation",
+          "authentication",
+          "encryption in transit"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "trading_database",
+        "service_type": "google_sql_database_instance",
+        "purpose": "Primary database storing user accounts, trading history, balances, and transaction records",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption at rest",
+          "backup encryption",
+          "access controls",
+          "audit logging"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "google_cloud_run",
+        "purpose": "REST API gateway handling user authentication, order placement, and portfolio queries",
+        "dependencies": [
+          "trading_engine_cluster",
+          "trading_database"
+        ],
+        "security_considerations": [
+          "JWT authentication",
+          "API rate limiting",
+          "input validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "compliance_storage",
+        "service_type": "google_storage_bucket",
+        "purpose": "Immutable storage for trade records, audit logs, and regulatory compliance data",
+        "dependencies": [
+          "trading_database"
+        ],
+        "security_considerations": [
+          "object versioning",
+          "retention policies",
+          "access logging",
+          "encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "google_compute_global_forwarding_rule",
+        "purpose": "Global load balancer distributing trading requests across multiple regions",
+        "dependencies": [
+          "api_gateway"
+        ],
+        "security_considerations": [
+          "SSL termination",
+          "DDoS protection",
+          "geographic restrictions"
+        ],
+        "configuration_complexity": "low"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with multiple subnets across regions for high availability and low latency trading",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Load balancer in public zone routes to API gateway in private zone",
+        "Trading engine cluster communicates with cache and database in data zone",
+        "All inter-service communication encrypted"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 8,
+      "storage_buckets": 3,
+      "databases": 2,
+      "networking_components": 12
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:18:37.987678"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "title": "No Project Wide SSH Keys",
+        "description": "The trading engine cluster compute instances allow project-wide SSH keys, which creates a security risk by enabling broader access than necessary. This violates the principle of least privilege and could allow unauthorized access to critical trading infrastructure.",
+        "severity": "medium",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Configure compute instances with block-project-ssh-keys set to false",
+        "business_impact": "Unauthorized SSH access to trading engine could lead to market manipulation, data theft, or system compromise affecting trading operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#\n  good:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          block-project-ssh-keys = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_service_account\" \"default\" {\n        account_id   = \"service_account_id\"\n        display_name = \"Service Account\"\n      }\n\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          block-project-ssh-keys = false\n        }\n      }",
+        "file_name": "no_project_wide_ssh_keys.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set metadata block-project-ssh-keys = false on trading engine instances",
+          "explanation": "This allows any project-wide SSH key to access the trading engine, bypassing instance-specific access controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-ENABLE_PG_TEMP_FILE_LOGGING",
+        "title": "Enable PostgreSQL Temp File Logging",
+        "description": "The trading database lacks proper temporary file logging configuration, which is critical for monitoring database performance and detecting potential security issues in a financial trading system.",
+        "severity": "medium",
+        "affected_component": "trading_database",
+        "injection_strategy": "Configure PostgreSQL instance without log_temp_files flag or with inappropriate value",
+        "business_impact": "Inability to monitor database performance issues or detect potential data exfiltration attempts through temporary file operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_temp_files\"\n            value = \"0\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n      }",
+        "file_name": "enable_pg_temp_file_logging.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Omit log_temp_files database flag or set to -1 in trading database configuration",
+          "explanation": "Without proper temp file logging, suspicious database operations may go undetected in the trading system"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+        "title": "No Public Ingress",
+        "description": "Firewall rules allow unrestricted public access (0.0.0.0/0) to internal trading infrastructure, exposing critical systems to internet-based attacks.",
+        "severity": "medium",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Configure firewall rules with source_ranges = [\"0.0.0.0/0\"]",
+        "business_impact": "Direct internet exposure of trading engine could lead to DDoS attacks, unauthorized access, or system compromise affecting market operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall#source_ranges\n    - https://www.terraform.io/docs/providers/google/r/compute_firewall.html\n  good:\n    - |-\n      resource \"google_compute_firewall\" \"good_example\" {\n        source_ranges = [\"1.2.3.4/32\"]\n        allow {\n          protocol = \"icmp\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_firewall\" \"bad_example\" {\n        source_ranges = [\"0.0.0.0/0\"]\n        allow {\n          protocol = \"icmp\"\n        }\n      }",
+        "file_name": "no_public_ingress.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create firewall rules with source_ranges = [\"0.0.0.0/0\"] for trading infrastructure",
+          "explanation": "This exposes internal trading systems directly to the internet without proper access controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "title": "No User Granted Permissions",
+        "description": "IAM permissions are granted directly to individual users rather than groups or service accounts, violating best practices for access management in a financial trading platform.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Configure IAM bindings with user: principals instead of service accounts or groups",
+        "business_impact": "Difficult to manage and audit user access, potential for privilege escalation and compliance violations in financial operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://www.terraform.io/docs/providers/google/d/iam_policy.html#members\n  good:\n    - |-\n      resource \"google_project_iam_binding\" \"good_example\" {\n        members = [\n          \"group:test@example.com\",\n        ]\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_binding\" \"bad_example\" {\n        members = [\n          \"user:test@example.com\",\n        ]\n      }",
+        "file_name": "no_user_granted_permissions.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Grant IAM permissions using member = \"user:trader@company.com\" format",
+          "explanation": "Direct user permissions are harder to manage and audit, especially in regulated financial environments"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_FLOW_LOGS",
+        "title": "Enable Subnetwork Flow Logs",
+        "description": "VPC subnetworks lack flow logging, which is critical for monitoring network traffic and detecting suspicious activities in a financial trading platform.",
+        "severity": "medium",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Configure subnetworks without flow logs or with enable_flow_logs = false",
+        "business_impact": "Inability to detect network-based attacks, data exfiltration, or suspicious trading patterns, compromising security monitoring and regulatory compliance",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork#enable_flow_logs\n  good:\n    - |-\n      resource \"google_compute_subnetwork\" \"good_example_with_log_config\" {\n        name          = \"test-subnetwork\"\n        ip_cidr_range = \"10.2.0.0/16\"\n        region        = \"us-central1\"\n        network       = google_compute_network.custom-test.id\n        log_config {\n          aggregation_interval = \"INTERVAL_10_MIN\"\n          flow_sampling        = 0.5\n          metadata             = \"INCLUDE_ALL_METADATA\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_subnetwork\" \"bad_example\" {\n        name             = \"test-subnetwork\"\n        ip_cidr_range    = \"10.2.0.0/16\"\n        region           = \"us-central1\"\n        network          = google_compute_network.custom-test.id\n        enable_flow_logs = false\n      }",
+        "file_name": "enable_subnetwork_flow_logs.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure VPC subnetworks without log_config block or with enable_flow_logs = false",
+          "explanation": "Without flow logs, network traffic analysis and threat detection capabilities are severely limited"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-RESTRICT_SSH_ACCESS",
+        "title": "Restrict SSH Access",
+        "description": "SSH access to compute instances is not properly restricted, allowing connections from any IP address (0.0.0.0/0) which poses a significant security risk to the trading infrastructure.",
+        "severity": "medium",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Configure SSH firewall rules with source_ranges = [\"0.0.0.0/0\"]",
+        "business_impact": "Unrestricted SSH access could allow attackers to compromise trading servers, manipulate orders, or steal sensitive financial data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall\n  good:\n    - |-\n      resource \"google_compute_firewall\" \"good_example\" {\n        name    = \"allow-ssh-from-specific-ip\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"22\"]\n        }\n\n        source_ranges = [\"192.168.1.0/24\"]\n        target_tags   = [\"ssh-allowed\"]\n      }\n  bad:\n    - |-\n      resource \"google_compute_firewall\" \"bad_example\" {\n        name    = \"allow-ssh-from-anywhere\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"22\"]\n        }\n\n        source_ranges = [\"0.0.0.0/0\"]\n        target_tags   = [\"ssh-allowed\"]\n      }",
+        "file_name": "restrict_ssh_access.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create SSH firewall rules with source_ranges = [\"0.0.0.0/0\"] for trading instances",
+          "explanation": "This allows SSH connections from anywhere on the internet, creating a major attack vector"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-PG_LOG_ERRORS",
+        "title": "PostgreSQL Log Errors",
+        "description": "The trading database is not configured to properly log errors and warnings, which is essential for monitoring database health and detecting security incidents in financial systems.",
+        "severity": "medium",
+        "affected_component": "trading_database",
+        "injection_strategy": "Configure PostgreSQL with log_min_messages set to PANIC instead of WARNING",
+        "business_impact": "Critical database errors and security events may go unnoticed, potentially leading to data corruption, failed trades, or undetected breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"WARNING\"\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"db\" {\n        name             = \"db\"\n        database_version = \"POSTGRES_12\"\n        region           = \"us-central1\"\n        settings {\n          database_flags {\n            name  = \"log_min_messages\"\n            value = \"PANIC\"\n          }\n        }\n      }",
+        "file_name": "pg_log_errors.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set log_min_messages to PANIC in database configuration",
+          "explanation": "This suppresses important error and warning messages that are crucial for monitoring trading database health"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+        "title": "Enable Shielded VM vTPM",
+        "description": "Compute instances in the trading engine cluster do not have virtual Trusted Platform Module (vTPM) enabled, reducing the security posture against advanced persistent threats and boot-level attacks.",
+        "severity": "medium",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Configure compute instances with enable_vtpm = false in shielded_instance_config",
+        "business_impact": "Increased vulnerability to rootkits, boot-level malware, and advanced attacks that could compromise the integrity of trading operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#enable_vtpm\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_vtpm = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_vtpm = false\n        }\n      }",
+        "file_name": "enable_shielded_vm_vtpm.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_vtpm = false in shielded_instance_config for trading engine instances",
+          "explanation": "Disabling vTPM removes important hardware-based security protections against sophisticated attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "GOOGLE-SQL-ENABLE_PG_TEMP_FILE_LOGGING",
+        "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+        "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_FLOW_LOGS",
+        "GOOGLE-COMPUTE-RESTRICT_SSH_ACCESS",
+        "GOOGLE-SQL-PG_LOG_ERRORS",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_name": "digital-asset-trading-platform",
+    "architecture_type": "microservices",
+    "cloud_provider": "gcp",
+    "iac_tool": "terraform",
+    "total_resources": 28,
+    "resource_breakdown": {
+      "compute_resources": 6,
+      "networking_resources": 10,
+      "storage_resources": 3,
+      "database_resources": 3,
+      "security_resources": 3,
+      "monitoring_resources": 1,
+      "iam_resources": 2
+    },
+    "components_implemented": [
+      {
+        "name": "trading_engine_cluster",
+        "service_type": "google_compute_instance_group",
+        "resources": [
+          "google_compute_instance_template.trading_engine_template",
+          "google_compute_instance_group_manager.trading_engine_cluster"
+        ],
+        "status": "implemented"
+      },
+      {
+        "name": "market_data_cache",
+        "service_type": "google_redis_instance",
+        "resources": [
+          "google_redis_instance.market_data_cache"
+        ],
+        "status": "implemented"
+      },
+      {
+        "name": "trading_database",
+        "service_type": "google_sql_database_instance",
+        "resources": [
+          "google_sql_database_instance.trading_database",
+          "google_sql_database.trading_db",
+          "google_sql_user.trading_user"
+        ],
+        "status": "implemented"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "google_cloud_run",
+        "resources": [
+          "google_cloud_run_service.api_gateway"
+        ],
+        "status": "implemented"
+      },
+      {
+        "name": "compliance_storage",
+        "service_type": "google_storage_bucket",
+        "resources": [
+          "google_storage_bucket.compliance_storage",
+          "google_storage_bucket.audit_logs",
+          "google_storage_bucket.trade_records"
+        ],
+        "status": "implemented"
+      },
+      {
+        "name": "load_balancer",
+        "service_type": "google_compute_global_forwarding_rule",
+        "resources": [
+          "google_compute_global_forwarding_rule.load_balancer",
+          "google_compute_backend_service.api_backend",
+          "google_compute_url_map.load_balancer",
+          "google_compute_target_http_proxy.load_balancer_proxy"
+        ],
+        "status": "implemented"
+      }
+    ],
+    "vulnerabilities_injected": 8,
+    "estimated_monthly_cost": "$2500-4000",
+    "deployment_time_estimate": "15-20 minutes",
+    "supported_regions": [
+      "us-central1",
+      "us-east1",
+      "europe-west1",
+      "asia-southeast1"
+    ],
+    "compliance_features": [
+      "audit_logging",
+      "data_retention",
+      "encryption_at_rest",
+      "vpc_isolation"
+    ],
+    "high_availability": true,
+    "auto_scaling": true,
+    "backup_strategy": "automated_daily_backups"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 25,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

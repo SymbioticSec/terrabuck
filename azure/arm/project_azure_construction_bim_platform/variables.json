@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "East US"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "sqlAdminUsername": {
+      "value": "bimsqladmin"
+    },
+    "sqlAdminPassword": {
+      "value": "BIMPlatform2024!"
+    },
+    "appServicePlanSku": {
+      "value": "S1"
+    },
+    "storageAccountType": {
+      "value": "Standard_LRS"
+    },
+    "redisCacheSku": {
+      "value": "Basic"
+    },
+    "applicationGatewayTier": {
+      "value": "Standard_v2"
+    }
+  }
+}

@@ -1,0 +1,384 @@
+{
+  "project_info": {
+    "project_id": "global-content-delivery-platform",
+    "project_name": "Global Content Delivery Platform",
+    "description": "A scalable content delivery platform for a media company that serves video content, images, and documents to global audiences. The platform includes content upload processing, global distribution via CDN, user authentication, and analytics tracking. Designed to handle high-traffic content delivery with automatic scaling and cost optimization.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "distributed_content_delivery",
+    "business_context": "A growing media company needs to deliver video content, marketing materials, and documentation to customers worldwide. They require fast content delivery, automatic video transcoding, user access controls, and detailed analytics on content consumption patterns.",
+    "components": [
+      {
+        "name": "content_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Primary storage for original content uploads with versioning and lifecycle policies",
+        "dependencies": [],
+        "security_considerations": [
+          "bucket_policy_restrictions",
+          "encryption_at_rest",
+          "access_logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "content_processing",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless functions for image resizing, video transcoding, and content optimization triggered by S3 uploads",
+        "dependencies": [
+          "content_storage",
+          "processed_content_storage"
+        ],
+        "security_considerations": [
+          "iam_execution_roles",
+          "vpc_isolation",
+          "environment_variable_encryption"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "processed_content_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Storage for processed and optimized content ready for CDN distribution",
+        "dependencies": [
+          "content_processing"
+        ],
+        "security_considerations": [
+          "cross_region_replication",
+          "bucket_versioning",
+          "access_controls"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "global_cdn",
+        "service_type": "aws_cloudfront",
+        "purpose": "Global content distribution network for fast content delivery with caching and edge locations",
+        "dependencies": [
+          "processed_content_storage",
+          "api_gateway"
+        ],
+        "security_considerations": [
+          "origin_access_identity",
+          "ssl_certificates",
+          "geo_restrictions"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "user_database",
+        "service_type": "aws_rds",
+        "purpose": "PostgreSQL database storing user accounts, content metadata, and access permissions",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "vpc_isolation",
+          "backup_encryption",
+          "parameter_group_hardening"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API for content management, user authentication, and analytics data collection",
+        "dependencies": [
+          "user_database",
+          "backend_services"
+        ],
+        "security_considerations": [
+          "api_key_management",
+          "throttling_limits",
+          "cors_configuration"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "backend_services",
+        "service_type": "aws_ecs",
+        "purpose": "Containerized application services for user management, content cataloging, and analytics processing",
+        "dependencies": [
+          "user_database"
+        ],
+        "security_considerations": [
+          "task_role_permissions",
+          "secrets_management",
+          "network_isolation"
+        ],
+        "configuration_complexity": "high"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancers and NAT gateways, private subnets for ECS tasks and RDS instances",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "CloudFront connects to S3 and API Gateway",
+        "API Gateway triggers Lambda and connects to ECS",
+        "ECS services communicate with RDS in isolated subnets",
+        "Lambda functions process content between S3 buckets"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 6,
+      "databases": 3,
+      "networking_components": 8,
+      "serverless_functions": 3,
+      "cdn_distributions": 1,
+      "api_gateways": 2,
+      "container_services": 3
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T22:57:00.724186"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-ENABLE_BUCKET_ENCRYPTION",
+        "title": "Enable Bucket Encryption",
+        "description": "S3 buckets storing content uploads and processed media files lack server-side encryption configuration, exposing sensitive content data at rest. This vulnerability affects both the primary content storage and processed content storage buckets.",
+        "severity": "medium",
+        "affected_component": "content_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted media content and user uploads could be exposed if AWS storage is compromised, leading to data breaches and compliance violations",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        bucket = \"mybucket\"\n\n        server_side_encryption_configuration {\n          rule {\n            apply_server_side_encryption_by_default {\n              kms_master_key_id = \"arn\"\n              sse_algorithm     = \"aws:kms\"\n            }\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"mybucket\"\n      }",
+        "file_name": "enable_bucket_encryption.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 buckets without server_side_encryption_configuration block",
+          "explanation": "Missing encryption configuration leaves content data unprotected at rest in S3 storage"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_VERSIONING",
+        "title": "Enable Versioning",
+        "description": "Content storage buckets lack versioning configuration, preventing recovery from accidental deletions or malicious modifications of media content and processed assets.",
+        "severity": "medium",
+        "affected_component": "processed_content_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Loss of content versioning could result in permanent data loss, inability to recover from content corruption, and disruption of content delivery services",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        versioning {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n\n      }",
+        "file_name": "enable_versioning.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy S3 buckets without versioning configuration block",
+          "explanation": "Without versioning, content modifications are permanent and cannot be rolled back"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ECS-NO_PLAINTEXT_SECRETS",
+        "title": "No Plaintext Secrets",
+        "description": "ECS task definitions for backend services contain hardcoded database credentials and API keys in environment variables, exposing sensitive authentication data in container configurations.",
+        "severity": "medium",
+        "affected_component": "backend_services",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Exposed database credentials could allow unauthorized access to user data, content metadata, and analytics information",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_ecs_task_definition\" \"good_example\" {\n        container_definitions = <<EOF\n       [\n         {\n           \"name\": \"my_service\",\n           \"environment\": [\n             { \"name\": \"ENVIRONMENT\", \"value\": \"development\" }\n           ]\n         }\n       ]\n       EOF\n      }\n  bad:\n    - |-\n      resource \"aws_ecs_task_definition\" \"bad_example\" {\n        container_definitions = <<EOF\n       [\n         {\n           \"name\": \"my_service\",\n           \"environment\": [\n             { \"name\": \"ENVIRONMENT\", \"value\": \"development\" },\n             { \"name\": \"DATABASE_PASSWORD\", \"value\": \"oh no D:\"}\n           ]\n         }\n       ]\n       EOF\n      }",
+        "file_name": "no_plaintext_secrets.yaml",
+        "service": "ecs",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Include sensitive values like DATABASE_PASSWORD directly in container environment variables",
+          "explanation": "Plaintext secrets in task definitions are visible to anyone with ECS access and stored in logs"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "title": "Performance Insights Encryption Customer Key",
+        "description": "RDS PostgreSQL database has Performance Insights enabled but uses default AWS-managed encryption instead of customer-managed KMS keys, reducing control over database monitoring data encryption.",
+        "severity": "medium",
+        "affected_component": "user_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Database performance metrics and query patterns could be exposed through AWS-managed keys, potentially revealing application behavior and data access patterns",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"good_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab\"\n      }\n  bad:\n    - |-\n      resource \"aws_rds_cluster_instance\" \"bad_example\" {\n        name                            = \"bar\"\n        performance_insights_enabled    = true\n        performance_insights_kms_key_id = \"\"\n      }",
+        "file_name": "performance_insights_encryption_customer_key.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Enable performance_insights_enabled without specifying performance_insights_kms_key_id",
+          "explanation": "Performance Insights data uses default encryption instead of customer-controlled keys"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "title": "Use Secure Tls Policy",
+        "description": "CloudFront distribution for global content delivery uses outdated TLS protocol versions, allowing connections with weak encryption that could be intercepted or compromised.",
+        "severity": "medium",
+        "affected_component": "global_cdn",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Weak TLS protocols expose content delivery traffic to man-in-the-middle attacks, potentially compromising user data and media content in transit",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_cloudfront_distribution\" \"good_example\" {\n        viewer_certificate {\n          cloudfront_default_certificate = false\n          minimum_protocol_version       = \"TLSv1.2_2021\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_cloudfront_distribution\" \"bad_example\" {\n        viewer_certificate {\n          cloudfront_default_certificate = false\n          minimum_protocol_version       = \"TLSv1.0\"\n        }\n      }",
+        "file_name": "use_secure_tls_policy.yaml",
+        "service": "cloudfront",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set minimum_protocol_version to TLSv1.0 or omit the setting entirely",
+          "explanation": "Older TLS versions have known vulnerabilities and weak cipher suites"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-REQUIRE_VPC_FLOW_LOGS_FOR_ALL_VPCS",
+        "title": "Require Vpc Flow Logs For All Vpcs",
+        "description": "VPC hosting the content delivery infrastructure lacks flow logs configuration, preventing network traffic monitoring and security incident detection across the multi-AZ deployment.",
+        "severity": "medium",
+        "affected_component": "backend_services",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without VPC flow logs, security teams cannot detect suspicious network activity, DDoS attacks, or unauthorized access attempts to content delivery infrastructure",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_vpc\" \"example\" {\n        cidr_block = \"10.0.0.0/16\"\n      }\n\n      resource \"aws_flow_log\" \"example\" {\n        log_group_name = \"example\"\n        traffic_type   = \"ALL\"\n        vpc_id         = aws_vpc.example.id\n      }\n  bad:\n    - |-\n      resource \"aws_vpc\" \"example\" {\n        cidr_block = \"10.0.0.0/16\"\n      }",
+        "file_name": "require_vpc_flow_logs_for_all_vpcs.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create VPC resources without corresponding aws_flow_log resources",
+          "explanation": "Missing flow logs eliminate network traffic visibility and security monitoring capabilities"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-NO_POLICY_WILDCARDS",
+        "title": "No Policy Wildcards",
+        "description": "IAM policies for content processing Lambda functions and ECS services use wildcard permissions, granting excessive access to AWS resources beyond what's required for content delivery operations.",
+        "severity": "medium",
+        "affected_component": "content_processing",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Overprivileged service roles could be exploited to access unrelated AWS resources, escalate privileges, or perform unauthorized actions across the AWS account",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      data \"aws_iam_policy_document\" \"s3_policy\" {\n        statement {\n          principals {\n            type        = \"AWS\"\n            identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n          }\n          actions   = [\"s3:GetObject\"]\n          resources = [aws_s3_bucket.example.arn]\n        }\n      }\n  bad:\n    - |-\n      data \"aws_iam_policy_document\" \"s3_policy\" {\n        statement {\n          principals {\n            type        = \"AWS\"\n            identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n          }\n          actions   = [\"s3:*\"]\n          resources = [\"*\"]\n        }\n      }",
+        "file_name": "no_policy_wildcards.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Use wildcard actions like 's3:*' and wildcard resources like '*' in IAM policy documents",
+          "explanation": "Wildcard permissions violate the principle of least privilege and create unnecessary security exposure"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ECR-ENFORCE_IMMUTABLE_REPOSITORY",
+        "title": "Enforce Immutable Repository",
+        "description": "ECR repositories storing container images for backend services allow tag mutability, enabling potential supply chain attacks through image tag manipulation and unauthorized image updates.",
+        "severity": "medium",
+        "affected_component": "backend_services",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Mutable container image tags could allow attackers to replace legitimate images with malicious versions, compromising the content delivery platform's security",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_ecr_repository\" \"good_example\" {\n        name                 = \"bar\"\n        image_tag_mutability = \"IMMUTABLE\"\n      }\n  bad:\n    - |-\n      resource \"aws_ecr_repository\" \"bad_example\" {\n        name                 = \"bar\"\n        image_tag_mutability = \"MUTABLE\"\n      }",
+        "file_name": "enforce_immutable_repository.yaml",
+        "service": "ecr",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set image_tag_mutability to 'MUTABLE' or omit the setting entirely",
+          "explanation": "Mutable tags allow the same tag to point to different images, creating supply chain security risks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-S3-ENABLE_BUCKET_ENCRYPTION",
+        "AWS-S3-ENABLE_VERSIONING",
+        "AWS-ECS-NO_PLAINTEXT_SECRETS",
+        "AWS-RDS-PERFORMANCE_INSIGHTS_ENCRYPTION_CUSTOMER_KEY",
+        "AWS-CLOUDFRONT-USE_SECURE_TLS_POLICY",
+        "AWS-EC2-REQUIRE_VPC_FLOW_LOGS_FOR_ALL_VPCS",
+        "AWS-IAM-NO_POLICY_WILDCARDS",
+        "AWS-ECR-ENFORCE_IMMUTABLE_REPOSITORY"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "s3",
+        "ec2",
+        "iam",
+        "cloudfront",
+        "rds",
+        "ecr",
+        "ecs"
+      ],
+      "services_covered": [
+        "s3",
+        "ec2",
+        "iam",
+        "cloudfront",
+        "rds",
+        "ecr",
+        "ecs"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_id": "global-content-delivery-platform",
+    "terraform_version": "~> 1.0",
+    "aws_provider_version": "~> 5.0",
+    "total_resources": 25,
+    "resource_breakdown": {
+      "networking": 7,
+      "storage": 2,
+      "compute": 6,
+      "database": 2,
+      "security": 4,
+      "monitoring": 1,
+      "api": 2,
+      "cdn": 1
+    },
+    "estimated_monthly_cost": "$150-300",
+    "deployment_time": "10-15 minutes",
+    "components_implemented": [
+      "content_storage",
+      "content_processing",
+      "processed_content_storage",
+      "global_cdn",
+      "user_database",
+      "api_gateway",
+      "backend_services"
+    ],
+    "vulnerabilities_injected": 8,
+    "security_tools_detection": [
+      "trivy",
+      "checkov",
+      "tfsec"
+    ]
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 28,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

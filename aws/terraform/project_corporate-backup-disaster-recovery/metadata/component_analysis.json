@@ -1,0 +1,281 @@
+{
+  "original_components": [
+    {
+      "name": "primary_backup_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Primary backup storage with versioning and lifecycle policies for daily automated backups",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_logging",
+        "versioning_protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "disaster_recovery_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Cross-region replicated storage for disaster recovery with long-term retention",
+      "dependencies": [
+        "primary_backup_storage"
+      ],
+      "security_considerations": [
+        "cross_region_replication",
+        "encryption_in_transit",
+        "immutable_backups"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "backup_orchestration",
+      "service_type": "aws_lambda",
+      "purpose": "Serverless functions to orchestrate backup jobs, monitor status, and handle notifications",
+      "dependencies": [
+        "primary_backup_storage",
+        "backup_metadata_db"
+      ],
+      "security_considerations": [
+        "iam_role_permissions",
+        "vpc_execution",
+        "secrets_management"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "backup_metadata_db",
+      "service_type": "aws_rds",
+      "purpose": "Database storing backup metadata, job status, and restore point information",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "backup_retention",
+        "access_control"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "backup_gateway",
+      "service_type": "aws_ec2",
+      "purpose": "Secure gateway server for on-premises backup agents and restore operations",
+      "dependencies": [
+        "primary_backup_storage",
+        "backup_orchestration"
+      ],
+      "security_considerations": [
+        "security_groups",
+        "key_management",
+        "network_isolation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "monitoring_dashboard",
+      "service_type": "aws_cloudwatch",
+      "purpose": "Centralized monitoring and alerting for backup job status and system health",
+      "dependencies": [
+        "backup_orchestration",
+        "backup_metadata_db"
+      ],
+      "security_considerations": [
+        "log_encryption",
+        "access_control",
+        "alert_notifications"
+      ],
+      "configuration_complexity": "low"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "primary_backup_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "disaster_recovery_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_orchestration",
+      "service_type": "aws_lambda",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_metadata_db",
+      "service_type": "aws_rds",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "backup_gateway",
+      "service_type": "aws_ec2",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "monitoring_dashboard",
+      "service_type": "aws_cloudwatch",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 475,
+      "resource_count": 30,
+      "resources_found": [
+        {
+          "type": "aws_vpc",
+          "name": "corporate_backup_vpc"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "public_subnet"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "private_subnet"
+        },
+        {
+          "type": "aws_subnet",
+          "name": "data_subnet"
+        },
+        {
+          "type": "aws_internet_gateway",
+          "name": "corporate_backup_igw"
+        },
+        {
+          "type": "aws_route_table",
+          "name": "public_rt"
+        },
+        {
+          "type": "aws_route_table_association",
+          "name": "public_rta"
+        },
+        {
+          "type": "aws_network_acl",
+          "name": "backup_gateway_nacl"
+        },
+        {
+          "type": "aws_network_acl_rule",
+          "name": "backup_gateway_ingress"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "backup_gateway_sg"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "rds_sg"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "primary_backup_storage"
+        },
+        {
+          "type": "aws_s3_bucket_public_access_block",
+          "name": "primary_backup_pab"
+        },
+        {
+          "type": "aws_s3_bucket_versioning",
+          "name": "primary_backup_versioning"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "disaster_recovery_storage"
+        },
+        {
+          "type": "aws_s3_bucket_replication_configuration",
+          "name": "primary_to_dr"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "replication_role"
+        },
+        {
+          "type": "aws_db_subnet_group",
+          "name": "backup_metadata_subnet_group"
+        },
+        {
+          "type": "aws_db_instance",
+          "name": "backup_metadata_db"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "lambda_execution_role"
+        },
+        {
+          "type": "aws_lambda_function",
+          "name": "backup_orchestration"
+        },
+        {
+          "type": "aws_security_group",
+          "name": "lambda_sg"
+        },
+        {
+          "type": "aws_instance",
+          "name": "backup_gateway"
+        },
+        {
+          "type": "aws_iam_instance_profile",
+          "name": "backup_gateway_profile"
+        },
+        {
+          "type": "aws_iam_role",
+          "name": "backup_gateway_role"
+        },
+        {
+          "type": "aws_cloudtrail",
+          "name": "backup_monitoring"
+        },
+        {
+          "type": "aws_s3_bucket",
+          "name": "cloudtrail_logs"
+        },
+        {
+          "type": "aws_iam_account_password_policy",
+          "name": "backup_system_policy"
+        },
+        {
+          "type": "aws_cloudwatch_log_group",
+          "name": "backup_logs"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 70,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 50,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 160,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

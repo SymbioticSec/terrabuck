@@ -1,0 +1,96 @@
+Outputs:
+  VPCId:
+    Description: "ID of the VPC"
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+
+  PublicSubnetId:
+    Description: "ID of the public subnet"
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet-ID"
+
+  PrivateSubnetId:
+    Description: "ID of the private subnet"
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet-ID"
+
+  ArtifactBucketName:
+    Description: "Name of the S3 bucket for artifacts"
+    Value: !Ref ArtifactStorageBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-ArtifactBucket"
+
+  SourceRepositoryName:
+    Description: "Name of the CodeCommit repository"
+    Value: !Ref SourceRepository
+    Export:
+      Name: !Sub "${AWS::StackName}-SourceRepo"
+
+  SourceRepositoryCloneUrl:
+    Description: "Clone URL for the CodeCommit repository"
+    Value: !GetAtt SourceRepository.CloneUrlHttp
+    Export:
+      Name: !Sub "${AWS::StackName}-SourceRepoCloneUrl"
+
+  BuildProjectName:
+    Description: "Name of the CodeBuild project"
+    Value: !Ref BuildProject
+    Export:
+      Name: !Sub "${AWS::StackName}-BuildProject"
+
+  PipelineName:
+    Description: "Name of the CodePipeline"
+    Value: !Ref Pipeline
+    Export:
+      Name: !Sub "${AWS::StackName}-Pipeline"
+
+  CodeDeployApplicationName:
+    Description: "Name of the CodeDeploy application"
+    Value: !Ref CodeDeployApplication
+    Export:
+      Name: !Sub "${AWS::StackName}-CodeDeployApp"
+
+  AutoScalingGroupName:
+    Description: "Name of the Auto Scaling Group"
+    Value: !Ref AutoScalingGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-ASG"
+
+  NotificationTopicArn:
+    Description: "ARN of the SNS notification topic"
+    Value: !Ref NotificationTopic
+    Export:
+      Name: !Sub "${AWS::StackName}-NotificationTopic"
+
+  KMSKeyId:
+    Description: "ID of the KMS key for encryption"
+    Value: !Ref ArtifactEncryptionKey
+    Export:
+      Name: !Sub "${AWS::StackName}-KMSKey"
+
+  KMSKeyAlias:
+    Description: "Alias of the KMS key"
+    Value: !Ref ArtifactEncryptionKeyAlias
+    Export:
+      Name: !Sub "${AWS::StackName}-KMSKeyAlias"
+
+  BuildSecurityGroupId:
+    Description: "ID of the build security group"
+    Value: !Ref BuildSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-BuildSG"
+
+  ApplicationSecurityGroupId:
+    Description: "ID of the application security group"
+    Value: !Ref ApplicationSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-AppSG"
+
+  CloudTrailArn:
+    Description: "ARN of the CloudTrail"
+    Value: !GetAtt CloudTrail.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudTrail"

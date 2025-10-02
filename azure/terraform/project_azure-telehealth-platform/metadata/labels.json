@@ -1,0 +1,451 @@
+{
+  "project_labels": {
+    "project_id": "azure-telehealth-platform",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 3,
+        "medium": 5
+      },
+      "by_type": {
+        "access_control": 3,
+        "encryption": 2,
+        "monitoring": 2,
+        "network": 1
+      },
+      "by_trivy_service": {
+        "database": 3,
+        "storage": 2,
+        "appservice": 1,
+        "network": 1,
+        "monitor": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "AZURE-STORAGE-ENFORCE_HTTPS",
+        "AZURE-APPSERVICE-ENFORCE_HTTPS",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-DATABASE-THREAT_ALERT_EMAIL_SET",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+        "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES"
+      ],
+      "services_covered": [
+        "database",
+        "storage",
+        "appservice",
+        "network",
+        "monitor"
+      ],
+      "detection_accuracy": "95%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_access.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/azure/database"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_connectivity_to_azure",
+        "database_credentials"
+      ],
+      "mitigation_strategies": [
+        "Set public_network_access_enabled = false",
+        "Configure private endpoints",
+        "Implement VNet integration",
+        "Use Azure Private Link"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "public_network_access_enabled = true",
+        "secure_pattern": "public_network_access_enabled = false"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-STORAGE-ENFORCE_HTTPS",
+      "trivy_rule_info": {
+        "original_file": "enforce_https.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/azure/storage"
+      },
+      "vulnerability_class": "encryption_in_transit",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "HIPAA",
+        "PCI-DSS",
+        "GDPR",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_interception_capability",
+        "man_in_middle_position"
+      ],
+      "mitigation_strategies": [
+        "Set enable_https_traffic_only = true",
+        "Configure minimum TLS version",
+        "Implement certificate pinning",
+        "Use secure transport protocols"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "enable_https_traffic_only = false",
+        "secure_pattern": "enable_https_traffic_only = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-APPSERVICE-ENFORCE_HTTPS",
+      "trivy_rule_info": {
+        "original_file": "enforce_https.yaml",
+        "service_category": "appservice",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/azure/appservice"
+      },
+      "vulnerability_class": "encryption_in_transit",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "HIPAA",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access_to_function_app",
+        "http_traffic_interception"
+      ],
+      "mitigation_strategies": [
+        "Set https_only = true",
+        "Configure SSL/TLS certificates",
+        "Implement HSTS headers",
+        "Redirect HTTP to HTTPS"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "https_only parameter omitted or false",
+        "secure_pattern": "https_only = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+      "trivy_rule_info": {
+        "original_file": "enable_audit.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/azure/database"
+      },
+      "vulnerability_class": "audit_logging",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "database_access",
+        "malicious_activity"
+      ],
+      "mitigation_strategies": [
+        "Configure azurerm_mssql_server_extended_auditing_policy",
+        "Set appropriate retention periods",
+        "Configure secure audit log storage",
+        "Enable audit log monitoring"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "Missing azurerm_mssql_server_extended_auditing_policy resource",
+        "secure_pattern": "Properly configured auditing policy with storage and retention"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "monitoring",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-THREAT_ALERT_EMAIL_SET",
+      "trivy_rule_info": {
+        "original_file": "threat_alert_email_set.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/azure/database"
+      },
+      "vulnerability_class": "incident_response",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "database_threat_occurrence",
+        "security_incident"
+      ],
+      "mitigation_strategies": [
+        "Configure email_addresses in security alert policy",
+        "Set up security team distribution lists",
+        "Configure alert escalation procedures",
+        "Test alert delivery mechanisms"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "email_addresses = []",
+        "secure_pattern": "email_addresses = [\"security@company.com\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "monitoring",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/azure/storage"
+      },
+      "vulnerability_class": "cryptographic_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "PCI-DSS",
+        "HIPAA",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "deprecated_tls_client",
+        "cryptographic_attack_tools"
+      ],
+      "mitigation_strategies": [
+        "Set min_tls_version = \"TLS1_2\"",
+        "Disable legacy TLS versions",
+        "Update client applications",
+        "Monitor TLS usage patterns"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "min_tls_version = \"TLS1_0\"",
+        "secure_pattern": "min_tls_version = \"TLS1_2\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-NETWORK-SSH_BLOCKED_FROM_INTERNET",
+      "trivy_rule_info": {
+        "original_file": "ssh_blocked_from_internet.yaml",
+        "service_category": "network",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/azure/network"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "CIS_Controls"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "ssh_client",
+        "brute_force_tools",
+        "internet_connectivity"
+      ],
+      "mitigation_strategies": [
+        "Restrict source_address_prefix to specific IPs",
+        "Use Azure Bastion for secure access",
+        "Implement VPN-based access",
+        "Configure SSH key-based authentication"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "source_address_prefix = \"*\" for SSH port 22",
+        "secure_pattern": "source_address_prefix = \"specific_ip_range\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES",
+      "trivy_rule_info": {
+        "original_file": "capture_all_activities.yaml",
+        "service_category": "monitor",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/azure/monitor"
+      },
+      "vulnerability_class": "audit_logging",
+      "detection_difficulty": "medium",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "administrative_access",
+        "malicious_activity"
+      ],
+      "mitigation_strategies": [
+        "Configure categories = [\"Action\", \"Delete\", \"Write\"]",
+        "Set appropriate log retention policies",
+        "Configure log analysis and alerting",
+        "Implement SIEM integration"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "categories = []",
+        "secure_pattern": "categories = [\"Action\", \"Delete\", \"Write\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "monitoring",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_assessment",
+      "security_pattern_recognition"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,MEDIUM .",
+      "expected_trivy_output": "8 vulnerabilities across database, storage, appservice, network, and monitor services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand common Azure security misconfigurations in healthcare environments",
+      "Learn how Trivy detects infrastructure security issues",
+      "Master HIPAA-compliant cloud architecture patterns",
+      "Practice secure Terraform configuration for sensitive workloads",
+      "Understand the relationship between security controls and compliance requirements"
+    ],
+    "prerequisite_knowledge": [
+      "Basic Azure services understanding",
+      "Terraform syntax and resource configuration",
+      "Healthcare compliance requirements (HIPAA)",
+      "Network security fundamentals",
+      "Encryption and TLS concepts"
+    ],
+    "difficulty_level": "intermediate",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Public network access should be disabled for sensitive databases",
+      "HTTPS enforcement is critical for healthcare data transmission",
+      "Comprehensive audit logging is required for compliance",
+      "Security alerting must include proper notification channels",
+      "Modern TLS versions are essential for cryptographic security",
+      "Network access controls should follow principle of least privilege",
+      "Activity monitoring must capture all relevant event categories"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "azure",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "storage",
+      "appservice",
+      "network",
+      "database",
+      "monitor"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "azure-telehealth-platform",
+    "generation_timestamp": "2025-08-06T22:25:28.829685",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

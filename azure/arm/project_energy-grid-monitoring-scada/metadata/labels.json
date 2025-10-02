@@ -1,0 +1,440 @@
+{
+  "project_labels": {
+    "project_id": "energy-grid-monitoring-scada",
+    "overall_security_posture": "vulnerable",
+    "vulnerability_count": {
+      "total": 8,
+      "by_severity": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8
+      },
+      "by_type": {
+        "access_control": 2,
+        "encryption": 3,
+        "network": 2,
+        "monitoring": 1
+      },
+      "by_trivy_service": {
+        "appservice": 2,
+        "storage": 2,
+        "database": 1,
+        "network": 1,
+        "compute": 1,
+        "securitycenter": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 10,
+    "trivy_coverage": {
+      "rules_represented": [
+        "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+        "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+        "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "AZURE-SECURITYCENTER-ALERT_ON_SEVERE_NOTIFICATIONS",
+        "AZURE-COMPUTE-ENABLE_DISK_ENCRYPTION",
+        "AZURE-STORAGE-DEFAULT_ACTION_DENY"
+      ],
+      "services_covered": [
+        "appservice",
+        "storage",
+        "database",
+        "network",
+        "compute",
+        "securitycenter"
+      ],
+      "detection_accuracy": "100%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "AZURE-APPSERVICE-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "appservice",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/appservice/use_secure_tls_policy.yaml"
+      },
+      "vulnerability_class": "cryptographic_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "NERC_CIP",
+        "NIST_CSF",
+        "IEC_62443"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access_to_application",
+        "tls_downgrade_capability"
+      ],
+      "mitigation_strategies": [
+        "set_min_tls_version_1_2",
+        "disable_legacy_protocols",
+        "implement_hsts"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "min_tls_version = \"1.0\"",
+        "secure_pattern": "min_tls_version = \"1.2\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "cryptographic_weakness",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+      "trivy_rule_info": {
+        "original_file": "enable_audit.yaml",
+        "service_category": "database",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/database/enable_audit.yaml"
+      },
+      "vulnerability_class": "insufficient_logging",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "NERC_CIP",
+        "SOX",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "database_access",
+        "privileged_account"
+      ],
+      "mitigation_strategies": [
+        "enable_extended_auditing",
+        "configure_audit_storage",
+        "set_retention_policy"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "missing azurerm_mssql_server_extended_auditing_policy",
+        "secure_pattern": "azurerm_mssql_server_extended_auditing_policy configured"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "insufficient_logging",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-NETWORK-NO_PUBLIC_INGRESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_ingress.yaml",
+        "service_category": "network",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/network/no_public_ingress.yaml"
+      },
+      "vulnerability_class": "excessive_network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "NERC_CIP",
+        "NIST_CSF",
+        "IEC_62443"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity"
+      ],
+      "mitigation_strategies": [
+        "restrict_source_ranges",
+        "implement_vpn_access",
+        "use_private_endpoints"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "source_address_prefix = \"0.0.0.0/0\"",
+        "secure_pattern": "source_address_prefix = \"10.0.0.0/16\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "excessive_network_exposure",
+        "severity_numeric": 7.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-STORAGE-USE_SECURE_TLS_POLICY",
+      "trivy_rule_info": {
+        "original_file": "use_secure_tls_policy.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/storage/use_secure_tls_policy.yaml"
+      },
+      "vulnerability_class": "cryptographic_weakness",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "NERC_CIP",
+        "GDPR",
+        "HIPAA"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access_to_storage",
+        "tls_downgrade_capability"
+      ],
+      "mitigation_strategies": [
+        "set_min_tls_version_1_2",
+        "enforce_https_only",
+        "disable_legacy_protocols"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "min_tls_version = \"TLS1_0\"",
+        "secure_pattern": "min_tls_version = \"TLS1_2\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "cryptographic_weakness",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+      "trivy_rule_info": {
+        "original_file": "account_identity_registered.yaml",
+        "service_category": "appservice",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/appservice/account_identity_registered.yaml"
+      },
+      "vulnerability_class": "credential_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "NERC_CIP",
+        "SOC2",
+        "NIST_CSF"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "application_access",
+        "configuration_access"
+      ],
+      "mitigation_strategies": [
+        "enable_managed_identity",
+        "remove_connection_strings",
+        "implement_rbac"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "missing identity block in azurerm_app_service",
+        "secure_pattern": "identity { type = \"UserAssigned\" }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "credential_exposure",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-SECURITYCENTER-ALERT_ON_SEVERE_NOTIFICATIONS",
+      "trivy_rule_info": {
+        "original_file": "alert_on_severe_notifications.yaml",
+        "service_category": "securitycenter",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/securitycenter/alert_on_severe_notifications.yaml"
+      },
+      "vulnerability_class": "insufficient_monitoring",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "NERC_CIP",
+        "SOC2",
+        "NIST_CSF"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "security_incident_occurrence"
+      ],
+      "mitigation_strategies": [
+        "enable_alert_notifications",
+        "configure_contact_details",
+        "enable_admin_alerts"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "alert_notifications = false",
+        "secure_pattern": "alert_notifications = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "insufficient_monitoring",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-COMPUTE-ENABLE_DISK_ENCRYPTION",
+      "trivy_rule_info": {
+        "original_file": "enable_disk_encryption.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/compute/enable_disk_encryption.yaml"
+      },
+      "vulnerability_class": "data_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 8,
+      "compliance_relevance": [
+        "NERC_CIP",
+        "GDPR",
+        "HIPAA"
+      ],
+      "attack_vector": "physical",
+      "prerequisites": [
+        "physical_disk_access",
+        "decommissioned_hardware"
+      ],
+      "mitigation_strategies": [
+        "enable_disk_encryption",
+        "use_customer_managed_keys",
+        "implement_key_rotation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "encryption_settings { enabled = false }",
+        "secure_pattern": "encryption_settings { enabled = true }"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "data_exposure",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+      "trivy_rule_info": {
+        "original_file": "default_action_deny.yaml",
+        "service_category": "storage",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/blob/main/checks/cloud/azure/storage/default_action_deny.yaml"
+      },
+      "vulnerability_class": "excessive_permissions",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "NERC_CIP",
+        "GDPR",
+        "SOC2"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access"
+      ],
+      "mitigation_strategies": [
+        "set_default_action_deny",
+        "configure_allowed_networks",
+        "implement_private_endpoints"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "default_action = \"Allow\"",
+        "secure_pattern": "default_action = \"Deny\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "excessive_permissions",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_checking",
+      "critical_infrastructure_security"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --severity MEDIUM,HIGH,CRITICAL ./terraform/",
+      "expected_trivy_output": "8 medium severity findings across appservice, storage, database, network, compute, and securitycenter services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "Understand critical infrastructure security requirements for SCADA systems",
+      "Learn how Trivy detects common Azure misconfigurations",
+      "Master secure configuration patterns for energy sector applications",
+      "Recognize the importance of defense-in-depth for OT networks",
+      "Apply NERC CIP compliance requirements to cloud infrastructure"
+    ],
+    "prerequisite_knowledge": [
+      "Basic Azure services knowledge",
+      "Terraform infrastructure as code concepts",
+      "SCADA and industrial control systems fundamentals",
+      "Network security principles",
+      "Cryptographic protocols (TLS/SSL)"
+    ],
+    "difficulty_level": "advanced",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "Critical infrastructure requires enhanced security controls beyond standard IT systems",
+      "TLS configuration is crucial for protecting SCADA communications",
+      "Network segmentation prevents lateral movement in OT environments",
+      "Audit logging is essential for compliance and incident response",
+      "Managed identities reduce credential exposure risks",
+      "Encryption at rest protects against physical security breaches"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 8,
+    "unique_rule_ids": 8,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "securitycenter",
+      "compute",
+      "database",
+      "storage",
+      "network",
+      "appservice"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "energy-grid-monitoring-scada",
+    "generation_timestamp": "2025-08-08T17:38:00.724306",
+    "version": "1.0",
+    "data_quality": "medium"
+  }
+}

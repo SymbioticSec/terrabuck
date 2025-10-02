@@ -1,0 +1,160 @@
+{
+  "original_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_ec2_instance",
+      "purpose": "Hosts the main web application for document management interface, user authentication, and business logic",
+      "dependencies": [
+        "document_storage",
+        "metadata_database",
+        "search_engine"
+      ],
+      "security_considerations": [
+        "web_application_vulnerabilities",
+        "session_management",
+        "input_validation"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "purpose": "Encrypted storage for all legal documents with versioning and lifecycle policies for retention management",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_policies",
+        "data_retention_compliance"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "metadata_database",
+      "service_type": "aws_rds_instance",
+      "purpose": "Stores document metadata, user permissions, access logs, and audit trails in encrypted PostgreSQL database",
+      "dependencies": [],
+      "security_considerations": [
+        "database_encryption",
+        "connection_security",
+        "backup_encryption"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "search_engine",
+      "service_type": "aws_elasticsearch_domain",
+      "purpose": "Provides full-text search capabilities across document content with role-based result filtering",
+      "dependencies": [
+        "document_storage"
+      ],
+      "security_considerations": [
+        "search_result_authorization",
+        "index_encryption",
+        "query_logging"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "purpose": "Distributes traffic across web application instances with SSL termination and health checks",
+      "dependencies": [
+        "web_application_tier"
+      ],
+      "security_considerations": [
+        "ssl_certificate_management",
+        "ddos_protection",
+        "request_filtering"
+      ],
+      "configuration_complexity": "low"
+    },
+    {
+      "name": "document_processor",
+      "service_type": "aws_lambda_function",
+      "purpose": "Serverless function for document processing tasks like OCR, format conversion, and metadata extraction",
+      "dependencies": [
+        "document_storage",
+        "metadata_database"
+      ],
+      "security_considerations": [
+        "function_permissions",
+        "temporary_file_handling",
+        "processing_isolation"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "web_application_tier",
+      "service_type": "aws_ec2_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "document_storage",
+      "service_type": "aws_s3_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "metadata_database",
+      "service_type": "aws_rds_instance",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "search_engine",
+      "service_type": "aws_elasticsearch_domain",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "load_balancer",
+      "service_type": "aws_application_load_balancer",
+      "implementation_confidence": 0.8999999999999999
+    },
+    {
+      "name": "document_processor",
+      "service_type": "aws_lambda_function",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.yaml": {
+      "filename": "main.yaml",
+      "line_count": 557,
+      "resource_count": 160,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "variables.yaml": {
+      "filename": "variables.yaml",
+      "line_count": 17,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.yaml": {
+      "filename": "outputs.yaml",
+      "line_count": 18,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 155,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

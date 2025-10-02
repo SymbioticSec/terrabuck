@@ -1,0 +1,482 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Digital Asset Custody Platform - Institutional-grade cryptocurrency custody with multi-signature wallets and compliance reporting'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - ProjectName
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnetCidr
+          - PrivateSubnetCidr
+          - DataSubnetCidr
+      - Label:
+          default: "Security Configuration"
+        Parameters:
+          - KeyPairName
+          - DatabasePassword
+          - ApiKey
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Deployment environment
+  
+  ProjectName:
+    Type: String
+    Default: digital-asset-custody-platform
+    Description: Project identifier for resource naming
+  
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC
+  
+  PublicSubnetCidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for public subnet
+  
+  PrivateSubnetCidr:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for private subnet
+  
+  DataSubnetCidr:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for data subnet
+  
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 Key Pair for instance access
+  
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Password for RDS database
+  
+  ApiKey:
+    Type: String
+    NoEcho: true
+    Description: API key for compliance services
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+
+Resources:
+  # VPC and Networking Infrastructure
+  CustodyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+        - Key: Environment
+          Value: !Ref Environment
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CustodyVPC
+      CidrBlock: !Ref PublicSubnetCidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet"
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CustodyVPC
+      CidrBlock: !Ref PrivateSubnetCidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-subnet"
+
+  DataSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CustodyVPC
+      CidrBlock: !Ref DataSubnetCidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-data-subnet"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref CustodyVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref CustodyVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-rt"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # Security Groups with Vulnerabilities
+  WalletManagementSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for wallet management service
+      VpcId: !Ref CustodyVPC
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "6"
+          FromPort: 22
+          ToPort: 22
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: "6"
+          FromPort: 8080
+          ToPort: 8080
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-wallet-sg"
+
+  MonitoringSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for monitoring dashboard
+      VpcId: !Ref CustodyVPC
+      SecurityGroupIngress:
+        - CidrIp: 10.0.0.0/16
+          IpProtocol: "6"
+          FromPort: 443
+          ToPort: 443
+        - CidrIp: 10.0.0.0/16
+          IpProtocol: "6"
+          FromPort: 80
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-monitoring-sg"
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for audit database
+      VpcId: !Ref CustodyVPC
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !Ref WalletManagementSecurityGroup
+          IpProtocol: "6"
+          FromPort: 5432
+          ToPort: 5432
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database-sg"
+
+  # S3 Bucket for Secure Vault Storage (with vulnerabilities)
+  SecureVaultStorage:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-secure-vault-${AWS::AccountId}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-secure-vault"
+        - Key: Purpose
+          Value: "Cryptographic material storage"
+
+  # RDS Database for Audit Trails (with vulnerability)
+  AuditDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${ProjectName}-audit-db"
+      DBInstanceClass: db.t3.medium
+      Engine: postgres
+      EngineVersion: "13.7"
+      MasterUsername: custodyuser
+      MasterUserPassword: !Ref DatabasePassword
+      AllocatedStorage: 100
+      StorageType: gp2
+      StorageEncrypted: false
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      BackupRetentionPeriod: 7
+      MultiAZ: !If [IsProduction, true, false]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-audit-database"
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for audit database
+      SubnetIds:
+        - !Ref PrivateSubnet
+        - !Ref DataSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-subnet-group"
+
+  # IAM Roles and Policies
+  WalletManagementRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-wallet-management-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: VaultAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub "${SecureVaultStorage}/*"
+
+  WalletManagementInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref WalletManagementRole
+
+  ComplianceLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-compliance-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ComplianceAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - rds:DescribeDBInstances
+                Resource: "*"
+
+  # EC2 Instance for Wallet Management (with vulnerability)
+  WalletManagementService:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0abcdef1234567890
+      InstanceType: t3.large
+      KeyName: !Ref KeyPairName
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref WalletManagementSecurityGroup
+      IamInstanceProfile: !Ref WalletManagementInstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          export DATABASE_PASSWORD=${DatabasePassword}
+          export API_KEY=${ApiKey}
+          export VAULT_ACCESS_KEY=hardcoded-vault-key-12345
+          yum update -y
+          yum install -y docker
+          systemctl start docker
+          systemctl enable docker
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp3
+            Encrypted: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-wallet-management"
+        - Key: Purpose
+          Value: "Multi-signature wallet operations"
+
+  # EC2 Instance for Monitoring Dashboard (with vulnerability)
+  MonitoringDashboard:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0abcdef1234567890
+      InstanceType: t3.medium
+      KeyName: !Ref KeyPairName
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds:
+        - !Ref MonitoringSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y nginx
+          systemctl start nginx
+          systemctl enable nginx
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 50
+            VolumeType: gp3
+            Encrypted: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-monitoring-dashboard"
+
+  # Lambda Function for Compliance Processing (with vulnerability)
+  ComplianceProcessor:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-compliance-processor"
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt ComplianceLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          
+          def handler(event, context):
+              # AML screening and compliance processing
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Compliance check completed')
+              }
+      Environment:
+        Variables:
+          DATABASE_ENDPOINT: !GetAtt AuditDatabase.Endpoint.Address
+          VAULT_BUCKET: !Ref SecureVaultStorage
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-compliance-processor"
+
+  # API Gateway for Compliance API
+  ComplianceApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ProjectName}-compliance-api"
+      Description: "API for compliance reporting and transaction monitoring"
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ComplianceApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ComplianceApiGateway
+      ParentId: !GetAtt ComplianceApiGateway.RootResourceId
+      PathPart: compliance
+
+  ComplianceApiMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ComplianceApiGateway
+      ResourceId: !Ref ComplianceApiResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ComplianceProcessor.Arn}/invocations"
+
+  ComplianceApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ComplianceApiMethod
+    Properties:
+      RestApiId: !Ref ComplianceApiGateway
+      StageName: !Ref Environment
+
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ComplianceProcessor
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "${ComplianceApiGateway}/*/POST/compliance"
+
+  # VPC Endpoint for S3
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref CustodyVPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PublicRouteTable
+
+Outputs:
+  VPCId:
+    Description: VPC ID for the custody platform
+    Value: !Ref CustodyVPC
+    Export:
+      Name: !Sub "${ProjectName}-vpc-id"
+
+  SecureVaultBucket:
+    Description: S3 bucket for secure vault storage
+    Value: !Ref SecureVaultStorage
+    Export:
+      Name: !Sub "${ProjectName}-vault-bucket"
+
+  DatabaseEndpoint:
+    Description: RDS database endpoint
+    Value: !GetAtt AuditDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${ProjectName}-database-endpoint"
+
+  WalletManagementInstanceId:
+    Description: Wallet management service instance ID
+    Value: !Ref WalletManagementService
+    Export:
+      Name: !Sub "${ProjectName}-wallet-instance"
+
+  ComplianceApiUrl:
+    Description: Compliance API Gateway URL
+    Value: !Sub "https://${ComplianceApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+    Export:
+      Name: !Sub "${ProjectName}-api-url"
+
+  MonitoringDashboardIP:
+    Description: Public IP of monitoring dashboard
+    Value: !GetAtt MonitoringDashboard.PublicIp
+    Export:
+      Name: !Sub "${ProjectName}-monitoring-ip"

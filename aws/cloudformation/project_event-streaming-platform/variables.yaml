@@ -1,0 +1,45 @@
+# CloudFormation Parameters Configuration
+# This file contains all configurable variables for the Real-Time Event Streaming Analytics Platform
+
+# Environment Configuration
+Environment: production
+ProjectName: real-time-event-streaming-analytics-platform
+
+# Network Configuration
+VpcCidr: 10.0.0.0/16
+PublicSubnetCidr: 10.0.1.0/24
+PrivateComputeSubnetCidr: 10.0.2.0/24
+PrivateDataSubnetCidr: 10.0.3.0/24
+
+# Database Configuration
+DatabaseUsername: analytics_admin
+DatabasePassword: SecurePassword123!
+DatabaseInstanceClass: db.t3.medium
+
+# Kinesis Configuration
+KinesisShardCount: 2
+KinesisRetentionHours: 24
+
+# Lambda Configuration
+LambdaRuntime: python3.9
+LambdaMemorySize: 512
+LambdaTimeout: 300
+
+# Redis Configuration
+RedisNodeType: cache.t3.micro
+RedisNumNodes: 2
+
+# S3 Configuration
+S3LifecycleIATransitionDays: 30
+S3LifecycleGlacierTransitionDays: 90
+
+# API Gateway Configuration
+APIGatewayEndpointType: REGIONAL
+APIGatewayAuthType: AWS_IAM
+
+# Tags
+DefaultTags:
+  Project: real-time-event-streaming-analytics-platform
+  Owner: analytics-team
+  CostCenter: engineering
+  Backup: required

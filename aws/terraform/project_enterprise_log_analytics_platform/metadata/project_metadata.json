@@ -1,0 +1,318 @@
+{
+  "project_info": {
+    "project_id": "enterprise_log_analytics_platform",
+    "project_name": "Enterprise Log Analytics and Monitoring Platform",
+    "description": "A centralized log analytics platform that collects, processes, and analyzes application logs from multiple enterprise systems. The platform provides real-time monitoring, alerting, and compliance reporting for security and operational teams. It ingests logs from web applications, databases, and infrastructure components, processes them for anomaly detection, and provides dashboards for incident response and audit compliance.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "data_pipeline",
+    "business_context": "Large enterprises need centralized log management for security monitoring, compliance reporting (SOX, PCI-DSS), and operational troubleshooting. This platform serves IT operations, security teams, and compliance officers who need to monitor system health, detect security incidents, and generate audit reports across distributed applications and infrastructure.",
+    "components": [
+      {
+        "name": "log_ingestion_api",
+        "service_type": "aws_api_gateway",
+        "purpose": "RESTful API endpoint for receiving log data from various enterprise applications and systems",
+        "dependencies": [],
+        "security_considerations": [
+          "API authentication",
+          "rate limiting",
+          "input validation",
+          "TLS encryption"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "log_processing_pipeline",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless functions to parse, normalize, and enrich incoming log data before storage",
+        "dependencies": [
+          "log_ingestion_api"
+        ],
+        "security_considerations": [
+          "execution role permissions",
+          "environment variable encryption",
+          "VPC isolation"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "processed_logs_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Long-term storage for processed and archived log data with lifecycle policies",
+        "dependencies": [
+          "log_processing_pipeline"
+        ],
+        "security_considerations": [
+          "bucket encryption",
+          "access policies",
+          "versioning",
+          "audit logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "log_search_database",
+        "service_type": "aws_elasticsearch_domain",
+        "purpose": "Elasticsearch cluster for real-time log search, analysis, and dashboard visualization",
+        "dependencies": [
+          "log_processing_pipeline"
+        ],
+        "security_considerations": [
+          "cluster encryption",
+          "access control",
+          "network isolation",
+          "audit trails"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "alert_notification_system",
+        "service_type": "aws_sns",
+        "purpose": "Notification service for sending alerts when anomalies or security events are detected",
+        "dependencies": [
+          "log_search_database"
+        ],
+        "security_considerations": [
+          "topic encryption",
+          "subscription validation",
+          "message filtering"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "log_analytics_dashboard",
+        "service_type": "aws_ec2_instance",
+        "purpose": "Web application hosting Kibana dashboards for log visualization and reporting",
+        "dependencies": [
+          "log_search_database"
+        ],
+        "security_considerations": [
+          "instance hardening",
+          "application authentication",
+          "network access control",
+          "SSL certificates"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public and private subnets across two availability zones for high availability",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "API Gateway in public subnet receives external log submissions",
+        "Lambda functions in private subnet process logs securely",
+        "Elasticsearch cluster in data subnet with restricted access",
+        "Dashboard EC2 instance in private subnet with ALB in public subnet",
+        "S3 bucket accessible via VPC endpoint for secure data transfer"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 4,
+      "total_estimated": 25
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:55:51.923373"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "title": "Enable Access Logging",
+        "description": "The API Gateway stage lacks proper access logging configuration, preventing security teams from monitoring API usage patterns, detecting anomalies, and conducting forensic analysis during security incidents.",
+        "severity": "medium",
+        "affected_component": "log_ingestion_api",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without API access logs, security teams cannot detect unauthorized access attempts, monitor compliance with data access policies, or investigate security incidents involving the log ingestion endpoint.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_stage#access_log_settings\n  good:\n    - |-\n      resource \"aws_apigatewayv2_stage\" \"good_example\" {\n        api_id = aws_apigatewayv2_api.example.id\n        name   = \"example-stage\"\n\n        access_log_settings {\n          destination_arn = \"arn:aws:logs:region:0123456789:log-group:access_logging\"\n          format          = \"json\"\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_apigatewayv2_stage\" \"bad_example\" {\n        api_id = aws_apigatewayv2_api.example.id\n        name   = \"example-stage\"\n      }",
+        "file_name": "enable_access_logging.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy API Gateway stage without access_log_settings block",
+          "explanation": "Missing access logging prevents audit trails and security monitoring for the critical log ingestion endpoint"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-RESTRICT_SOURCE_ARN",
+        "title": "Restrict Source Arn",
+        "description": "Lambda function permissions lack source ARN restrictions, allowing any service of the specified type to invoke the log processing functions, potentially leading to unauthorized execution and resource abuse.",
+        "severity": "medium",
+        "affected_component": "log_processing_pipeline",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unrestricted Lambda permissions could allow malicious actors to invoke log processing functions from unauthorized sources, potentially causing data corruption, resource exhaustion, or processing of malicious payloads.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission\n  good:\n    - |-\n      resource \"aws_lambda_permission\" \"good_example\" {\n        statement_id  = \"AllowExecutionFromSNS\"\n        action        = \"lambda:InvokeFunction\"\n        function_name = aws_lambda_function.func.function_name\n        principal     = \"sns.amazonaws.com\"\n        source_arn    = aws_sns_topic.default.arn\n      }\n  bad:\n    - |-\n      resource \"aws_lambda_permission\" \"bad_example\" {\n        statement_id  = \"AllowExecutionFromSNS\"\n        action        = \"lambda:InvokeFunction\"\n        function_name = aws_lambda_function.func.function_name\n        principal     = \"sns.amazonaws.com\"\n      }",
+        "file_name": "restrict_source_arn.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Lambda permission without source_arn parameter",
+          "explanation": "Without source ARN restriction, any API Gateway or SNS service could potentially invoke the log processing functions"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELASTICSEARCH-ENABLE_DOMAIN_ENCRYPTION",
+        "title": "Enable Domain Encryption",
+        "description": "Elasticsearch domain lacks encryption at rest, exposing sensitive log data stored in the search cluster to potential unauthorized access if the underlying storage is compromised.",
+        "severity": "medium",
+        "affected_component": "log_search_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unencrypted Elasticsearch storage could expose sensitive application logs, security events, and compliance data if storage media is compromised, leading to data breaches and regulatory violations.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/elasticsearch_domain#encrypt_at_rest\n  good:\n    - |-\n      resource \"aws_elasticsearch_domain\" \"good_example\" {\n        encrypt_at_rest {\n          enabled = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_elasticsearch_domain\" \"bad_example\" {\n        encrypt_at_rest {\n          enabled = false\n        }\n      }",
+        "file_name": "enable_domain_encryption.yaml",
+        "service": "elasticsearch",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure Elasticsearch domain with encrypt_at_rest.enabled = false or omit encryption configuration",
+          "explanation": "Without encryption at rest, log data stored in Elasticsearch is vulnerable to unauthorized access through storage-level attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ELASTICSEARCH-ENABLE_DOMAIN_LOGGING",
+        "title": "Enable Domain Logging",
+        "description": "Elasticsearch domain lacks audit logging configuration, preventing security teams from monitoring access patterns, query activities, and potential security incidents within the log analytics platform.",
+        "severity": "medium",
+        "affected_component": "log_search_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Without Elasticsearch audit logs, security teams cannot detect unauthorized data access, monitor compliance with data governance policies, or investigate potential data exfiltration attempts.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/elasticsearch_domain#log_type\n  good:\n    - |-\n      resource \"aws_elasticsearch_domain\" \"good_example\" {\n        log_publishing_options {\n          cloudwatch_log_group_arn = aws_cloudwatch_log_group.example.arn\n          log_type                 = \"AUDIT_LOGS\"\n          enabled                  = true\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_elasticsearch_domain\" \"bad_example\" {}",
+        "file_name": "enable_domain_logging.yaml",
+        "service": "elasticsearch",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy Elasticsearch domain without log_publishing_options configuration",
+          "explanation": "Missing audit logging prevents monitoring of who accesses what data within the log analytics platform"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-SNS-TOPIC_ENCRYPTION_WITH_CMK",
+        "title": "Topic Encryption With Cmk",
+        "description": "SNS topic uses default AWS-managed encryption instead of customer-managed KMS keys, reducing control over encryption key management and limiting compliance with strict data governance requirements.",
+        "severity": "medium",
+        "affected_component": "alert_notification_system",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Using AWS-managed keys instead of customer-managed keys reduces organizational control over encryption, key rotation policies, and access auditing for sensitive alert notifications.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic#example-with-server-side-encryption-sse\n  good:\n    - |-\n      resource \"aws_sns_topic\" \"good_example\" {\n        kms_master_key_id = \"/blah\"\n      }\n  bad:\n    - |-\n      resource \"aws_sns_topic\" \"bad_example\" {\n        kms_master_key_id = \"alias/aws/sns\"\n      }",
+        "file_name": "topic_encryption_with_cmk.yaml",
+        "service": "sns",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure SNS topic with kms_master_key_id = \"alias/aws/sns\" or omit encryption",
+          "explanation": "Using default AWS-managed keys limits organizational control over encryption key lifecycle and access policies"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+        "title": "No Public Ip Subnet",
+        "description": "Subnet configuration automatically assigns public IP addresses to instances, potentially exposing the dashboard server and other infrastructure components to direct internet access.",
+        "severity": "medium",
+        "affected_component": "log_analytics_dashboard",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Automatic public IP assignment increases attack surface by making dashboard instances directly accessible from the internet, bypassing load balancer security controls.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet#map_public_ip_on_launch\n  good:\n    - |-\n      resource \"aws_subnet\" \"good_example\" {\n        vpc_id                  = \"vpc-123456\"\n        map_public_ip_on_launch = false\n      }\n  bad:\n    - |-\n      resource \"aws_subnet\" \"bad_example\" {\n        vpc_id                  = \"vpc-123456\"\n        map_public_ip_on_launch = true\n      }",
+        "file_name": "no_public_ip_subnet.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure subnet with map_public_ip_on_launch = true",
+          "explanation": "Automatic public IP assignment exposes instances to direct internet access, bypassing intended network security controls"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY",
+        "title": "Log Group Customer Key",
+        "description": "CloudWatch log groups use default AWS-managed encryption instead of customer-managed KMS keys, limiting organizational control over log encryption and key management policies.",
+        "severity": "medium",
+        "affected_component": "processed_logs_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Using default encryption reduces compliance posture and limits organizational control over log data encryption, key rotation, and access auditing for sensitive application logs.",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group#kms_key_id\n  good:\n    - |-\n      resource \"aws_kms_key\" \"cloudwatch\" {\n        enable_key_rotation = true\n      }\n      resource \"aws_cloudwatch_log_group\" \"good_example\" {\n        name = \"good_example\"\n        kms_key_id = aws_kms_alias.cloudwatch.arn\n      }\n  bad:\n    - |-\n      resource \"aws_cloudwatch_log_group\" \"bad_example\" {\n        name = \"bad_example\"\n      }",
+        "file_name": "log_group_customer_key.yaml",
+        "service": "cloudwatch",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create CloudWatch log group without kms_key_id parameter",
+          "explanation": "Missing customer-managed encryption reduces organizational control over log data protection and compliance requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-APIGATEWAY-ENABLE_ACCESS_LOGGING",
+        "AWS-LAMBDA-RESTRICT_SOURCE_ARN",
+        "AWS-ELASTICSEARCH-ENABLE_DOMAIN_ENCRYPTION",
+        "AWS-ELASTICSEARCH-ENABLE_DOMAIN_LOGGING",
+        "AWS-SNS-TOPIC_ENCRYPTION_WITH_CMK",
+        "AWS-EC2-NO_PUBLIC_IP_SUBNET",
+        "AWS-CLOUDWATCH-LOG_GROUP_CUSTOMER_KEY"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 7,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "lambda",
+        "cloudwatch",
+        "ec2",
+        "elasticsearch",
+        "sns"
+      ],
+      "services_covered": [
+        "apigateway",
+        "lambda",
+        "cloudwatch",
+        "ec2",
+        "elasticsearch",
+        "sns"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 30,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

@@ -1,0 +1,401 @@
+{
+  "project_labels": {
+    "project_id": "gcp-telehealth-platform",
+    "overall_security_posture": "critical",
+    "vulnerability_count": {
+      "total": 7,
+      "by_severity": {
+        "critical": 0,
+        "high": 3,
+        "medium": 4
+      },
+      "by_type": {
+        "access_control": 2,
+        "encryption": 2,
+        "network": 2,
+        "logging": 1
+      },
+      "by_trivy_service": {
+        "sql": 2,
+        "compute": 3,
+        "iam": 1,
+        "dns": 1
+      }
+    },
+    "complexity_score": 8,
+    "realism_score": 9,
+    "educational_value": 9,
+    "trivy_coverage": {
+      "rules_represented": [
+        "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "GOOGLE-SQL-PG_LOG_DISCONNECTIONS",
+        "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+        "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "GOOGLE-IAM-NO_PRIVILEGED_SERVICE_ACCOUNTS",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+        "GOOGLE-DNS-ENABLE_DNSSEC"
+      ],
+      "services_covered": [
+        "sql",
+        "compute",
+        "iam",
+        "dns"
+      ],
+      "detection_accuracy": "100%"
+    }
+  },
+  "vulnerability_labels": [
+    {
+      "rule_id": "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+      "trivy_rule_info": {
+        "original_file": "encrypt_in_transit_data.yaml",
+        "service_category": "sql",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/sql"
+      },
+      "vulnerability_class": "encryption_in_transit",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "network_access_to_database",
+        "ability_to_intercept_traffic"
+      ],
+      "mitigation_strategies": [
+        "set_require_ssl_to_true",
+        "configure_ssl_mode_encrypted_only",
+        "implement_certificate_validation"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "require_ssl = false",
+        "secure_pattern": "require_ssl = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "encryption",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-SQL-PG_LOG_DISCONNECTIONS",
+      "trivy_rule_info": {
+        "original_file": "pg_log_disconnections.yaml",
+        "service_category": "sql",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/sql"
+      },
+      "vulnerability_class": "audit_logging",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "database_access",
+        "ability_to_establish_connections"
+      ],
+      "mitigation_strategies": [
+        "enable_log_disconnections_flag",
+        "configure_comprehensive_audit_logging",
+        "implement_log_monitoring"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "log_disconnections = \"off\"",
+        "secure_pattern": "log_disconnections = \"on\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "logging",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-NO_PUBLIC_INGRESS",
+      "trivy_rule_info": {
+        "original_file": "no_public_ingress.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "network_exposure",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "internet_connectivity"
+      ],
+      "mitigation_strategies": [
+        "restrict_source_ranges_to_specific_ips",
+        "implement_load_balancer_with_waf",
+        "use_vpc_firewall_rules",
+        "implement_zero_trust_architecture"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "source_ranges = [\"0.0.0.0/0\"]",
+        "secure_pattern": "source_ranges = [\"10.0.0.0/8\", \"172.16.0.0/12\"]"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 8.5,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+      "trivy_rule_info": {
+        "original_file": "no_project_wide_ssh_keys.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "access_control",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "project_level_access",
+        "ssh_key_access"
+      ],
+      "mitigation_strategies": [
+        "block_project_wide_ssh_keys",
+        "use_instance_specific_keys",
+        "implement_oslogin",
+        "use_identity_aware_proxy"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "block-project-ssh-keys = false",
+        "secure_pattern": "block-project-ssh-keys = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 6.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-IAM-NO_PRIVILEGED_SERVICE_ACCOUNTS",
+      "trivy_rule_info": {
+        "original_file": "no_privileged_service_accounts.yaml",
+        "service_category": "iam",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/iam"
+      },
+      "vulnerability_class": "privilege_escalation",
+      "detection_difficulty": "medium",
+      "remediation_effort": "medium",
+      "business_impact_score": 9,
+      "compliance_relevance": [
+        "HIPAA",
+        "SOC2",
+        "PCI-DSS",
+        "GDPR"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "service_account_compromise",
+        "application_vulnerability"
+      ],
+      "mitigation_strategies": [
+        "implement_least_privilege_principle",
+        "use_predefined_roles",
+        "create_custom_roles_with_minimal_permissions",
+        "regular_permission_audits"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "role = \"roles/owner\"",
+        "secure_pattern": "role = \"roles/cloudsql.client\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "access_control",
+        "severity_numeric": 8.0,
+        "should_flag": true,
+        "auto_remediable": false,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+      "trivy_rule_info": {
+        "original_file": "enable_shielded_vm_vtpm.yaml",
+        "service_category": "compute",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/compute"
+      },
+      "vulnerability_class": "system_integrity",
+      "detection_difficulty": "easy",
+      "remediation_effort": "low",
+      "business_impact_score": 6,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "local",
+      "prerequisites": [
+        "physical_or_hypervisor_access",
+        "boot_level_attack_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_vtpm_on_instances",
+        "enable_integrity_monitoring",
+        "enable_secure_boot",
+        "implement_measured_boot"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "enable_vtpm = false",
+        "secure_pattern": "enable_vtpm = true"
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "system_hardening",
+        "severity_numeric": 5.5,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    },
+    {
+      "rule_id": "GOOGLE-DNS-ENABLE_DNSSEC",
+      "trivy_rule_info": {
+        "original_file": "enable_dnssec.yaml",
+        "service_category": "dns",
+        "source_url": "https://github.com/aquasecurity/trivy-checks/tree/main/checks/cloud/google/dns"
+      },
+      "vulnerability_class": "dns_security",
+      "detection_difficulty": "easy",
+      "remediation_effort": "medium",
+      "business_impact_score": 7,
+      "compliance_relevance": [
+        "SOC2",
+        "PCI-DSS"
+      ],
+      "attack_vector": "network",
+      "prerequisites": [
+        "dns_server_compromise",
+        "man_in_the_middle_capability"
+      ],
+      "mitigation_strategies": [
+        "enable_dnssec_validation",
+        "configure_dnssec_signing",
+        "implement_dns_monitoring",
+        "use_secure_dns_resolvers"
+      ],
+      "code_patterns": {
+        "vulnerable_pattern": "state = \"off\"",
+        "secure_pattern": "state = \"on\""
+      },
+      "training_labels": {
+        "is_vulnerable": true,
+        "vulnerability_type": "network_security",
+        "severity_numeric": 6.0,
+        "should_flag": true,
+        "auto_remediable": true,
+        "trivy_detectable": true
+      }
+    }
+  ],
+  "ml_metadata": {
+    "suitable_for_tasks": [
+      "vulnerability_detection",
+      "severity_classification",
+      "auto_remediation",
+      "trivy_rule_matching",
+      "compliance_gap_analysis",
+      "security_posture_assessment"
+    ],
+    "data_splits": {
+      "recommended_train": 0.7,
+      "recommended_val": 0.15,
+      "recommended_test": 0.15
+    },
+    "sampling_weight": 9,
+    "annotation_confidence": "high",
+    "requires_domain_knowledge": true,
+    "trivy_integration": {
+      "can_validate_with_trivy": true,
+      "trivy_scan_command": "trivy config --format json --severity HIGH,CRITICAL .",
+      "expected_trivy_output": "7_vulnerabilities_across_sql_compute_iam_dns_services"
+    }
+  },
+  "educational_metadata": {
+    "learning_objectives": [
+      "understand_healthcare_infrastructure_security_requirements",
+      "learn_trivy_based_vulnerability_detection_patterns",
+      "master_gcp_security_best_practices_for_hipaa_compliance",
+      "practice_remediation_of_common_cloud_misconfigurations",
+      "understand_defense_in_depth_for_sensitive_data_systems"
+    ],
+    "prerequisite_knowledge": [
+      "basic_terraform_syntax",
+      "gcp_services_overview",
+      "healthcare_compliance_fundamentals",
+      "network_security_concepts",
+      "iam_and_access_control_principles"
+    ],
+    "difficulty_level": "advanced",
+    "estimated_review_time": 45,
+    "key_takeaways": [
+      "encryption_in_transit_is_critical_for_healthcare_data",
+      "comprehensive_audit_logging_enables_compliance_and_incident_response",
+      "network_segmentation_reduces_attack_surface",
+      "least_privilege_principle_prevents_lateral_movement",
+      "defense_in_depth_requires_multiple_security_layers",
+      "trivy_provides_comprehensive_infrastructure_security_scanning"
+    ],
+    "trivy_learning_value": {
+      "demonstrates_trivy_capabilities": true,
+      "real_world_applicability": "high",
+      "rule_complexity": "moderate"
+    }
+  },
+  "computed_metrics": {
+    "total_vulnerabilities": 7,
+    "unique_rule_ids": 7,
+    "has_critical_vulnerabilities": false,
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "component_count": 6,
+    "file_count": 4,
+    "service_categories": [
+      "dns",
+      "sql",
+      "iam",
+      "compute"
+    ]
+  },
+  "dataset_metadata": {
+    "project_id": "gcp-telehealth-platform",
+    "generation_timestamp": "2025-08-08T14:59:50.885217",
+    "version": "1.0",
+    "data_quality": "high"
+  }
+}

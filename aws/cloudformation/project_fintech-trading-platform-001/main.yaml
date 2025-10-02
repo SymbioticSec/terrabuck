@@ -1,0 +1,500 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Real-Time Trading Platform Backend - High-frequency trading platform with microservices architecture'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnetCidr
+          - PrivateSubnetCidr
+          - DataSubnetCidr
+      - Label:
+          default: "Trading Engine Configuration"
+        Parameters:
+          - TradingEngineInstanceType
+          - TradingEngineAmiId
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DatabaseInstanceClass
+          - DatabaseUsername
+          - DatabasePassword
+
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: CIDR block for VPC
+  
+  PublicSubnetCidr:
+    Type: String
+    Default: "10.0.1.0/24"
+    Description: CIDR block for public subnet
+  
+  PrivateSubnetCidr:
+    Type: String
+    Default: "10.0.2.0/24"
+    Description: CIDR block for private subnet
+  
+  DataSubnetCidr:
+    Type: String
+    Default: "10.0.3.0/24"
+    Description: CIDR block for data subnet
+  
+  TradingEngineInstanceType:
+    Type: String
+    Default: "c5.2xlarge"
+    AllowedValues:
+      - "c5.large"
+      - "c5.xlarge"
+      - "c5.2xlarge"
+      - "c5.4xlarge"
+    Description: Instance type for trading engine
+  
+  TradingEngineAmiId:
+    Type: AWS::EC2::Image::Id
+    Default: "ami-0abcdef1234567890"
+    Description: AMI ID for trading engine instances
+  
+  DatabaseInstanceClass:
+    Type: String
+    Default: "db.r5.xlarge"
+    AllowedValues:
+      - "db.r5.large"
+      - "db.r5.xlarge"
+      - "db.r5.2xlarge"
+    Description: RDS instance class
+  
+  DatabaseUsername:
+    Type: String
+    Default: "tradingadmin"
+    Description: Database master username
+  
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Database master password
+
+Resources:
+  # VPC and Networking
+  TradingPlatformVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-vpc-main
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TradingPlatformVPC
+      CidrBlock: !Ref PublicSubnetCidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-subnet-public
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TradingPlatformVPC
+      CidrBlock: !Ref PrivateSubnetCidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-subnet-private
+
+  DataSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref TradingPlatformVPC
+      CidrBlock: !Ref DataSubnetCidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-subnet-data
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-igw-main
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref TradingPlatformVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Security Groups with vulnerabilities
+  TradingEngineSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for trading engine cluster
+      VpcId: !Ref TradingPlatformVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-sg-trading-engine
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for application load balancer
+      VpcId: !Ref TradingPlatformVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-sg-alb
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for trade database
+      VpcId: !Ref TradingPlatformVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref TradingEngineSecurityGroup
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-sg-database
+
+  # Trading Engine Cluster (EC2 instances with vulnerability)
+  TradingEngineInstance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref TradingEngineAmiId
+      InstanceType: !Ref TradingEngineInstanceType
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref TradingEngineSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp3
+            Encrypted: false
+      IamInstanceProfile: !Ref TradingEngineInstanceProfile
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-ec2-trading-engine-1
+
+  TradingEngineInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref TradingEngineAmiId
+      InstanceType: !Ref TradingEngineInstanceType
+      SubnetId: !Ref PrivateSubnet
+      SecurityGroupIds:
+        - !Ref TradingEngineSecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 100
+            VolumeType: gp3
+            Encrypted: false
+      IamInstanceProfile: !Ref TradingEngineInstanceProfile
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-ec2-trading-engine-2
+
+  # IAM Role for Trading Engine
+  TradingEngineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-role-trading-engine
+
+  TradingEngineInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref TradingEngineRole
+
+  # Application Load Balancer (with vulnerability)
+  TradingPlatformALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: real-time-trading-platform-backend-alb-api-gateway
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet
+        - !Ref DataSubnet
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-alb-api-gateway
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: trading-engine-targets
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref TradingPlatformVPC
+      Targets:
+        - Id: !Ref TradingEngineInstance1
+        - Id: !Ref TradingEngineInstance2
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref TradingPlatformALB
+      Port: 80
+      Protocol: HTTP
+
+  # RDS PostgreSQL Database (with vulnerability)
+  TradeDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: real-time-trading-platform-backend-rds-trade-db
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      Engine: postgres
+      EngineVersion: '13.7'
+      AllocatedStorage: 500
+      StorageType: gp2
+      StorageEncrypted: true
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      BackupRetentionPeriod: 7
+      MultiAZ: true
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-rds-trade-database
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for trade database
+      SubnetIds:
+        - !Ref DataSubnet
+        - !Ref PrivateSubnet
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-subnet-group-db
+
+  # ElastiCache Redis (with vulnerability)
+  MarketDataCacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnet group for market data cache
+      SubnetIds:
+        - !Ref PrivateSubnet
+        - !Ref DataSubnet
+
+  MarketDataCache:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupId: real-time-trading-platform-backend-redis-market-data
+      Description: Redis cache for real-time market data
+      NodeType: cache.r6g.xlarge
+      NumCacheClusters: 2
+      Engine: redis
+      EngineVersion: '6.2'
+      Port: 6379
+      CacheSubnetGroupName: !Ref MarketDataCacheSubnetGroup
+      SecurityGroupIds:
+        - !Ref CacheSecurityGroup
+      AtRestEncryptionEnabled: false
+      TransitEncryptionEnabled: true
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-redis-market-data-cache
+
+  CacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for market data cache
+      VpcId: !Ref TradingPlatformVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref TradingEngineSecurityGroup
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-sg-cache
+
+  # S3 Bucket for Compliance Logs (with vulnerability)
+  ComplianceLogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "real-time-trading-platform-backend-s3-compliance-logs-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-s3-compliance-logs
+
+  # Lambda Function for Risk Management (with vulnerability)
+  RiskManagementRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: RiskManagementPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds:DescribeDBInstances
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: '*'
+
+  RiskManagementFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: real-time-trading-platform-backend-lambda-risk-management
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt RiskManagementRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          def handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Risk assessment completed')
+              }
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet
+      TracingConfig:
+        Mode: PassThrough
+      Environment:
+        Variables:
+          DATABASE_ENDPOINT: !GetAtt TradeDatabase.Endpoint.Address
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-lambda-risk-management-service
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for risk management lambda
+      VpcId: !Ref TradingPlatformVPC
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: real-time-trading-platform-backend-sg-lambda
+
+  # IAM Password Policy (with vulnerability)
+  PasswordPolicy:
+    Type: AWS::IAM::AccountPasswordPolicy
+    Properties:
+      MinimumPasswordLength: 12
+      RequireUppercaseCharacters: true
+      RequireLowercaseCharacters: true
+      RequireNumbers: true
+      RequireSymbols: true
+      MaxPasswordAge: 90
+
+Outputs:
+  VPCId:
+    Description: VPC ID for the trading platform
+    Value: !Ref TradingPlatformVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+
+  LoadBalancerDNS:
+    Description: DNS name of the application load balancer
+    Value: !GetAtt TradingPlatformALB.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-DNS"
+
+  DatabaseEndpoint:
+    Description: RDS database endpoint
+    Value: !GetAtt TradeDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-DB-Endpoint"
+
+  CacheEndpoint:
+    Description: ElastiCache Redis endpoint
+    Value: !GetAtt MarketDataCache.RedisEndpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-Cache-Endpoint"
+
+  ComplianceBucket:
+    Description: S3 bucket for compliance logs
+    Value: !Ref ComplianceLogsBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-Compliance-Bucket"
+
+  RiskManagementFunctionArn:
+    Description: ARN of the risk management Lambda function
+    Value: !GetAtt RiskManagementFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-Lambda-ARN"

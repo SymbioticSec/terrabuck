@@ -1,0 +1,286 @@
+{
+  "original_components": [
+    {
+      "name": "claims_document_storage",
+      "service_type": "google_storage_bucket",
+      "purpose": "Secure storage for claim documents, photos, and supporting evidence with lifecycle management and audit logging",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_at_rest",
+        "access_logging",
+        "retention_policies",
+        "PII_protection"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "claims_processing_engine",
+      "service_type": "google_compute_engine",
+      "purpose": "Core application server running claims workflow engine, business rules, and integration APIs",
+      "dependencies": [
+        "claims_database",
+        "claims_document_storage"
+      ],
+      "security_considerations": [
+        "private_subnet_placement",
+        "service_account_permissions",
+        "network_security"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "document_analysis_function",
+      "service_type": "google_cloud_functions",
+      "purpose": "Serverless function for OCR processing, document classification, and data extraction using Vision API",
+      "dependencies": [
+        "claims_document_storage",
+        "claims_database"
+      ],
+      "security_considerations": [
+        "function_permissions",
+        "API_key_management",
+        "data_processing_compliance"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "fraud_detection_service",
+      "service_type": "google_cloud_run",
+      "purpose": "Containerized ML service for real-time fraud scoring and pattern analysis of claims data",
+      "dependencies": [
+        "claims_database"
+      ],
+      "security_considerations": [
+        "container_security",
+        "model_access_control",
+        "sensitive_data_handling"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "claims_database",
+      "service_type": "google_cloud_sql",
+      "purpose": "Primary PostgreSQL database storing claim records, customer data, policy information, and audit trails",
+      "dependencies": [],
+      "security_considerations": [
+        "encryption_in_transit",
+        "database_access_control",
+        "backup_encryption",
+        "audit_logging"
+      ],
+      "configuration_complexity": "high"
+    },
+    {
+      "name": "notification_queue",
+      "service_type": "google_cloud_pubsub",
+      "purpose": "Message queue for asynchronous processing of claim status updates, notifications, and workflow triggers",
+      "dependencies": [
+        "claims_processing_engine"
+      ],
+      "security_considerations": [
+        "message_encryption",
+        "topic_access_control",
+        "dead_letter_handling"
+      ],
+      "configuration_complexity": "medium"
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "google_cloud_endpoints",
+      "purpose": "Managed API gateway for external integrations, mobile apps, and third-party services with rate limiting and authentication",
+      "dependencies": [
+        "claims_processing_engine"
+      ],
+      "security_considerations": [
+        "API_authentication",
+        "rate_limiting",
+        "request_validation",
+        "SSL_termination"
+      ],
+      "configuration_complexity": "medium"
+    }
+  ],
+  "implemented_components": [
+    {
+      "name": "claims_document_storage",
+      "service_type": "google_storage_bucket",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "claims_processing_engine",
+      "service_type": "google_compute_engine",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "document_analysis_function",
+      "service_type": "google_cloud_functions",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "fraud_detection_service",
+      "service_type": "google_cloud_run",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "claims_database",
+      "service_type": "google_cloud_sql",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "notification_queue",
+      "service_type": "google_cloud_pubsub",
+      "implementation_confidence": 1.0
+    },
+    {
+      "name": "api_gateway",
+      "service_type": "google_cloud_endpoints",
+      "implementation_confidence": 1.0
+    }
+  ],
+  "missing_components": [],
+  "implementation_coverage": 1.0,
+  "file_analysis": {
+    "main.tf": {
+      "filename": "main.tf",
+      "line_count": 346,
+      "resource_count": 26,
+      "resources_found": [
+        {
+          "type": "google_compute_network",
+          "name": "claims_vpc"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "public_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "private_subnet"
+        },
+        {
+          "type": "google_compute_subnetwork",
+          "name": "data_subnet"
+        },
+        {
+          "type": "google_compute_router",
+          "name": "claims_router"
+        },
+        {
+          "type": "google_compute_router_nat",
+          "name": "claims_nat"
+        },
+        {
+          "type": "google_compute_firewall",
+          "name": "allow_http_https"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "claims_documents"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "audit_logs"
+        },
+        {
+          "type": "random_id",
+          "name": "bucket_suffix"
+        },
+        {
+          "type": "google_sql_database_instance",
+          "name": "claims_database"
+        },
+        {
+          "type": "google_sql_database",
+          "name": "claims_db"
+        },
+        {
+          "type": "google_compute_global_address",
+          "name": "private_ip_address"
+        },
+        {
+          "type": "google_service_networking_connection",
+          "name": "private_vpc_connection"
+        },
+        {
+          "type": "google_compute_instance",
+          "name": "claims_processing_engine"
+        },
+        {
+          "type": "google_storage_bucket",
+          "name": "function_source"
+        },
+        {
+          "type": "google_storage_bucket_object",
+          "name": "function_zip"
+        },
+        {
+          "type": "google_cloudfunctions_function",
+          "name": "document_analysis"
+        },
+        {
+          "type": "google_cloud_run_service",
+          "name": "fraud_detection"
+        },
+        {
+          "type": "google_vpc_access_connector",
+          "name": "connector"
+        },
+        {
+          "type": "google_pubsub_topic",
+          "name": "notification_queue"
+        },
+        {
+          "type": "google_pubsub_subscription",
+          "name": "notification_subscription"
+        },
+        {
+          "type": "google_compute_global_address",
+          "name": "api_gateway_ip"
+        },
+        {
+          "type": "google_compute_ssl_policy",
+          "name": "api_ssl_policy"
+        },
+        {
+          "type": "google_project_iam_member",
+          "name": "claims_processor_access"
+        },
+        {
+          "type": "google_project_iam_member",
+          "name": "database_user_access"
+        }
+      ],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": true
+    },
+    "variables.tf": {
+      "filename": "variables.tf",
+      "line_count": 57,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": true,
+      "has_outputs": false,
+      "has_provider_config": false
+    },
+    "outputs.tf": {
+      "filename": "outputs.tf",
+      "line_count": 59,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": true,
+      "has_provider_config": false
+    },
+    "README.md": {
+      "filename": "README.md",
+      "line_count": 155,
+      "resource_count": 0,
+      "resources_found": [],
+      "has_variables": false,
+      "has_outputs": false,
+      "has_provider_config": false
+    }
+  },
+  "recommendations": []
+}

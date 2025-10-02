@@ -1,0 +1,339 @@
+{
+  "project_info": {
+    "project_id": "digital-asset-custody-platform",
+    "project_name": "Digital Asset Custody Platform",
+    "description": "A secure institutional-grade digital asset custody platform that provides cold storage, multi-signature wallet management, and regulatory compliance reporting for cryptocurrency exchanges and financial institutions. The platform handles high-value digital asset storage with bank-grade security, automated compliance reporting, and secure transaction processing workflows.",
+    "cloud_provider": "aws",
+    "language": "cloudformation",
+    "architecture_type": "microservices",
+    "business_context": "Financial services company providing institutional custody services for digital assets, serving cryptocurrency exchanges, hedge funds, and traditional banks entering the digital asset space. Requires SOC 2 Type II compliance and handles billions in digital asset value.",
+    "components": [
+      {
+        "name": "secure_vault_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Encrypted storage for private keys, wallet seeds, and sensitive cryptographic material with versioning and immutable backups",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_logging",
+          "versioning",
+          "mfa_delete",
+          "cross_region_replication"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "wallet_management_service",
+        "service_type": "aws_ec2_instance",
+        "purpose": "Core service managing multi-signature wallets, transaction signing, and cryptographic operations in isolated environment",
+        "dependencies": [
+          "secure_vault_storage",
+          "audit_database"
+        ],
+        "security_considerations": [
+          "instance_isolation",
+          "encrypted_ebs",
+          "security_groups",
+          "iam_roles",
+          "session_manager"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "compliance_api_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "Secure API endpoint for compliance reporting, transaction monitoring, and regulatory data access with rate limiting",
+        "dependencies": [
+          "compliance_processor",
+          "audit_database"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "rate_limiting",
+          "request_validation",
+          "logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "compliance_processor",
+        "service_type": "aws_lambda",
+        "purpose": "Serverless functions for AML screening, transaction monitoring, regulatory reporting, and compliance rule execution",
+        "dependencies": [
+          "audit_database",
+          "secure_vault_storage"
+        ],
+        "security_considerations": [
+          "execution_role_permissions",
+          "environment_encryption",
+          "vpc_configuration"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "audit_database",
+        "service_type": "aws_rds_instance",
+        "purpose": "Encrypted PostgreSQL database storing transaction logs, audit trails, compliance records, and wallet metadata",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption_at_rest",
+          "backup_encryption",
+          "network_isolation",
+          "parameter_groups"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "monitoring_dashboard",
+        "service_type": "aws_ec2_instance",
+        "purpose": "Real-time monitoring interface for wallet status, transaction processing, security alerts, and compliance metrics",
+        "dependencies": [
+          "wallet_management_service",
+          "audit_database"
+        ],
+        "security_considerations": [
+          "web_application_firewall",
+          "ssl_certificates",
+          "access_controls"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with isolated subnets for different security zones, NAT gateways for outbound access, and VPC endpoints for AWS services",
+      "security_zones": [
+        "dmz_public",
+        "application_private",
+        "data_private",
+        "vault_isolated"
+      ],
+      "connectivity_patterns": [
+        "api_gateway_to_lambda",
+        "ec2_to_rds_private",
+        "s3_vpc_endpoint",
+        "isolated_vault_access"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 6,
+      "security_components": 8,
+      "monitoring_components": 4,
+      "total_estimated": 24
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T16:10:23.978960"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-S3-NO_PUBLIC_BUCKETS",
+        "title": "No Public Buckets",
+        "description": "S3 bucket lacks proper public access block configuration, potentially exposing sensitive cryptographic material and private keys to unauthorized access",
+        "severity": "high",
+        "affected_component": "secure_vault_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Critical security breach exposing billions in digital assets - private keys and wallet seeds could be accessed by unauthorized parties, leading to complete compromise of custody platform",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            PublicAccessBlockConfiguration:\n              RestrictPublicBuckets: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "no_public_buckets.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without PublicAccessBlockConfiguration or with RestrictPublicBuckets set to false",
+          "explanation": "Missing public access restrictions allows potential unauthorized access to the most sensitive component of the custody platform"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "title": "Encrypt Instance Storage Data",
+        "description": "RDS database storing audit trails and compliance records lacks encryption at rest, violating financial services regulatory requirements",
+        "severity": "high",
+        "affected_component": "audit_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "SOC 2 Type II compliance violation and regulatory breach - unencrypted audit logs and transaction records expose sensitive financial data and could result in massive fines",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            KmsKeyId: something\n            StorageEncrypted: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::RDS::DBInstance\n          Properties:\n            StorageEncrypted: false",
+        "file_name": "encrypt_instance_storage_data.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create RDS instance without StorageEncrypted property or with StorageEncrypted set to false",
+          "explanation": "Unencrypted database storage exposes sensitive audit trails and compliance data that must be protected under financial regulations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_SECRETS_IN_USER_DATA",
+        "title": "No Secrets In User Data",
+        "description": "EC2 instances contain hardcoded credentials in user data scripts, exposing API keys and database passwords in plaintext",
+        "severity": "high",
+        "affected_component": "wallet_management_service",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Complete compromise of wallet management system - hardcoded credentials provide direct access to cryptographic operations and could enable unauthorized transaction signing",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            UserData: export SSM_PATH=/database/creds\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            UserData: export DATABASE_PASSWORD=password1234",
+        "file_name": "no_secrets_in_user_data.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Include hardcoded passwords, API keys, or access tokens directly in EC2 UserData field",
+          "explanation": "User data is stored in plaintext and accessible through instance metadata, exposing critical credentials for wallet operations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-LAMBDA-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "Lambda functions processing compliance and AML screening lack proper tracing configuration, hindering security monitoring and audit capabilities",
+        "severity": "medium",
+        "affected_component": "compliance_processor",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Reduced visibility into compliance processing and potential regulatory violations - inability to trace AML screening decisions and transaction monitoring could lead to compliance failures",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            TracingConfig:\n              Mode: Active\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::Lambda::Function\n          Properties:\n            Code:\n              S3Bucket: my-bucket",
+        "file_name": "enable_tracing.yaml",
+        "service": "lambda",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create Lambda function without TracingConfig or with Mode set to PassThrough",
+          "explanation": "Missing tracing reduces observability into critical compliance operations and regulatory reporting functions"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-ENABLE_AT_REST_ENCRYPTION",
+        "title": "Enable At Rest Encryption",
+        "description": "EC2 instances lack EBS volume encryption, potentially exposing sensitive data stored on monitoring dashboard and wallet management systems",
+        "severity": "medium",
+        "affected_component": "monitoring_dashboard",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Data exposure risk for monitoring systems - unencrypted volumes could reveal wallet status, transaction patterns, and security metrics if storage is compromised",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            BlockDeviceMappings:\n              - DeviceName: /dev/sdm\n                Ebs:\n                  Encrypted: true\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::EC2::Instance\n          Properties:\n            BlockDeviceMappings:\n              - DeviceName: /dev/sdm\n                Ebs:\n                  Encrypted: false",
+        "file_name": "enable_at_rest_encryption.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create EC2 instance with EBS BlockDeviceMappings where Encrypted is set to false or omitted",
+          "explanation": "Unencrypted EBS volumes expose sensitive monitoring data and could reveal operational patterns of the custody platform"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_VERSIONING",
+        "title": "Enable Versioning",
+        "description": "S3 bucket storing cryptographic material lacks versioning, preventing recovery from accidental deletion or corruption of critical wallet data",
+        "severity": "medium",
+        "affected_component": "secure_vault_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Risk of permanent data loss for critical cryptographic material - without versioning, accidental deletion or corruption of private keys could result in irreversible loss of digital assets",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            VersioningConfiguration:\n              Status: Enabled\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket",
+        "file_name": "enable_versioning.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without VersioningConfiguration or with Status set to Suspended",
+          "explanation": "Missing versioning eliminates protection against accidental deletion or corruption of irreplaceable cryptographic keys"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "title": "No Public Ingress Sgr",
+        "description": "Security groups allow unrestricted public access (0.0.0.0/0) to sensitive wallet management and monitoring systems",
+        "severity": "high",
+        "affected_component": "wallet_management_service",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Direct exposure of critical wallet infrastructure to internet attacks - unrestricted access could enable unauthorized transaction signing and complete compromise of digital asset custody",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            SecurityGroupIngress:\n              - CidrIp: 127.0.0.1/32\n                IpProtocol: \"6\"\n  bad:\n    - |-\n      Resources:\n        BadSecurityGroup:\n          Type: AWS::EC2::SecurityGroup\n          Properties:\n            SecurityGroupIngress:\n              - CidrIp: 0.0.0.0/0\n                IpProtocol: \"6\"",
+        "file_name": "no_public_ingress_sgr.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create security group with ingress rules allowing CidrIp: 0.0.0.0/0 for sensitive ports",
+          "explanation": "Public access to wallet management systems bypasses network isolation and exposes critical infrastructure to internet-based attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_LOGGING",
+        "title": "Enable Logging",
+        "description": "S3 bucket lacks access logging configuration, preventing audit trail generation for access to sensitive cryptographic material",
+        "severity": "medium",
+        "affected_component": "secure_vault_storage",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Compliance and forensic analysis gaps - without access logs, the platform cannot track who accessed private keys or detect unauthorized access attempts, violating audit requirements",
+        "trivy_yaml_content": "cloudformation:\n  good:\n    - |-\n      Resources:\n        GoodExample:\n          Type: AWS::S3::Bucket\n          Properties:\n            LoggingConfiguration:\n              DestinationBucketName: !Ref TestLoggingBucket\n  bad:\n    - |-\n      Resources:\n        BadExample:\n          Type: AWS::S3::Bucket\n          Properties: null",
+        "file_name": "enable_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without LoggingConfiguration property",
+          "explanation": "Missing access logs eliminate the ability to audit access to the most sensitive component of the custody platform"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AWS-S3-NO_PUBLIC_BUCKETS",
+        "AWS-RDS-ENCRYPT_INSTANCE_STORAGE_DATA",
+        "AWS-EC2-NO_SECRETS_IN_USER_DATA",
+        "AWS-LAMBDA-ENABLE_TRACING",
+        "AWS-EC2-ENABLE_AT_REST_ENCRYPTION",
+        "AWS-S3-ENABLE_VERSIONING",
+        "AWS-EC2-NO_PUBLIC_INGRESS_SGR",
+        "AWS-S3-ENABLE_LOGGING"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 4,
+        "medium": 4,
+        "low": 0
+      },
+      "service_categories": [
+        "rds",
+        "lambda",
+        "ec2",
+        "s3"
+      ],
+      "services_covered": [
+        "rds",
+        "lambda",
+        "ec2",
+        "s3"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 213,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

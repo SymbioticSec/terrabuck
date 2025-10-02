@@ -1,0 +1,372 @@
+{
+  "project_info": {
+    "project_id": "gcp_drone_delivery_platform",
+    "project_name": "Autonomous Drone Delivery Management Platform",
+    "description": "A comprehensive platform for managing autonomous drone delivery operations including flight path optimization, real-time tracking, package management, and regulatory compliance reporting. The system handles drone fleet coordination, weather integration, no-fly zone enforcement, and customer delivery notifications with real-time GPS tracking and automated route planning.",
+    "cloud_provider": "gcp",
+    "language": "terraform",
+    "architecture_type": "event_driven_microservices",
+    "business_context": "Last-mile delivery company transitioning from ground vehicles to autonomous drones for faster, cost-effective package delivery in urban and suburban areas. Requires real-time fleet management, regulatory compliance (FAA), and integration with existing logistics systems.",
+    "components": [
+      {
+        "name": "drone_telemetry_ingestion",
+        "service_type": "google_cloud_functions",
+        "purpose": "Ingests real-time telemetry data from drone fleet including GPS coordinates, battery levels, payload status, and sensor readings",
+        "dependencies": [],
+        "security_considerations": [
+          "device_authentication",
+          "encrypted_telemetry_transmission",
+          "rate_limiting"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "flight_coordination_engine",
+        "service_type": "google_compute_engine",
+        "purpose": "Core service managing flight path optimization, collision avoidance, weather integration, and no-fly zone enforcement using real-time algorithms",
+        "dependencies": [
+          "drone_telemetry_ingestion",
+          "operational_database"
+        ],
+        "security_considerations": [
+          "api_authentication",
+          "flight_data_encryption",
+          "access_control"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "delivery_tracking_api",
+        "service_type": "google_cloud_run",
+        "purpose": "RESTful API providing real-time delivery tracking, customer notifications, and delivery status updates with webhook integrations",
+        "dependencies": [
+          "operational_database",
+          "flight_coordination_engine"
+        ],
+        "security_considerations": [
+          "jwt_authentication",
+          "customer_data_privacy",
+          "api_rate_limiting"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "operational_database",
+        "service_type": "google_cloud_sql",
+        "purpose": "Stores delivery orders, drone fleet information, flight logs, customer data, and regulatory compliance records",
+        "dependencies": [],
+        "security_considerations": [
+          "database_encryption",
+          "backup_security",
+          "connection_ssl",
+          "access_logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "telemetry_data_lake",
+        "service_type": "google_cloud_storage",
+        "purpose": "Long-term storage for drone telemetry data, flight recordings, and analytics data for performance optimization and compliance reporting",
+        "dependencies": [
+          "drone_telemetry_ingestion"
+        ],
+        "security_considerations": [
+          "bucket_encryption",
+          "access_policies",
+          "audit_logging"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "compliance_reporting_service",
+        "service_type": "google_cloud_functions",
+        "purpose": "Automated generation of FAA compliance reports, flight log summaries, and safety incident documentation",
+        "dependencies": [
+          "operational_database",
+          "telemetry_data_lake"
+        ],
+        "security_considerations": [
+          "report_encryption",
+          "audit_trails",
+          "secure_transmission"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VPC with public subnet for API endpoints and private subnets for internal services and databases",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "drone_fleet_to_ingestion_via_https",
+        "internal_service_mesh",
+        "database_private_access",
+        "external_api_public_endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 3,
+      "storage_buckets": 2,
+      "databases": 1,
+      "networking_components": 5,
+      "cloud_functions": 4,
+      "iam_resources": 6,
+      "monitoring_resources": 3,
+      "load_balancers": 2
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T15:38:26.758691"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "GOOGLE-COMPUTE-VM_DISK_ENCRYPTION_CUSTOMER_KEY",
+        "title": "VM Disk Encryption Customer Key Missing",
+        "description": "The flight coordination engine compute instance lacks customer-managed encryption keys for boot disk encryption, relying on Google-managed keys which provide less control over sensitive flight data and telemetry information",
+        "severity": "medium",
+        "affected_component": "flight_coordination_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Reduced control over encryption of critical flight coordination data and potential compliance issues with drone operation regulations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#kms_key_self_link\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n          kms_key_self_link = \"something\"\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n      }",
+        "file_name": "vm_disk_encryption_customer_key.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create google_compute_instance resource without kms_key_self_link in boot_disk configuration",
+          "explanation": "Without customer-managed encryption keys, the flight coordination engine's disk encryption relies on Google-managed keys, reducing organizational control over sensitive drone operation data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-NO_PUBLIC_ACCESS",
+        "title": "SQL Database Public Access Enabled",
+        "description": "The operational database allows public access through authorized networks configuration with 0.0.0.0/0, exposing sensitive delivery orders, drone fleet information, and customer data to potential internet-based attacks",
+        "severity": "medium",
+        "affected_component": "operational_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Critical exposure of customer delivery data, drone fleet information, and regulatory compliance records to unauthorized internet access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"10.0.0.1/24\"\n              name  = \"internal\"\n            }\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n\n            authorized_networks {\n              value = \"0.0.0.0/0\"\n              name  = \"internet\"\n            }\n          }\n        }\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Add authorized_networks block with value = \"0.0.0.0/0\" in ip_configuration",
+          "explanation": "This configuration allows database access from any internet IP address, creating a critical security exposure for sensitive drone delivery data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "title": "SQL Database Transit Encryption Disabled",
+        "description": "The operational database does not enforce SSL/TLS encryption for data in transit, allowing sensitive delivery and drone fleet data to be transmitted unencrypted between services",
+        "severity": "medium",
+        "affected_component": "operational_database",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Risk of data interception during transmission of customer delivery information, drone telemetry, and regulatory compliance data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/sql_database_instance\n  good:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n            require_ssl = true\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"google_sql_database_instance\" \"postgres\" {\n        name             = \"postgres-instance-a\"\n        database_version = \"POSTGRES_11\"\n\n        settings {\n          tier = \"db-f1-micro\"\n\n          ip_configuration {\n            ipv4_enabled = false\n            authorized_networks {\n              value = \"108.12.12.0/24\"\n              name  = \"internal\"\n            }\n            require_ssl = false\n          }\n        }\n      }",
+        "file_name": "encrypt_in_transit_data.yaml",
+        "service": "sql",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set require_ssl = false in ip_configuration block",
+          "explanation": "Disabling SSL requirement allows unencrypted database connections, exposing sensitive drone delivery data during transmission"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-RESTRICT_SSH_ACCESS",
+        "title": "Unrestricted SSH Access to Flight Coordination Engine",
+        "description": "Firewall rules allow SSH access from any IP address (0.0.0.0/0) to the flight coordination engine, creating a potential entry point for attackers to compromise critical drone flight management systems",
+        "severity": "medium",
+        "affected_component": "flight_coordination_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Unauthorized access to critical flight coordination systems could lead to drone hijacking, flight path manipulation, or service disruption",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall\n  good:\n    - |-\n      resource \"google_compute_firewall\" \"good_example\" {\n        name    = \"allow-ssh-from-specific-ip\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"22\"]\n        }\n\n        source_ranges = [\"192.168.1.0/24\"]\n        target_tags   = [\"ssh-allowed\"]\n      }\n  bad:\n    - |-\n      resource \"google_compute_firewall\" \"bad_example\" {\n        name    = \"allow-ssh-from-anywhere\"\n        network = \"default\"\n\n        allow {\n          protocol = \"tcp\"\n          ports    = [\"22\"]\n        }\n\n        source_ranges = [\"0.0.0.0/0\"]\n        target_tags   = [\"ssh-allowed\"]\n      }",
+        "file_name": "restrict_ssh_access.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create firewall rule with source_ranges = [\"0.0.0.0/0\"] for SSH port 22",
+          "explanation": "Allowing SSH access from any internet IP creates a broad attack surface for the critical flight coordination engine"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "title": "Project-Wide SSH Keys Not Blocked",
+        "description": "Compute instances do not block project-wide SSH keys, allowing any project-level SSH key to access the flight coordination engine and potentially other critical drone management systems",
+        "severity": "medium",
+        "affected_component": "flight_coordination_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Overprivileged access to drone coordination systems through shared project SSH keys, increasing risk of unauthorized flight control",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#\n  good:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          block-project-ssh-keys = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"default\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        metadata = {\n          block-project-ssh-keys = false\n        }\n      }",
+        "file_name": "no_project_wide_ssh_keys.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set block-project-ssh-keys = false in instance metadata",
+          "explanation": "Allowing project-wide SSH keys creates excessive access privileges to critical drone coordination infrastructure"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_PRIVATE_GOOGLE_ACCESS",
+        "title": "Private Google Access Disabled",
+        "description": "Subnetworks do not have private Google access enabled, forcing instances to use external IP addresses to access Google Cloud services, increasing network exposure for drone telemetry and data processing",
+        "severity": "medium",
+        "affected_component": "telemetry_data_lake",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Increased network exposure and potential data interception when accessing Google Cloud Storage for drone telemetry data",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork#private_ip_google_access\n  good:\n    - |-\n      resource \"google_compute_subnetwork\" \"good_example\" {\n        name                     = \"test-subnetwork\"\n        ip_cidr_range            = \"10.2.0.0/16\"\n        region                   = \"us-central1\"\n        network                  = google_compute_network.custom-test.id\n        private_ip_google_access = true\n      }\n  bad:\n    - |-\n      resource \"google_compute_subnetwork\" \"bad_example\" {\n        name                     = \"test-subnetwork\"\n        ip_cidr_range            = \"10.2.0.0/16\"\n        region                   = \"us-central1\"\n        network                  = google_compute_network.custom-test.id\n        private_ip_google_access = false\n      }",
+        "file_name": "enable_subnetwork_private_google_access.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set private_ip_google_access = false in subnetwork configuration",
+          "explanation": "Without private Google access, instances must use external IPs to reach Google services, increasing network attack surface"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "title": "Direct User IAM Permissions",
+        "description": "IAM permissions are granted directly to user accounts instead of service accounts or groups, creating potential security risks for drone delivery platform access management",
+        "severity": "medium",
+        "affected_component": "delivery_tracking_api",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Increased risk of credential compromise and difficulty in access management for drone delivery operations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://www.terraform.io/docs/providers/google/d/iam_policy.html#members\n  good:\n    - |-\n      resource \"google_project_iam_binding\" \"good_example\" {\n        members = [\n          \"group:test@example.com\",\n        ]\n      }\n  bad:\n    - |-\n      resource \"google_project_iam_binding\" \"bad_example\" {\n        members = [\n          \"user:test@example.com\",\n        ]\n      }",
+        "file_name": "no_user_granted_permissions.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Use \"user:email@domain.com\" in IAM binding members instead of service accounts or groups",
+          "explanation": "Direct user permissions create security risks and make access management more difficult in drone delivery operations"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM",
+        "title": "Shielded VM vTPM Disabled",
+        "description": "The flight coordination engine does not have virtual Trusted Platform Module (vTPM) enabled, reducing protection against rootkits and boot-level attacks on critical drone management infrastructure",
+        "severity": "medium",
+        "affected_component": "flight_coordination_engine",
+        "injection_strategy": "trivy_yaml_injection",
+        "business_impact": "Reduced protection against advanced persistent threats and boot-level attacks on critical drone flight coordination systems",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#enable_vtpm\n  good:\n    - |-\n      resource \"google_compute_instance\" \"good_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_vtpm = true\n        }\n      }\n  bad:\n    - |-\n      resource \"google_compute_instance\" \"bad_example\" {\n        name         = \"test\"\n        machine_type = \"e2-medium\"\n        zone         = \"us-central1-a\"\n\n        boot_disk {\n          initialize_params {\n            image = \"debian-cloud/debian-9\"\n          }\n        }\n\n        shielded_instance_config {\n          enable_vtpm = false\n        }\n      }",
+        "file_name": "enable_shielded_vm_vtpm.yaml",
+        "service": "compute",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_vtpm = false in shielded_instance_config",
+          "explanation": "Disabling vTPM reduces the instance's ability to verify boot integrity and protect against advanced attacks on drone coordination systems"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "GOOGLE-COMPUTE-VM_DISK_ENCRYPTION_CUSTOMER_KEY",
+        "GOOGLE-SQL-NO_PUBLIC_ACCESS",
+        "GOOGLE-SQL-ENCRYPT_IN_TRANSIT_DATA",
+        "GOOGLE-COMPUTE-RESTRICT_SSH_ACCESS",
+        "GOOGLE-COMPUTE-NO_PROJECT_WIDE_SSH_KEYS",
+        "GOOGLE-COMPUTE-ENABLE_SUBNETWORK_PRIVATE_GOOGLE_ACCESS",
+        "GOOGLE-IAM-NO_USER_GRANTED_PERMISSIONS",
+        "GOOGLE-COMPUTE-ENABLE_SHIELDED_VM_VTPM"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "services_covered": [
+        "sql",
+        "iam",
+        "compute"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "deployment_name": "autonomous-drone-delivery-management-platform",
+    "architecture_type": "event_driven_microservices",
+    "cloud_provider": "google_cloud_platform",
+    "total_resources": 29,
+    "resource_breakdown": {
+      "compute_instances": 1,
+      "cloud_functions": 2,
+      "cloud_run_services": 1,
+      "storage_buckets": 2,
+      "sql_instances": 1,
+      "sql_databases": 1,
+      "sql_users": 1,
+      "networks": 1,
+      "subnets": 3,
+      "firewall_rules": 2,
+      "service_accounts": 1,
+      "iam_bindings": 2,
+      "storage_objects": 2,
+      "archive_files": 2,
+      "load_balancer_components": 2,
+      "health_checks": 1,
+      "global_addresses": 1,
+      "random_ids": 1,
+      "data_sources": 2
+    },
+    "components_implemented": [
+      "drone_telemetry_ingestion",
+      "flight_coordination_engine",
+      "delivery_tracking_api",
+      "operational_database",
+      "telemetry_data_lake",
+      "compliance_reporting_service"
+    ],
+    "vulnerabilities_injected": 8,
+    "estimated_monthly_cost_usd": 450,
+    "deployment_time_minutes": 15,
+    "terraform_version_required": ">=1.0",
+    "provider_versions": {
+      "google": "~>4.0",
+      "archive": "~>2.0"
+    }
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 23,
+    "components_implemented": 6,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

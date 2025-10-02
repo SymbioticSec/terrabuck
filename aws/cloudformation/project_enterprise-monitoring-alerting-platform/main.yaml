@@ -1,0 +1,533 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Enterprise Infrastructure Monitoring and Alerting Platform - Production-ready monitoring system with high-throughput metric ingestion and intelligent alerting'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Environment Configuration"
+        Parameters:
+          - Environment
+          - ProjectName
+      - Label:
+          default: "Network Configuration"
+        Parameters:
+          - VpcCidr
+          - PublicSubnetCidr1
+          - PrivateSubnetCidr1
+          - DataSubnetCidr1
+      - Label:
+          default: "Database Configuration"
+        Parameters:
+          - DatabaseUsername
+          - DatabasePassword
+          - DatabaseInstanceClass
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+    Description: Deployment environment
+  
+  ProjectName:
+    Type: String
+    Default: enterprise-monitoring-platform
+    Description: Project name for resource naming
+  
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR block for VPC
+  
+  PublicSubnetCidr1:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR block for public subnet
+  
+  PrivateSubnetCidr1:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR block for private subnet
+  
+  DataSubnetCidr1:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for data subnet
+  
+  DatabaseUsername:
+    Type: String
+    Default: monitoringadmin
+    Description: Database administrator username
+  
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Database administrator password
+  
+  DatabaseInstanceClass:
+    Type: String
+    Default: db.r5.large
+    AllowedValues: [db.r5.large, db.r5.xlarge, db.r5.2xlarge]
+    Description: RDS instance class
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, production]
+
+Resources:
+  # VPC and Networking Infrastructure
+  MonitoringVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-vpc"
+        - Key: Environment
+          Value: !Ref Environment
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-igw"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MonitoringVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonitoringVPC
+      CidrBlock: !Ref PublicSubnetCidr1
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-subnet-1"
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonitoringVPC
+      CidrBlock: !Ref PrivateSubnetCidr1
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-subnet-1"
+
+  DataSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonitoringVPC
+      CidrBlock: !Ref DataSubnetCidr1
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-data-subnet-1"
+
+  # NAT Gateway for private subnet outbound access
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIPForNAT.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-nat-gateway"
+
+  EIPForNAT:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+
+  # Route Tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MonitoringVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-public-rt"
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MonitoringVPC
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-private-rt"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  # Security Groups - VULNERABILITY: Missing descriptions
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref MonitoringVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-alb-sg"
+
+  MetricsProcessingSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref MonitoringVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-metrics-processing-sg"
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS databases
+      VpcId: !Ref MonitoringVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref MetricsProcessingSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-database-sg"
+
+  # Application Load Balancer - metrics_ingestion_api
+  MetricsIngestionLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${ProjectName}-metrics-alb"
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - !Ref PublicSubnet1
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: enterprise-infrastructure-monitoring-and-alerting-platform-application-load-balancer-metrics-ingestion
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${ProjectName}-metrics-tg"
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref MonitoringVPC
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      TargetType: instance
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref MetricsIngestionLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  # Launch Configuration and Auto Scaling Group - metrics_processing_service
+  # VULNERABILITY: IMDS tokens set to optional
+  MetricsProcessingLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-0abcdef1234567890
+      InstanceType: t3.medium
+      SecurityGroups:
+        - !Ref MetricsProcessingSecurityGroup
+      IamInstanceProfile: !Ref MetricsProcessingInstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y docker
+          service docker start
+          usermod -a -G docker ec2-user
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: optional
+
+  MetricsProcessingAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub "${ProjectName}-metrics-processing-asg"
+      LaunchConfigurationName: !Ref MetricsProcessingLaunchConfig
+      MinSize: 2
+      MaxSize: 10
+      DesiredCapacity: 3
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+      Tags:
+        - Key: Name
+          Value: enterprise-infrastructure-monitoring-and-alerting-platform-ec2-auto-scaling-group-metrics-processing
+          PropagateAtLaunch: true
+
+  # IAM Role for EC2 instances - VULNERABILITY: Excessive S3 permissions
+  MetricsProcessingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: MetricsProcessingPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:*
+                Resource: '*'
+
+  MetricsProcessingInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref MetricsProcessingRole
+
+  # Lambda Function - alert_engine
+  AlertEngineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  AlertEngineFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-alert-engine"
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt AlertEngineRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          def handler(event, context):
+              return {'statusCode': 200, 'body': json.dumps('Alert processed')}
+      Environment:
+        Variables:
+          DB_HOST: !GetAtt ConfigurationDatabase.Endpoint.Address
+      Tags:
+        - Key: Name
+          Value: enterprise-infrastructure-monitoring-and-alerting-platform-lambda-alert-engine
+
+  # RDS Subnet Group
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for monitoring databases
+      SubnetIds:
+        - !Ref DataSubnet1
+        - !Ref PrivateSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-db-subnet-group"
+
+  # RDS Instance - configuration_database
+  ConfigurationDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${ProjectName}-config-db"
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      Engine: mysql
+      EngineVersion: '8.0.35'
+      AllocatedStorage: 100
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      BackupRetentionPeriod: 7
+      MultiAZ: !If [IsProduction, true, false]
+      StorageEncrypted: false
+      Tags:
+        - Key: Name
+          Value: enterprise-infrastructure-monitoring-and-alerting-platform-rds-instance-configuration
+
+  # RDS Cluster - time_series_database - VULNERABILITY: No encryption
+  TimeSeriesDBCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      DBClusterIdentifier: !Sub "${ProjectName}-timeseries-cluster"
+      Engine: aurora-mysql
+      EngineVersion: '8.0.mysql_aurora.3.02.0'
+      MasterUsername: !Ref DatabaseUsername
+      MasterUserPassword: !Ref DatabasePassword
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      BackupRetentionPeriod: 7
+      StorageEncrypted: false
+      Tags:
+        - Key: Name
+          Value: enterprise-infrastructure-monitoring-and-alerting-platform-rds-cluster-time-series
+
+  TimeSeriesDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      DBClusterIdentifier: !Ref TimeSeriesDBCluster
+      Engine: aurora-mysql
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-timeseries-instance"
+
+  # S3 Bucket - dashboard_storage
+  DashboardStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-dashboard-storage-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Name
+          Value: enterprise-infrastructure-monitoring-and-alerting-platform-s3-bucket-dashboard-storage
+
+  # SQS Queue - notification_queue - VULNERABILITY: Wildcard permissions
+  NotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ProjectName}-notification-queue"
+      MessageRetentionPeriod: 1209600
+      VisibilityTimeoutSeconds: 300
+      Tags:
+        - Key: Name
+          Value: enterprise-infrastructure-monitoring-and-alerting-platform-sqs-notification-queue
+
+  NotificationQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref NotificationQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: '*'
+            Resource: !GetAtt NotificationQueue.Arn
+
+  # CloudTrail for audit logging - VULNERABILITY: No customer KMS key and public bucket access
+  CloudTrailBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectName}-cloudtrail-logs-${AWS::AccountId}"
+      AccessControl: AuthenticatedRead
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-cloudtrail-bucket"
+
+  MonitoringCloudTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: !Sub "${ProjectName}-audit-trail"
+      S3BucketName: !Ref CloudTrailBucket
+      IsLogging: true
+      IsMultiRegionTrail: false
+      IncludeGlobalServiceEvents: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-cloudtrail"
+
+Outputs:
+  VPCId:
+    Description: VPC ID for the monitoring platform
+    Value: !Ref MonitoringVPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC-ID"
+
+  LoadBalancerDNS:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt MetricsIngestionLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-DNS"
+
+  ConfigurationDatabaseEndpoint:
+    Description: Configuration database endpoint
+    Value: !GetAtt ConfigurationDatabase.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-Config-DB-Endpoint"
+
+  TimeSeriesDatabaseEndpoint:
+    Description: Time series database cluster endpoint
+    Value: !GetAtt TimeSeriesDBCluster.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-TimeSeries-DB-Endpoint"
+
+  DashboardBucketName:
+    Description: S3 bucket name for dashboard storage
+    Value: !Ref DashboardStorageBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-Dashboard-Bucket"
+
+  NotificationQueueURL:
+    Description: SQS queue URL for notifications
+    Value: !Ref NotificationQueue
+    Export:
+      Name: !Sub "${AWS::StackName}-Notification-Queue-URL"
+
+  AlertEngineFunctionArn:
+    Description: Lambda function ARN for alert engine
+    Value: !GetAtt AlertEngineFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-Alert-Engine-ARN"

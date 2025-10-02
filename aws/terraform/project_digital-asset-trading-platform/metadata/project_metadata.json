@@ -1,0 +1,378 @@
+{
+  "project_info": {
+    "project_id": "digital-asset-trading-platform",
+    "project_name": "Digital Asset Trading Platform",
+    "description": "A secure, high-performance cryptocurrency and digital asset trading platform supporting real-time order matching, portfolio management, and regulatory compliance. The platform handles thousands of concurrent users executing trades with sub-millisecond latency requirements while maintaining strict security and audit trails for financial regulations.",
+    "cloud_provider": "aws",
+    "language": "terraform",
+    "architecture_type": "microservices",
+    "business_context": "A fintech startup launching a regulated cryptocurrency exchange that needs to handle high-frequency trading, maintain customer funds securely, provide real-time market data, and comply with financial regulations including KYC/AML requirements. The platform must support both retail and institutional traders with different access levels and trading limits.",
+    "components": [
+      {
+        "name": "trading_engine_cluster",
+        "service_type": "aws_ecs_cluster",
+        "purpose": "High-performance containerized trading engine for order matching and execution with auto-scaling capabilities",
+        "dependencies": [
+          "market_data_cache",
+          "trade_database",
+          "secure_network"
+        ],
+        "security_considerations": [
+          "container_isolation",
+          "secrets_management",
+          "network_segmentation",
+          "audit_logging"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "market_data_cache",
+        "service_type": "aws_elasticache_redis",
+        "purpose": "In-memory cache for real-time market data, order books, and price feeds with microsecond access times",
+        "dependencies": [
+          "secure_network"
+        ],
+        "security_considerations": [
+          "encryption_in_transit",
+          "vpc_isolation",
+          "access_control"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "trade_database",
+        "service_type": "aws_rds_postgresql",
+        "purpose": "ACID-compliant database for trade records, user accounts, and transaction history with automated backups",
+        "dependencies": [
+          "secure_network"
+        ],
+        "security_considerations": [
+          "encryption_at_rest",
+          "backup_encryption",
+          "connection_ssl",
+          "audit_trails"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "api_gateway",
+        "service_type": "aws_api_gateway",
+        "purpose": "Rate-limited REST and WebSocket API endpoints for trading operations, account management, and market data streaming",
+        "dependencies": [
+          "trading_engine_cluster",
+          "user_auth_service"
+        ],
+        "security_considerations": [
+          "rate_limiting",
+          "api_key_management",
+          "ddos_protection",
+          "request_validation"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "user_auth_service",
+        "service_type": "aws_cognito",
+        "purpose": "Multi-factor authentication, KYC verification, and role-based access control for traders and administrators",
+        "dependencies": [
+          "compliance_storage"
+        ],
+        "security_considerations": [
+          "mfa_enforcement",
+          "password_policies",
+          "session_management",
+          "identity_verification"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "compliance_storage",
+        "service_type": "aws_s3_bucket",
+        "purpose": "Encrypted storage for KYC documents, audit logs, and regulatory reporting with immutable records",
+        "dependencies": [
+          "secure_network"
+        ],
+        "security_considerations": [
+          "encryption_at_rest",
+          "access_logging",
+          "versioning",
+          "legal_hold"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "secure_network",
+        "service_type": "aws_vpc",
+        "purpose": "Isolated network infrastructure with multiple availability zones and strict security group controls",
+        "dependencies": [],
+        "security_considerations": [
+          "network_segmentation",
+          "nacl_rules",
+          "flow_logs",
+          "nat_gateway_security"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Multi-AZ VPC with public subnets for load balancers, private subnets for application services, and isolated data subnets for databases and cache layers",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Internet Gateway for public access",
+        "NAT Gateway for outbound private subnet traffic",
+        "VPC Endpoints for AWS services",
+        "Private connectivity between application and data tiers"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 4,
+      "storage_buckets": 2,
+      "databases": 2,
+      "networking_components": 8,
+      "security_components": 6,
+      "monitoring_components": 3,
+      "total_estimated": 25
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-06T23:34:22.717602"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "title": "Encrypt Cluster Storage Data",
+        "description": "The PostgreSQL database cluster storing critical trading data lacks encryption at rest, exposing sensitive financial information including trade records, user account data, and transaction history to potential data breaches if storage media is compromised.",
+        "severity": "high",
+        "affected_component": "trade_database",
+        "injection_strategy": "Configure RDS cluster without storage_encrypted or with explicit false value",
+        "business_impact": "Unencrypted financial data violates regulatory compliance (PCI DSS, SOX) and exposes customer trading information, account balances, and transaction histories to unauthorized access",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster\n  good:\n    - |-\n      resource \"aws_rds_cluster\" \"good_example\" {\n        name              = \"bar\"\n        kms_key_id        = \"arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab\"\n        storage_encrypted = true\n      }\n  bad:\n    - |-\n      resource \"aws_rds_cluster\" \"bad_example\" {\n        name       = \"bar\"\n        kms_key_id = \"\"\n      }\n    - |-\n      resource \"aws_rds_cluster\" \"bad_example\" {\n        name              = \"bar\"\n        storage_encrypted = true\n      }",
+        "file_name": "encrypt_cluster_storage_data.yaml",
+        "service": "rds",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create RDS cluster resource without storage_encrypted = true or missing kms_key_id",
+          "explanation": "Without explicit encryption configuration, RDS cluster data remains unencrypted at rest, violating financial data protection requirements"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-ECS-NO_PLAINTEXT_SECRETS",
+        "title": "No Plaintext Secrets",
+        "description": "The trading engine ECS task definitions contain hardcoded secrets in environment variables, exposing database passwords, API keys, and encryption keys in plaintext within container configurations.",
+        "severity": "critical",
+        "affected_component": "trading_engine_cluster",
+        "injection_strategy": "Include sensitive values directly in ECS task definition environment variables",
+        "business_impact": "Exposed secrets enable unauthorized access to trading systems, market data feeds, and customer accounts, potentially leading to financial theft and market manipulation",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition\n  good:\n    - |-\n      resource \"aws_ecs_task_definition\" \"good_example\" {\n        container_definitions = <<EOF\n       [\n         {\n           \"name\": \"my_service\",\n           \"environment\": [\n             { \"name\": \"ENVIRONMENT\", \"value\": \"development\" }\n           ]\n         }\n       ]\n       EOF\n      }\n  bad:\n    - |-\n      resource \"aws_ecs_task_definition\" \"bad_example\" {\n        container_definitions = <<EOF\n       [\n         {\n           \"name\": \"my_service\",\n           \"environment\": [\n             { \"name\": \"ENVIRONMENT\", \"value\": \"development\" },\n             { \"name\": \"DATABASE_PASSWORD\", \"value\": \"oh no D:\"}\n           ]\n         }\n       ]\n       EOF\n      }",
+        "file_name": "no_plaintext_secrets.yaml",
+        "service": "ecs",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Embed DATABASE_PASSWORD, API_KEYS, or ENCRYPTION_KEYS directly in container environment variables",
+          "explanation": "Plaintext secrets in task definitions are visible to anyone with ECS access and stored in logs, creating multiple exposure vectors"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-APIGATEWAY-ENABLE_TRACING",
+        "title": "Enable Tracing",
+        "description": "The API Gateway handling trading operations lacks X-Ray tracing, preventing detailed monitoring of request flows, performance bottlenecks, and security incidents across the trading platform's microservices architecture.",
+        "severity": "medium",
+        "affected_component": "api_gateway",
+        "injection_strategy": "Configure API Gateway stage with xray_tracing_enabled = false or omit the setting",
+        "business_impact": "Limited observability hampers incident response, fraud detection, and performance optimization for high-frequency trading operations, potentially missing security breaches",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_stage#xray_tracing_enabled\n  good:\n    - |-\n      resource \"aws_api_gateway_rest_api\" \"test\" {}\n\n      resource \"aws_api_gateway_stage\" \"good_example\" {\n        stage_name           = \"prod\"\n        rest_api_id          = aws_api_gateway_rest_api.test.id\n        deployment_id        = aws_api_gateway_deployment.test.id\n        xray_tracing_enabled = true\n      }\n  bad:\n    - |-\n      resource \"aws_api_gateway_rest_api\" \"test\" {}\n\n      resource \"aws_api_gateway_stage\" \"bad_example\" {\n        stage_name           = \"prod\"\n        rest_api_id          = aws_api_gateway_rest_api.test.id\n        deployment_id        = aws_api_gateway_deployment.test.id\n        xray_tracing_enabled = false\n      }",
+        "file_name": "enable_tracing.yaml",
+        "service": "apigateway",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create API Gateway stage without xray_tracing_enabled = true",
+          "explanation": "Missing tracing reduces visibility into API performance and security events, critical for financial trading platforms"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-S3-ENABLE_OBJECT_READ_LOGGING",
+        "title": "Enable Object Read Logging",
+        "description": "The S3 bucket storing compliance documents and audit logs lacks CloudTrail object-level read logging, preventing detection of unauthorized access to sensitive KYC documents and regulatory records.",
+        "severity": "medium",
+        "affected_component": "compliance_storage",
+        "injection_strategy": "Create S3 bucket without corresponding CloudTrail configuration for object-level read events",
+        "business_impact": "Inability to detect unauthorized access to customer KYC documents and audit trails violates regulatory requirements and hampers forensic investigations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket#versioning\n  good:\n    - |-\n      resource \"aws_s3_bucket\" \"good_example\" {\n        bucket = \"my-bucket\"\n      }\n\n      resource \"aws_cloudtrail\" \"example\" {\n        event_selector {\n          read_write_type = \"ReadOnly\"\n          data_resource {\n            type   = \"AWS::S3::Object\"\n            values = [\"arn:aws:s3:::${aws_s3_bucket.good_example.bucket}/\"]\n          }\n        }\n      }\n  bad:\n    - |-\n      resource \"aws_s3_bucket\" \"bad_example\" {\n        bucket = \"my-bucket\"\n      }",
+        "file_name": "enable_object_read_logging.yaml",
+        "service": "s3",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create S3 bucket without CloudTrail event selector for object-level read operations",
+          "explanation": "Missing object-level logging prevents detection of unauthorized document access, critical for compliance auditing"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-EC2-REQUIRE_VPC_FLOW_LOGS_FOR_ALL_VPCS",
+        "title": "Require Vpc Flow Logs For All Vpcs",
+        "description": "The secure network VPC lacks flow logs, preventing network traffic analysis, intrusion detection, and forensic investigation of potential security breaches in the trading platform's network infrastructure.",
+        "severity": "medium",
+        "affected_component": "secure_network",
+        "injection_strategy": "Create VPC resource without corresponding aws_flow_log configuration",
+        "business_impact": "Limited network visibility hampers detection of data exfiltration, lateral movement, and network-based attacks against the trading infrastructure",
+        "trivy_yaml_content": "terraform:\n  good:\n    - |-\n      resource \"aws_vpc\" \"example\" {\n        cidr_block = \"10.0.0.0/16\"\n      }\n\n      resource \"aws_flow_log\" \"example\" {\n        log_group_name = \"example\"\n        traffic_type   = \"ALL\"\n        vpc_id         = aws_vpc.example.id\n      }\n  bad:\n    - |-\n      resource \"aws_vpc\" \"example\" {\n        cidr_block = \"10.0.0.0/16\"\n      }",
+        "file_name": "require_vpc_flow_logs_for_all_vpcs.yaml",
+        "service": "ec2",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create VPC without aws_flow_log resource targeting the VPC ID",
+          "explanation": "Missing flow logs eliminate network traffic visibility, critical for detecting suspicious activities in financial networks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-KMS-AUTO_ROTATE_KEYS",
+        "title": "Auto Rotate Keys",
+        "description": "KMS keys used for encrypting trading data and customer information lack automatic rotation, increasing the risk of key compromise over time and violating cryptographic best practices for financial data protection.",
+        "severity": "medium",
+        "affected_component": "trade_database",
+        "injection_strategy": "Configure KMS key with enable_key_rotation = false",
+        "business_impact": "Static encryption keys increase exposure window for compromised keys, potentially affecting all encrypted trading data and customer information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key#enable_key_rotation\n  good:\n    - |-\n      resource \"aws_kms_key\" \"good_example\" {\n        enable_key_rotation = true\n      }\n  bad:\n    - |-\n      resource \"aws_kms_key\" \"bad_example\" {\n        enable_key_rotation = false\n      }",
+        "file_name": "auto_rotate_keys.yaml",
+        "service": "kms",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create KMS key with enable_key_rotation = false or omit the setting",
+          "explanation": "Disabled key rotation extends the lifetime of encryption keys, increasing risk if keys are compromised"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS",
+        "title": "Require Symbols In Passwords",
+        "description": "The IAM password policy for trading platform administrators lacks symbol requirements, allowing weak passwords that could be compromised through brute force attacks against high-privilege accounts managing financial systems.",
+        "severity": "medium",
+        "affected_component": "user_auth_service",
+        "injection_strategy": "Configure IAM password policy without require_symbols = true",
+        "business_impact": "Weak administrative passwords increase risk of account compromise, potentially leading to unauthorized access to trading systems and customer funds",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_account_password_policy\n  good:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"good_example\" {\n        # ...\n        require_symbols = true\n        # ...\n      }\n  bad:\n    - |-\n      resource \"aws_iam_account_password_policy\" \"bad_example\" {\n        # ...\n        # require_symbols not set\n        # ...\n      }",
+        "file_name": "require_symbols_in_passwords.yaml",
+        "service": "iam",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create IAM password policy without require_symbols = true setting",
+          "explanation": "Missing symbol requirements allow weaker passwords that are more susceptible to brute force and dictionary attacks"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 7,
+      "trivy_rules_used": [
+        "AWS-RDS-ENCRYPT_CLUSTER_STORAGE_DATA",
+        "AWS-ECS-NO_PLAINTEXT_SECRETS",
+        "AWS-APIGATEWAY-ENABLE_TRACING",
+        "AWS-S3-ENABLE_OBJECT_READ_LOGGING",
+        "AWS-EC2-REQUIRE_VPC_FLOW_LOGS_FOR_ALL_VPCS",
+        "AWS-KMS-AUTO_ROTATE_KEYS",
+        "AWS-IAM-REQUIRE_SYMBOLS_IN_PASSWORDS"
+      ],
+      "severity_distribution": {
+        "critical": 1,
+        "high": 1,
+        "medium": 5,
+        "low": 0
+      },
+      "service_categories": [
+        "apigateway",
+        "s3",
+        "ec2",
+        "iam",
+        "rds",
+        "kms",
+        "ecs"
+      ],
+      "services_covered": [
+        "apigateway",
+        "s3",
+        "ec2",
+        "iam",
+        "rds",
+        "kms",
+        "ecs"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response",
+    "project_id": "digital-asset-trading-platform",
+    "terraform_version": "~> 1.0",
+    "aws_provider_version": "~> 5.0",
+    "total_resources": 30,
+    "resource_breakdown": {
+      "networking": 8,
+      "compute": 4,
+      "storage": 4,
+      "security": 6,
+      "monitoring": 2,
+      "iam": 4,
+      "other": 2
+    },
+    "estimated_monthly_cost": "$2500-4000",
+    "deployment_time": "15-20 minutes",
+    "components_implemented": [
+      "secure_network",
+      "trading_engine_cluster",
+      "market_data_cache",
+      "trade_database",
+      "api_gateway",
+      "user_auth_service",
+      "compliance_storage"
+    ],
+    "vulnerabilities_injected": 7,
+    "security_misconfigurations": [
+      "Unencrypted RDS storage",
+      "Plaintext secrets in ECS",
+      "Disabled API Gateway tracing",
+      "Missing S3 object logging",
+      "No VPC flow logs",
+      "Disabled KMS key rotation",
+      "Weak password policy"
+    ],
+    "compliance_frameworks": [
+      "PCI DSS",
+      "SOX",
+      "GDPR",
+      "KYC/AML"
+    ]
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 36,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}

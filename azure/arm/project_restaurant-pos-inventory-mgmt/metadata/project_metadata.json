@@ -1,0 +1,346 @@
+{
+  "project_info": {
+    "project_id": "restaurant-pos-inventory-mgmt",
+    "project_name": "Restaurant POS and Inventory Management System",
+    "description": "A cloud-based Point of Sale system for restaurant chains with real-time inventory management, sales analytics, and multi-location support. The system handles order processing, payment integration, inventory tracking across multiple locations, and provides management dashboards for franchise operations. Designed for mid-size restaurant chains with 10-50 locations requiring centralized inventory control and sales reporting.",
+    "cloud_provider": "azure",
+    "language": "arm_template",
+    "architecture_type": "microservices",
+    "business_context": "Restaurant franchise operations requiring centralized POS system with real-time inventory synchronization across multiple locations, integrated payment processing, and comprehensive sales analytics for operational decision making",
+    "components": [
+      {
+        "name": "pos_web_application",
+        "service_type": "azure_app_service",
+        "purpose": "Frontend web application for POS terminals and management dashboards with responsive design for tablets and desktop",
+        "dependencies": [
+          "pos_api_backend",
+          "payment_functions"
+        ],
+        "security_considerations": [
+          "SSL/TLS encryption",
+          "authentication and authorization",
+          "PCI DSS compliance for payment data"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "pos_api_backend",
+        "service_type": "azure_app_service",
+        "purpose": "RESTful API backend handling order processing, inventory operations, user management, and business logic",
+        "dependencies": [
+          "pos_database",
+          "inventory_storage"
+        ],
+        "security_considerations": [
+          "API authentication",
+          "input validation",
+          "rate limiting",
+          "secure database connections"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "payment_functions",
+        "service_type": "azure_functions",
+        "purpose": "Serverless functions for payment processing integration with third-party payment gateways and transaction logging",
+        "dependencies": [
+          "pos_database",
+          "transaction_storage"
+        ],
+        "security_considerations": [
+          "PCI DSS compliance",
+          "encrypted payment data",
+          "secure API keys management"
+        ],
+        "configuration_complexity": "high"
+      },
+      {
+        "name": "pos_database",
+        "service_type": "azure_sql_database",
+        "purpose": "Primary database storing menu items, orders, user accounts, sales transactions, and inventory levels",
+        "dependencies": [],
+        "security_considerations": [
+          "database encryption at rest",
+          "network isolation",
+          "backup encryption",
+          "access control"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "inventory_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Blob storage for inventory images, receipt templates, menu photos, and daily sales reports",
+        "dependencies": [],
+        "security_considerations": [
+          "storage encryption",
+          "access policies",
+          "secure file upload validation"
+        ],
+        "configuration_complexity": "low"
+      },
+      {
+        "name": "transaction_storage",
+        "service_type": "azure_storage_account",
+        "purpose": "Secure blob storage for payment transaction logs, audit trails, and compliance documentation",
+        "dependencies": [],
+        "security_considerations": [
+          "encryption at rest and in transit",
+          "immutable storage policies",
+          "access logging"
+        ],
+        "configuration_complexity": "medium"
+      },
+      {
+        "name": "application_load_balancer",
+        "service_type": "azure_application_gateway",
+        "purpose": "Load balancer with WAF capabilities distributing traffic to POS applications and providing SSL termination",
+        "dependencies": [
+          "pos_web_application",
+          "pos_api_backend"
+        ],
+        "security_considerations": [
+          "WAF rules",
+          "SSL certificate management",
+          "DDoS protection"
+        ],
+        "configuration_complexity": "medium"
+      }
+    ],
+    "network_topology": {
+      "vpc_structure": "Single VNet with multiple subnets: public subnet for Application Gateway, private subnets for App Services and Functions, isolated subnet for SQL Database",
+      "security_zones": [
+        "public",
+        "private",
+        "data"
+      ],
+      "connectivity_patterns": [
+        "Application Gateway routes traffic to App Services",
+        "App Services connect to SQL Database via private endpoints",
+        "Functions access storage accounts via service endpoints"
+      ]
+    },
+    "estimated_resources": {
+      "compute_instances": 5,
+      "storage_buckets": 6,
+      "databases": 3,
+      "networking_components": 8,
+      "security_components": 4,
+      "monitoring_components": 2
+    },
+    "generation_metadata": {
+      "agent": "ArchitectureAgent",
+      "timestamp": "2025-08-08T17:43:04.400327"
+    },
+    "vulnerabilities": [
+      {
+        "rule_id": "AZURE-STORAGE-ENFORCE_HTTPS",
+        "title": "Enforce HTTPS",
+        "description": "Storage accounts are not configured to enforce HTTPS-only traffic, allowing insecure HTTP connections that can expose sensitive restaurant data including payment information, inventory data, and customer details during transmission.",
+        "severity": "medium",
+        "affected_component": "inventory_storage",
+        "injection_strategy": "Configure storage account with enable_https_traffic_only = false",
+        "business_impact": "Payment card data and inventory information transmitted over unencrypted HTTP connections could be intercepted, leading to PCI DSS compliance violations and potential data breaches affecting customer payment information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#enable_https_traffic_only\n  good:\n    - |-\n      resource \"azurerm_storage_account\" \"good_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account\" \"bad_example\" {\n        name                      = \"storageaccountname\"\n        resource_group_name       = azurerm_resource_group.example.name\n        location                  = azurerm_resource_group.example.location\n        account_tier              = \"Standard\"\n        account_replication_type  = \"GRS\"\n        enable_https_traffic_only = false\n      }",
+        "file_name": "enforce_https.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set enable_https_traffic_only = false in the inventory_storage and transaction_storage storage account configurations",
+          "explanation": "This allows both HTTP and HTTPS connections to the storage accounts, creating a risk of data interception during transmission of sensitive restaurant and payment data"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "title": "Default Action Deny",
+        "description": "Storage account network rules are configured with default_action = 'Allow', permitting unrestricted network access to storage containing sensitive restaurant transaction logs and inventory data.",
+        "severity": "medium",
+        "affected_component": "transaction_storage",
+        "injection_strategy": "Configure storage account network rules with default_action = 'Allow'",
+        "business_impact": "Unrestricted network access to payment transaction logs and audit trails could allow unauthorized access to sensitive financial data, violating PCI DSS requirements and exposing customer payment information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account_network_rules#default_action\n  good:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"good_example\" {\n\n        default_action             = \"Deny\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }\n  bad:\n    - |-\n      resource \"azurerm_storage_account_network_rules\" \"bad_example\" {\n\n        default_action             = \"Allow\"\n        ip_rules                   = [\"127.0.0.1\"]\n        virtual_network_subnet_ids = [azurerm_subnet.test.id]\n        bypass                     = [\"Metrics\"]\n      }",
+        "file_name": "default_action_deny.yaml",
+        "service": "storage",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure network rules for transaction_storage with default_action = 'Allow' instead of 'Deny'",
+          "explanation": "This creates an overly permissive network configuration that allows access from any network location rather than restricting access to authorized networks only"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "title": "No Public Access",
+        "description": "SQL database is configured with public_network_access_enabled = true, exposing the restaurant's primary database containing customer orders, payment transactions, and inventory data to the public internet.",
+        "severity": "medium",
+        "affected_component": "pos_database",
+        "injection_strategy": "Configure SQL database with public_network_access_enabled = true",
+        "business_impact": "Direct internet exposure of the primary POS database creates significant risk of unauthorized access to customer payment data, order history, and business-critical inventory information, potentially resulting in data breaches and regulatory violations",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/postgresql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mysql_server#public_network_access_enabled\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mariadb_server#public_network_access_enabled\n  good:\n    - |-\n      resource \"azurerm_postgresql_server\" \"good_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = false\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_postgresql_server\" \"bad_example\" {\n        name = \"bad_example\"\n\n        public_network_access_enabled    = true\n        ssl_enforcement_enabled          = false\n        ssl_minimal_tls_version_enforced = \"TLS1_2\"\n      }",
+        "file_name": "no_public_access.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Set public_network_access_enabled = true in the pos_database SQL database configuration",
+          "explanation": "This exposes the database to the public internet rather than restricting access to private networks only, creating a significant attack surface"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-ENABLE_AUDIT",
+        "title": "Enable Audit",
+        "description": "SQL Server is missing extended auditing policy configuration, preventing comprehensive logging of database access and modifications to sensitive restaurant transaction and inventory data.",
+        "severity": "medium",
+        "affected_component": "pos_database",
+        "injection_strategy": "Omit azurerm_mssql_server_extended_auditing_policy resource configuration",
+        "business_impact": "Without comprehensive database auditing, the restaurant cannot detect unauthorized access attempts, data modifications, or compliance violations, making it difficult to investigate security incidents and meet PCI DSS audit trail requirements",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_extended_auditing_policy\n  good:\n    - |-\n      resource \"azurerm_sql_server\" \"good_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }\n\n      resource \"azurerm_mssql_server_extended_auditing_policy\" \"example\" {\n        server_id                               = azurerm_sql_server.good_example.id\n        storage_endpoint                        = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key              = azurerm_storage_account.example.primary_access_key\n        storage_account_access_key_is_secondary = true\n        retention_in_days                       = 6\n      }\n  bad:\n    - |-\n      resource \"azurerm_sql_server\" \"bad_example\" {\n        name                         = \"mssqlserver\"\n        resource_group_name          = azurerm_resource_group.example.name\n        location                     = azurerm_resource_group.example.location\n        version                      = \"12.0\"\n        administrator_login          = \"mradministrator\"\n        administrator_login_password = \"tfsecRocks\"\n      }",
+        "file_name": "enable_audit.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy SQL Server without configuring the azurerm_mssql_server_extended_auditing_policy resource",
+          "explanation": "This leaves the database without comprehensive audit logging, making it impossible to track access patterns and detect potential security incidents"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "title": "Account Identity Registered",
+        "description": "App Services are deployed without managed identity configuration, forcing the use of connection strings and API keys for accessing Azure resources, creating credential management vulnerabilities in the POS system.",
+        "severity": "medium",
+        "affected_component": "pos_web_application",
+        "injection_strategy": "Omit identity block in App Service configuration",
+        "business_impact": "Without managed identities, the POS application must use stored credentials that can be compromised, potentially allowing unauthorized access to payment processing functions and customer data stored in connected Azure services",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service#identity\n  good:\n    - |-\n      resource \"azurerm_app_service\" \"good_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n\n        identity {\n          type         = \"UserAssigned\"\n          identity_ids = \"webapp1\"\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_app_service\" \"bad_example\" {\n        name                = \"example-app-service\"\n        location            = azurerm_resource_group.example.location\n        resource_group_name = azurerm_resource_group.example.name\n        app_service_plan_id = azurerm_app_service_plan.example.id\n      }",
+        "file_name": "account_identity_registered.yaml",
+        "service": "appservice",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Deploy App Services without the identity configuration block, forcing reliance on connection strings",
+          "explanation": "This requires storing sensitive credentials in configuration, creating risk of credential exposure and making credential rotation more difficult"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-DATABASE-THREAT_ALERT_EMAIL_TO_OWNER",
+        "title": "Threat Alert Email To Owner",
+        "description": "SQL Server security alert policy is configured with email_account_admins = false, preventing automatic notification of database administrators when security threats are detected against the restaurant's payment and inventory databases.",
+        "severity": "medium",
+        "affected_component": "pos_database",
+        "injection_strategy": "Configure security alert policy with email_account_admins = false",
+        "business_impact": "Without automated threat alerts, database administrators won't be immediately notified of potential security incidents affecting payment data, delaying incident response and potentially allowing attackers more time to access sensitive customer information",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/mssql_server_security_alert_policy#email_account_admins\n  good:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"good_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts            = []\n\n        email_account_admins = true\n      }\n  bad:\n    - |-\n      resource \"azurerm_mssql_server_security_alert_policy\" \"bad_example\" {\n        resource_group_name        = azurerm_resource_group.example.name\n        server_name                = azurerm_sql_server.example.name\n        state                      = \"Enabled\"\n        storage_endpoint           = azurerm_storage_account.example.primary_blob_endpoint\n        storage_account_access_key = azurerm_storage_account.example.primary_access_key\n        disabled_alerts = [\n        ]\n        email_account_admins = false\n      }",
+        "file_name": "threat_alert_email_to_owner.yaml",
+        "service": "database",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure the security alert policy with email_account_admins = false",
+          "explanation": "This disables automatic email notifications to database administrators when security threats are detected, delaying incident response"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+        "title": "No Public Egress",
+        "description": "Network security rules are configured to allow outbound traffic to 0.0.0.0/0 (any destination), creating potential data exfiltration paths from the restaurant's POS network infrastructure.",
+        "severity": "medium",
+        "affected_component": "application_load_balancer",
+        "injection_strategy": "Configure network security rule with destination_address_prefix = '0.0.0.0/0' for outbound traffic",
+        "business_impact": "Overly permissive outbound network rules could allow compromised systems to exfiltrate sensitive restaurant data including customer payment information and proprietary business data to any internet destination",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/network_security_rule\n  good:\n    - |-\n      resource \"azurerm_network_security_rule\" \"good_example\" {\n        direction                  = \"Outbound\"\n        destination_address_prefix = \"10.0.0.0/16\"\n        access                     = \"Allow\"\n      }\n  bad:\n    - |-\n      resource \"azurerm_network_security_rule\" \"bad_example\" {\n        direction                  = \"Outbound\"\n        destination_address_prefix = \"0.0.0.0/0\"\n        access                     = \"Allow\"\n      }",
+        "file_name": "no_public_egress.yaml",
+        "service": "network",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Create network security rules with destination_address_prefix = '0.0.0.0/0' for outbound traffic",
+          "explanation": "This allows systems to communicate with any internet destination rather than restricting outbound traffic to necessary services only"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      },
+      {
+        "rule_id": "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES",
+        "title": "Capture All Activities",
+        "description": "Monitor log profile is configured with empty categories array, failing to capture critical security events and administrative actions across the restaurant's cloud infrastructure.",
+        "severity": "medium",
+        "affected_component": "pos_database",
+        "injection_strategy": "Configure monitor log profile with categories = []",
+        "business_impact": "Without comprehensive activity logging, the restaurant cannot detect unauthorized administrative actions, compliance violations, or security incidents, making forensic investigation impossible and failing to meet audit requirements for payment processing systems",
+        "trivy_yaml_content": "terraform:\n  links:\n    - https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_log_profile#categories\n  good:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"good_example\" {\n        name = \"good_example\"\n\n        categories = [\n          \"Action\",\n          \"Delete\",\n          \"Write\",\n        ]\n\n        retention_policy {\n          enabled = true\n          days    = 365\n        }\n      }\n  bad:\n    - |-\n      resource \"azurerm_monitor_log_profile\" \"bad_example\" {\n        name = \"bad_example\"\n\n        categories = []\n\n        retention_policy {\n          enabled = true\n          days    = 7\n        }\n      }",
+        "file_name": "capture_all_activities.yaml",
+        "service": "monitor",
+        "provider": "unknown",
+        "injection_example": {
+          "vulnerable_pattern": "Configure monitor log profile with an empty categories array instead of including Action, Delete, and Write categories",
+          "explanation": "This prevents logging of critical administrative activities, making it impossible to audit changes to the infrastructure"
+        },
+        "trivy_rule": true,
+        "llm_enhanced": true,
+        "source": "llm_selected_trivy_rule"
+      }
+    ],
+    "vulnerability_metadata": {
+      "total_count": 8,
+      "trivy_rules_used": [
+        "AZURE-STORAGE-ENFORCE_HTTPS",
+        "AZURE-STORAGE-DEFAULT_ACTION_DENY",
+        "AZURE-DATABASE-NO_PUBLIC_ACCESS",
+        "AZURE-DATABASE-ENABLE_AUDIT",
+        "AZURE-APPSERVICE-ACCOUNT_IDENTITY_REGISTERED",
+        "AZURE-DATABASE-THREAT_ALERT_EMAIL_TO_OWNER",
+        "AZURE-NETWORK-NO_PUBLIC_EGRESS",
+        "AZURE-MONITOR-CAPTURE_ALL_ACTIVITIES"
+      ],
+      "severity_distribution": {
+        "critical": 0,
+        "high": 0,
+        "medium": 8,
+        "low": 0
+      },
+      "service_categories": [
+        "database",
+        "monitor",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "services_covered": [
+        "database",
+        "monitor",
+        "storage",
+        "network",
+        "appservice"
+      ],
+      "trivy_integration": true,
+      "llm_selected": true
+    }
+  },
+  "generation_info": {
+    "extraction_method": "block_marker_parsing",
+    "source": "llm_response"
+  },
+  "file_structure": [],
+  "trivy_integration": {},
+  "validation_summary": {
+    "component_coverage": 1.0,
+    "resource_count": 17,
+    "components_implemented": 7,
+    "components_missing": 0,
+    "recommendations": []
+  }
+}
